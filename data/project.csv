@@ -1,4 +1,4 @@
-abbrev,name,domain
-A4A,AddressForAll,addressforall.org
-OSMcodes,OSMcodes,osm.codes
-DPreserv,Digital Preservation,-
+abbrev,name,current_year,current_owner,domain
+A4A,AddressForAll,2021,ITGS,AddressForAll.org
+OSMcodes,OSMcodes,2021,ITGS,OSM.codes
+DG,Digital-Guard,2021,ITGS,Digital-Guard.org
