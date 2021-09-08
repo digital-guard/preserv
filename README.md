@@ -5,7 +5,7 @@ Núcleo de software e metadados do projeto de [preservação digital](https://en
 
 A responsabilidade sobre os dados é dividida entre o Instituto ITGS e a curadoria local de uma
 jurisdição, tipicamente um país. A jurisdição `BR`, por exemplo, é relativa ao Brasil e seu repositório *git* é
-o [preserv-BR](http://git.Gigital-guard.org/preserv-BR).
+o [preserv-BR](http://git.digital-guard.org/preserv-BR).
 
 As *curadorias locais* selecionam quais dados devem ser preservados e quais os critérios mínimos de qualidade
 para que um pacote de dados possa ser incorporado ao acervo de preservação.
