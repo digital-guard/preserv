@@ -160,14 +160,22 @@ def main(argv):
             if listOfDict['layers'][key]['method']   == 'shp2sql':
                 listOfDict['layers'][key]['isCsv'] = False
                 listOfDict['layers'][key]['isOgr'] = False
+                listOfDict['layers'][key]['isOgrWithShp'] = False
                 listOfDict['layers'][key]['isShp'] = True
             elif listOfDict['layers'][key]['method'] == 'csv2sql':
                 listOfDict['layers'][key]['isCsv'] = True
                 listOfDict['layers'][key]['isOgr'] = False
+                listOfDict['layers'][key]['isOgrWithShp'] = False
                 listOfDict['layers'][key]['isShp'] = False
             elif listOfDict['layers'][key]['method'] == 'ogr2ogr':
                 listOfDict['layers'][key]['isCsv'] = False
                 listOfDict['layers'][key]['isOgr'] = True
+                listOfDict['layers'][key]['isOgrWithShp'] = False
+                listOfDict['layers'][key]['isShp'] = False
+            elif listOfDict['layers'][key]['method'] == 'ogrWshp':
+                listOfDict['layers'][key]['isCsv'] = False
+                listOfDict['layers'][key]['isOgr'] = False
+                listOfDict['layers'][key]['isOgrWithShp'] = False
                 listOfDict['layers'][key]['isShp'] = False
 
         #let listWithSeparators = pureList.map( (x, i, arr) => x.toString()+((arr.length-1===i)? '':', ') );
