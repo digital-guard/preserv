@@ -1,5 +1,8 @@
+<img src="docs/assets/digGuard-logoSmall.180px.png" style="float:right"/>
+
 # Preserv
-Núcleo de software e metadados do projeto de [preservação digital](https://en.wikipedia.org/wiki/Digital_preservation) das fontes primárias do [*Instituto ITGS**](http://addressforall.org/), batizado de **Gigital-guard/Preserv**.
+
+O presente projeto, batizado de  **Gigital-guard/Preserv**, consiste no núcleo de software e metadados do projeto de [preservação digital](https://en.wikipedia.org/wiki/Digital_preservation) de fontes primárias de dados, organizados e mantidos pelo [**Instituto ITGS**](http://addressforall.org/estatuto).
 
 ## Preservação dos dados primários
 
