@@ -158,11 +158,17 @@ def main(argv):
         # flags isCsv e isShp indicam se method é shp ou csv
         for key in listOfDict['layers'].keys():
             if listOfDict['layers'][key]['method']   == 'shp2sql':
-                listOfDict['layers'][key]['isShp'] = True
                 listOfDict['layers'][key]['isCsv'] = False
+                listOfDict['layers'][key]['isOgr'] = False
+                listOfDict['layers'][key]['isShp'] = True
             elif listOfDict['layers'][key]['method'] == 'csv2sql':
-                listOfDict['layers'][key]['isShp'] = False
                 listOfDict['layers'][key]['isCsv'] = True
+                listOfDict['layers'][key]['isOgr'] = False
+                listOfDict['layers'][key]['isShp'] = False
+            elif listOfDict['layers'][key]['method'] == 'ogr2ogr':
+                listOfDict['layers'][key]['isCsv'] = False
+                listOfDict['layers'][key]['isOgr'] = True
+                listOfDict['layers'][key]['isShp'] = False
 
         #let listWithSeparators = pureList.map( (x, i, arr) => x.toString()+((arr.length-1===i)? '':', ') );
         #let listOfObjects = pureList.map( x=> ({name:x}) )
