@@ -156,14 +156,13 @@ def main(argv):
         listOfDict['layers_keys'] = [*listOfDict['layers'].keys()]
 
         # flags que indicam tipo de method
-
-        listOfDict['layers'][key]['isCsv']              = False
-        listOfDict['layers'][key]['isCsvNotUtf8AndDos'] = False
-        listOfDict['layers'][key]['isOgr']              = False
-        listOfDict['layers'][key]['isOgrWithShp']       = False
-        listOfDict['layers'][key]['isShp']              = False
-
         for key in listOfDict['layers'].keys():
+            listOfDict['layers'][key]['isCsv']              = False
+            listOfDict['layers'][key]['isCsvNotUtf8AndDos'] = False
+            listOfDict['layers'][key]['isOgr']              = False
+            listOfDict['layers'][key]['isOgrWithShp']       = False
+            listOfDict['layers'][key]['isShp']              = False
+
             if listOfDict['layers'][key]['method']   == 'shp2sql':
                 listOfDict['layers'][key]['isShp'] = True
             elif listOfDict['layers'][key]['method'] == 'csv2sql':
