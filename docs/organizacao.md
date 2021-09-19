@@ -24,10 +24,10 @@ Vide pasta `/data` deste git.
 Os relatórios são como um blog de anúncio de atos de registro, em geral com um resumo para apresentar também os metadados. Vide pasta `/reports` deste git. -->
 
 -----
-# CONCEITOS
+## CONCEITOS
 Apresentação dos principais conceitos e diretivas adotadas no Projeto Digital-guard de _preservação digital_.
 
-## Fontes primárias
+### Fontes primárias
 
 As [fontes de dados primárias](https://en.wikipedia.org/wiki/Primary_source) podem ter diversas origens e diferentes metodologias de coleta. De especial interesse para o Instituto ITGS, num contexto de preservação de longo prazo (décadas), são as fontes de dados relativos a endereços postais de cada município do Brasil. Cada fonte consiste de um conjunto de dados sistematizados e publicados **por uma instituição** (nacional ou internacional) com idoniedade reconhecida pela comunidade local.
 
@@ -37,7 +37,7 @@ As fontes primárias estão relacionadas aos [dados brutos](https://en.wikipedia
 
 * [Imagens de satélite](https://en.wikipedia.org/wiki/Remote_sensing) são dados brutos. Os lotes, rios e vias são desenhados sobre a imagem a partir de softwares confiáveis assistidos por pessoas habilidadas, e que terão seu trabalho publicado (na forma por exemplo de [**arquivos&nbsp;GeoJSON**](https://en.wikipedia.org/wiki/GeoJSON)) por instituições que "assinam embaixo" desse trabalho, tais como o IBGE, a Fundação OpenStreetMap, o departamento de cartografia de uma grande prefeitura, e muitos outros. <br/>Mesmo tendo  usado a mesma imagem como origem, os produtos (ex. arquivos GeoJSON resultantes) podem diferir bastante em termos de qualidade, metodologia de interpretação, modelagem dos dados e software de interpretação, de modo que **cada produto de interpretação da imagem é considerado uma fonte primária distinta**.
 
-### Fontes OpenStreetMap Geofabrik
+#### Fontes OpenStreetMap Geofabrik
 
 O [mapa OSM](https://www.openstreetmap.org/about) cobre todo o planeta, é mantido pela [Openstreetmap Foundation](https://blog.osmfoundation.org/about/), uma fundação inglesa registrada sob *Company Registration Number 05912761*.
 
@@ -45,7 +45,7 @@ O [planeta inteiro](https://planet.openstreetmap.org/) é uma massa de dados tã
 
 Os metadados dos arquivos preservados estão descritos no *git* do projeto, [git/OSMBrasil/stable/brazil-latest.osm.md](https://github.com/OSMBrasil/stable/blob/master/brazil-latest.osm.md#dump-opensstreetmap-do-brasil).
 
-### Fontes IBGE
+#### Fontes IBGE
 
 Fonte dos dados estatísticos oficiais do Brasil, bem como elementos de cartografia e localização de endereços. O IBGE - Instituto Brasileiro de Geografia e Estatística (*CNPJ  33.787.094/0001-40*).
 
@@ -54,7 +54,7 @@ Por ser uma fonte muito extensa, requer  [curadoria e decisões de projeto](http
 ### Fontes nas prefeituras
 Por ser uma fonte muito extensa e diversificada, requer  [curadoria e decisões de projeto](http://git.digital-guard.org/preserv-BR/issues/).
 
-## Normalização das fontes
+### Normalização das fontes
 
 Os conjuntos de dados de cada fonte apresentam formatos e características de modelagem de dados distintas. Para que possam ser comparados entre si ou processados pelas ferramentas internas do AddressForAll, precisam estar todos obedecendo a um mesmo esquema, todos modelados com uma semântica.
 
@@ -62,7 +62,7 @@ A transformação que se aplica a um determinado conjunto de dados da *fonte pri
 
 Todos os elementos da normalização são repositórios *git* com licença aberta e publicamente distribuidos, atualmente em https://github.com/AddressForAll
 
-## Depósito legal e preservação digital
+### Depósito legal e preservação digital
 
 O Depósito legal dos metadados e da normalização das fontes é realizado em dois meios complementares, tendo em vista que no Brasil os cartórios e o sistema jurídico ainda não são 100% digitais.
 
@@ -72,7 +72,7 @@ O Depósito legal dos metadados e da normalização das fontes é realizado em d
 
 A preservação do arquivo em si (muitos Gigabytes) é feita por contratos de longo prazo (décadas), ainda em estudo. Uma vez no repositório definitivo, alguns parceiros se comprometem também com réplicas. PS: sistemas como  Filecoin ou LOCKSS, também em estudo, geram as réplicas de segurança automaticamente.
 
-## Contexto
+### Contexto
 
 A *Plataforma de Projetos* do *Instituto ITGS* foi concebida para a gestão de projetos integrados e uso de um ecosistema de padrões e metodologias interoperáveis.
 O presente projeto de preservação digital é um deles. Abaixo um diagrama que resume o passo-a-passo da preservação e como ele se relaciona com atividades de outros projetos.
