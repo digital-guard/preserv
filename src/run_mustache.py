@@ -155,14 +155,24 @@ def main(argv):
         items_setLast(listOfDict['files'])
         listOfDict['layers_keys'] = [*listOfDict['layers'].keys()]
 
-        # flags isCsv e isShp indicam se method é shp ou csv
+        # flags que indicam tipo de method
         for key in listOfDict['layers'].keys():
+            listOfDict['layers'][key]['isCsv']              = False
+            listOfDict['layers'][key]['isCsvNotUtf8AndDos'] = False
+            listOfDict['layers'][key]['isOgr']              = False
+            listOfDict['layers'][key]['isOgrWithShp']       = False
+            listOfDict['layers'][key]['isShp']              = False
+
             if listOfDict['layers'][key]['method']   == 'shp2sql':
                 listOfDict['layers'][key]['isShp'] = True
-                listOfDict['layers'][key]['isCsv'] = False
             elif listOfDict['layers'][key]['method'] == 'csv2sql':
-                listOfDict['layers'][key]['isShp'] = False
                 listOfDict['layers'][key]['isCsv'] = True
+            elif listOfDict['layers'][key]['method'] == 'ogr2ogr':
+                listOfDict['layers'][key]['isOgr'] = True
+            elif listOfDict['layers'][key]['method'] == 'ogrWshp':
+                listOfDict['layers'][key]['isOgrWithShp'] = True
+            elif listOfDict['layers'][key]['method'] == 'csv2unix2utf8':
+                listOfDict['layers'][key]['isCsvNotUtf8AndDos'] = True
 
         #let listWithSeparators = pureList.map( (x, i, arr) => x.toString()+((arr.length-1===i)? '':', ') );
         #let listOfObjects = pureList.map( x=> ({name:x}) )
