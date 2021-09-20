@@ -131,7 +131,8 @@ def main(argv):
             else:
                 dict_input = load_data(read_obj)
 
-    listOfDict = dict_input0 | dict_input
+    #listOfDict = dict_input0 | dict_input # merge dict python3.9+
+    listOfDict = {**dict_input0 , **dict_input} # merge dict python3.5+
     
 
     ## Concatena mustache e mustacheLast, gerando o template
