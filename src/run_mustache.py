@@ -29,7 +29,7 @@ def load_data(file, loaderName='SafeLoader'):
 def main(argv):
     basepath_default   = '/opt/gits/_a4a/'
     basepath_arg       = ''
-    partials_path      = 'digital-preservation-BR/src/maketemplates/'
+    partials_path      = 'preserv-BR/src/maketemplates/'
     fname_input0       = ''
     fname_input        = ''
     fname_mustache     = ''
