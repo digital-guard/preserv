@@ -27,7 +27,7 @@ def load_data(file, loaderName='SafeLoader'):
 ## ## ##
 
 def main(argv):
-    basepath_default   = '/opt/gits/_a4a/'
+    basepath_default   = '/opt/gits/_dg/'
     basepath_arg       = ''
     partials_path      = 'preserv-BR/src/maketemplates/'
     fname_input0       = ''
