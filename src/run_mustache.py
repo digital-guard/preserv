@@ -131,8 +131,12 @@ def main(argv):
             else:
                 dict_input = load_data(read_obj)
 
-    #listOfDict = dict_input0 | dict_input # merge dict python3.9+
-    listOfDict = {**dict_input0 , **dict_input} # merge dict python3.5+
+    if fname_input0:
+        #listOfDict = dict_input0 | dict_input # merge dict python3.9+
+        listOfDict = {**dict_input0 , **dict_input} # merge dict python3.5+
+    else:
+        listOfDict = dict_input
+
     
 
     ## Concatena mustache e mustacheLast, gerando o template
@@ -146,7 +150,11 @@ def main(argv):
         with open(fname_mustacheLast,'r') as read_obj:
             template_end = read_obj.read()
 
-    template = template_begin + template_end
+
+    if fname_mustacheLast:
+        template = template_begin + template_end
+    else:
+        template = template_begin
 
 
     ## Finaliza a preparação dos dados para renderização
