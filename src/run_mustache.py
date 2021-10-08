@@ -167,7 +167,6 @@ def main(argv):
         # flags que indicam tipo de method
         for key in listOfDict['layers'].keys():
             listOfDict['layers'][key]['isCsv']              = False
-            listOfDict['layers'][key]['isCsvNotUtf8AndDos'] = False
             listOfDict['layers'][key]['isOgr']              = False
             listOfDict['layers'][key]['isOgrWithShp']       = False
             listOfDict['layers'][key]['isShp']              = False
@@ -180,8 +179,6 @@ def main(argv):
                 listOfDict['layers'][key]['isOgr'] = True
             elif listOfDict['layers'][key]['method'] == 'ogrWshp':
                 listOfDict['layers'][key]['isOgrWithShp'] = True
-            elif listOfDict['layers'][key]['method'] == 'csv2unix2utf8':
-                listOfDict['layers'][key]['isCsvNotUtf8AndDos'] = True
 
         #let listWithSeparators = pureList.map( (x, i, arr) => x.toString()+((arr.length-1===i)? '':', ') );
         #let listOfObjects = pureList.map( x=> ({name:x}) )
