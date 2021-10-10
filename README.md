@@ -2,7 +2,7 @@
 
 ## Preserv
 
-O presente projeto, batizado de  **Gigital-guard/Preserv**, consiste no núcleo de software e metadados do projeto de [preservação digital](https://en.wikipedia.org/wiki/Digital_preservation) de fontes primárias de dados, organizados e mantidos pelo [**Instituto ITGS**](http://addressforall.org/estatuto).
+O presente projeto, batizado de  **Digital-guard/Preserv**, consiste no núcleo de software e metadados do projeto de [preservação digital](https://en.wikipedia.org/wiki/Digital_preservation) de fontes primárias de dados, organizados e mantidos pelo [**Instituto ITGS**](http://addressforall.org/estatuto).
 
 ### Preservação dos dados primários
 
