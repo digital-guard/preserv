@@ -61,8 +61,8 @@ openstreetmap-clean:
 ## ## ## ## ## ## ## ## ##
 
 makedirs: clean_sandbox
-	@mkdir -p $(sandbox_root)
-	@mkdir -p $(sandbox)
+	@mkdir -m 777 -p $(sandbox_root)
+	@mkdir -m 777 -p $(sandbox)
 	@mkdir -p $(pg_io)
 
 wget_files:
@@ -78,6 +78,6 @@ wget_files:
 ## ## ## ##
 
 clean_sandbox:
-	@rm -rf $(sandbox_root) || true
+	@rm -rf $(sandbox) || true
 
 clean: openstreetmap-clean

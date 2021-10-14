@@ -207,8 +207,8 @@ block-clean:
 ## ## ## ## ## ## ## ## ##
 
 makedirs: clean_sandbox
-	@mkdir -p $(sandbox_root)
-	@mkdir -p $(sandbox)
+	@mkdir -m 777 -p $(sandbox_root)
+	@mkdir -m 777 -p $(sandbox)
 	@mkdir -p $(pg_io)
 
 wget_files:
@@ -225,6 +225,6 @@ wget_files:
 ## ## ## ##
 
 clean_sandbox:
-	@rm -rf $(sandbox_root) || true
+	@rm -rf $(sandbox) || true
 
 clean: address-clean geoaddress-clean nsvia-clean genericvia-clean cadgenericvia-clean via-clean cadvia-clean parcel-clean block-clean
