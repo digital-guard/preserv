@@ -5,18 +5,29 @@
 	@read _tudo_bem_
 {{/srid}}
 {{#isShp}}
+{{#orig_subfilename}}
+	@echo Extraindo ...
+	cd $(sandbox);  7z x -y "*{{orig_filename}}*" ; chmod -R a+rx . > /dev/null
+{{/orig_subfilename}}
 	@echo Executando shp2pgsql ...
+{{#orig_subfilename}}
+	cd $(sandbox);  find $(sandbox) -iname "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" -exec sh -c "psql $(pg_uri_db) -c 'DROP TABLE IF EXISTS $(tabname)'; shp2pgsql {{{method_opts}}} -s {{srid}} {} $(tabname) | psql -q $(pg_uri_db); {{#query_view}}psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_$(tabname) AS {{{.}}}" | psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','{}','$(layername)','vw{{file}}_$(tabname)','$(fullPkID)','$(part{{file}}_file)',array[]::text[])" | psql $(pg_uri_db) -c "DROP VIEW vw{{file}}_$(tabname)"{{/query_view}}{{^query_view}}psql $(pg_uri_db) -c \"SELECT ingest.any_load('{{method}}','{}','$(layername)','$(tabname)','$(fullPkID)','$(part{{file}}_file)',array{{{sql_select}}})\"{{/query_view}}; chmod -R a+rx . 2> /dev/null" \;
+	@echo "Confira os resultados nas tabelas ingest.layer_file e ingest.feature_asis".
+{{/orig_subfilename}}
+{{^orig_subfilename}}
 	cd $(sandbox);	shp2pgsql  {{{method_opts}}} -s {{srid}} "{{orig_filename}}.shp" $(tabname) | psql -q $(pg_uri_db) 2> /dev/null
+{{/orig_subfilename}}
 {{/isShp}}
 {{#isCsv}}
 {{#csv_encoding}}
 	@echo Alterando codificação para UTF8 e o tipo de quebra de linha de CRLF para LF ...
 	iconv -f {{{csv_encoding}}} -t UTF-8 $(sandbox)/{{orig_filename}}.csv | dos2unix > $(sandbox)/{{orig_filename}}.unix_utf8.csv
-	@echo Executando csc2sql ...
+{{/csv_encoding}}
+	@echo Executando csv2sql ...
+{{#csv_encoding}}
 	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.unix_utf8.csv', '$(tabname)' )"
 {{/csv_encoding}}
 {{^csv_encoding}}
-	@echo Executando csc2sql ...
 	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.csv', '$(tabname)' )"
 {{/csv_encoding}}
 {{/isCsv}}
