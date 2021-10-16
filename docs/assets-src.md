@@ -35,7 +35,7 @@ Fonte para https://yuml.me/diagram/scruffy/class/draw
 ```
 
 Tipos principais, com geometria:
-![](assets/asIs_tabelas_geom2full.png)
+![](assets/asIs_tabs_geom2full.png)
 
 Tipos secundários, com informação cadastral externa:
 ![](assets/asIs_tabs_geom2ext.png)
