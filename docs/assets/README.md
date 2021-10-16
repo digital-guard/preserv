@@ -1,7 +1,15 @@
-## Código-fonte das ilustrações
+## Ilustrações
+
+Todas as ilustrações devem ser compatíveis com HTML5, e serão reproduzidas por Markdown.
+
+## Código-fonte
 
 Algumas ilustrações, tipicamente diagramas, oferecem código-fonte para refazer ou documentar intensão da imagem.
+Outras, como figuras SVG, devem ser armazenadas neste git como código-fonte XML.
 
+------
+
+A seguir o código-fonte de alguns tipos especiais de ilustração.
 
 ## Diagramas de classe
 
