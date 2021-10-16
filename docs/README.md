@@ -1,7 +1,7 @@
-Docs não tem README, exceto para avisar que é mkdocs.
+## Preserv Project's Documentation
 
-## Lembretes
+Documentation languages:
 
-* src/pubLib.sql precisa ser unificado por inicialização de database, podendo ser centrado no projeto WS. Mais simples referenciar lista de funções controladas de uma publib previamente definida como projeto e versionando grupos de prefixo (array, io, jsonb, etc.). Com cada módulo demandando as suas.
-
-* src relativo a database  "dl03t_main"
+* [`docs/en`](./en) **English**: (under construction) future main (reference) language, with all contents.
+* [`docs/pt`](./pt) **Português**: de 202o a 2021 a língua principal <br/>2020's main language (after will be secondary).
+* [`docs/es`](./es) **Espanhol**: (en construcion) secondary language.
