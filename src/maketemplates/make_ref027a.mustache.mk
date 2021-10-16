@@ -244,4 +244,4 @@ wget_files:
 clean_sandbox:
 	@rm -rf $(sandbox) || true
 
-clean: address-clean geoaddress-clean nsvia-clean genericvia-clean cadgenericvia-clean via-clean cadvia-clean parcel-clean block-clean building-clean
+clean: {{#layers_keys}}{{.}}-clean {{/layers_keys}}
