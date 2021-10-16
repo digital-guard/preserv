@@ -34,9 +34,17 @@ Fonte para https://yuml.me/diagram/scruffy/class/draw
   [parcel_ext|gid;join_id;geom;info]
 ```
 
-Tipos principais, com geometria:
-![](assets/asIs_tabs_geom2full.png)
+```
+// Relationships
 
-Tipos secundários, com informação cadastral externa:
-![](assets/asIs_tabs_geom2ext.png)
+  [address]--------[geoaddress_ext]
+  [address]--------[parcel_ext]
+  [cadvia]---------[via_ext]
+  [cadgenericvia]--[genericvia_ext]
+```
 
+Tipos principais, com geometria:<br/>  ![](assets/asIs_tabs_geom2full.png)
+
+Tipos secundários, com informação cadastral externa:<br/>  ![](assets/asIs_tabs_geom2ext.png)
+
+Relacionamentos obrigatórios:<br/>   ![](assets/asIs_relations.png)
