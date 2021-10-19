@@ -37,11 +37,15 @@ part{{p}}_path  =$(orig)/$(part{{p}}_file)
 all:
 	@echo "=== Resumo deste makefile de recuperação de dados preservados ==="
 	@printf "Targets para a geração de layers:\n\tall_layers {{#layers_keys}}{{.}} {{/layers_keys}}\n"
+	@printf "Targets para a join de layers:\n\tall_joins {{#joins_keys}}{{.}} {{/joins_keys}}\n"
 	@printf "Demais targets implementados:\n\tclean wget_files me\n"
 	@echo "A geração de layers requer os seguintes comandos e versões:\n\t$(need_commands)"
 
 all_layers: {{#layers_keys}}{{.}} {{/layers_keys}}
 	@echo "--ALL LAYERS--"
+
+all_joins: {{#joins_keys}}join-{{.}} {{/joins_keys}}
+	@echo "--ALL JOINS--"
 
 ## ## ## ## ## ## ## ## ##
 ## ## ## ## ## ## ## ## ##
@@ -220,8 +224,26 @@ block-clean:
 {{/block}}
 
 {{/layers}}
+
 ## ## ## ## ## ## ## ## ##
 ## ## ## ## ## ## ## ## ##
+
+{{#joins}}
+{{#genericvia}}
+join-genericvia:
+{{>common005_join}}
+{{/genericvia}}
+
+{{#geoaddress}}
+join-geoaddress:
+{{>common005_join}}
+{{/geoaddress}}
+
+{{#via}}
+join-via:
+{{>common005_join}}
+{{/via}}
+{{/joins}}
 
 makedirs: clean_sandbox
 	@mkdir -m 777 -p $(sandbox_root)
