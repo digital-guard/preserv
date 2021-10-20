@@ -1,7 +1,7 @@
 pkid:      integer,
 pkversion: integer,
-schemaId_input:    string, ID do JSON-schema de input, ref no preimeiro template a usar este padrão de input.
-schemaId_template: string, ID do makefile.mustache, ref no preimeiro package a usar o template.
+schemaId_input:    string, ID do JSON-schema de input, ref no primeiro template a usar este padrão de input.
+schemaId_template: string, ID do makefile.mustache, ref no primeiro package a usar o template.
 thisTplFile_root: nome do git utilizado como raiz dos schemas, por exemplo digital-preservation-BR
 srid: identificador tipo SRID no PostGIS da base de ingestão, padrão EPSG, por exemplo https://spatialreference.org/ref/epsg/wgs-84/
 files:
@@ -24,6 +24,7 @@ layers:
     query_view: [OPCIONAL] query completa referenciando "FROM $(tabname)"
     select_sql: [OPCIONAL] lista de nomes de coluna da tabela de referência do method.
     orig_filename: nome do arquivo (ou arquivo de referência como no caso de shape) a ser utilizado pelo método.
+    join_column: nome da coluna utilizada para join com o respectivo layer de cadastro (que também deve possuir join_column)
 
   via:
     subtype: (por exemplo) full
