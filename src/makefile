@@ -102,3 +102,9 @@ jurisdiction_iso_test:
 	 FROM optim.jurisdiction\
 	 WHERE osm_id IN (SELECT osm_id FROM rec_ids) order by 1\
 	"
+
+redirects_update:
+	@echo "-- Atualiza redirecionamentos --"
+	@echo Download da tabela de-para ....
+	wget "https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk/gviz/tq?tqx=out:csv&sheet={de-para}" -O "$(pg_io)/de-para.csv"
+	psql $(pg_uri) -c "DELETE FROM optim.redirects; COPY optim.redirects FROM '$(pg_io)/de-para.csv' CSV HEADER;"
