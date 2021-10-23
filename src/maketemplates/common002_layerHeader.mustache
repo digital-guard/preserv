@@ -10,7 +10,12 @@
 	@whoami
 	@printf "Above user is root? If not, you have permissions for all paths?\n [press ENTER for yes else ^C]"
 	@read _press_enter_
+{{#isCsv}}
+	psql $(pg_uri_db) -c "DROP FOREIGN TABLE IF EXISTS $(tabname)"
+{{/isCsv}}
+{{^isCsv}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
+{{/isCsv}}
 	@tput bold
 	@echo Extracting ....
 	@tput sgr0

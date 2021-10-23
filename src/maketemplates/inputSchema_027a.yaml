@@ -4,6 +4,7 @@ schemaId_input:    string, ID do JSON-schema de input, ref no primeiro template 
 schemaId_template: string, ID do makefile.mustache, ref no primeiro package a usar o template.
 thisTplFile_root: nome do git utilizado como raiz dos schemas, por exemplo digital-preservation-BR
 srid: identificador tipo SRID no PostGIS da base de ingestão, padrão EPSG, por exemplo https://spatialreference.org/ref/epsg/wgs-84/
+
 files:
   -
     p:    ID local deste arquivo de configuração
@@ -18,13 +19,17 @@ layers:
 
   geoaddress:
     subtype: completeza do layer com relação a dados-core do sponsor. full/ext/none.
-    method: método de conversão, shp2sql/csv2sql/etc
+    method: método de conversão, shp2sql/csv2sql/ogr2ogr/ogrWshp etc
+    method_opts: opções para method.
     p: identificador do arquivo seguido de letra identificadora do layer
     file: referência ao ID de um dos itens de files.
     query_view: [OPCIONAL] query completa referenciando "FROM $(tabname)"
     select_sql: [OPCIONAL] lista de nomes de coluna da tabela de referência do method.
     orig_filename: nome do arquivo (ou arquivo de referência como no caso de shape) a ser utilizado pelo método.
-    join_column: nome da coluna utilizada para join com o respectivo layer de cadastro (que também deve possuir join_column)
+    orig_subfilename: para o caso de arquivo compactado dentro de arquivo compactado.
+    multiple_files: boleana, informa se o layer possui mais de um arquivo. Obrigatória quando true. 
+    join_column: [OPCIONAL] nome da coluna utilizada para join com o respectivo layer de cadastro (que também deve possuir join_column)
+    orig_ext: utilizada em algumas situações com os métodos csv2sql/ogr2ogr para indicar a extensão do arquivo. Por exemplo, .gpkg ou .xlsx.
 
   via:
     subtype: (por exemplo) full
