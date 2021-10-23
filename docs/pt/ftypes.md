@@ -126,13 +126,19 @@ Idealmente os dados fornecidos possuem geometria e todos os atributos obrigatór
 <td>nsvia_full</td>
 <td>poly</td>
 <td>não</td>
-<td rowspan="2">Espaço-de-nomes para vias, um nome delimitado por polígono. Tipicamente nome de bairro ou de loteamento. Complementa o nome de via em nomes duplicados (repetidos dentro do mesmo município mas não dentro do mesmo nsvia).</td>
+<td rowspan="3">Espaço-de-nomes para vias, um nome delimitado por polígono. Tipicamente nome de bairro ou de loteamento. Complementa o nome de via em nomes duplicados (repetidos dentro do mesmo município mas não dentro do mesmo nsvia).</td>
 </tr>
 <tr>
 <td>72</td>
 <td>nsvia_ext</td>
 <td>poly</td>
 <td>SIM</td>
+</tr>
+<tr>
+<td>73</td>
+<td>nsvia_none</td>
+<td>poly</td>
+<td>não</td>
 </tr>
 
 <tr>
