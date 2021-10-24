@@ -193,15 +193,15 @@ def main(argv):
 
 
             if key == 'geoaddress' and 'address' in listOfDict['layers']:
-                    if listOfDict['layers'][key]['subtype'] == 'ext' and listOfDict['layers']['address']['subtype'] == 'cmpl':
-                        if listOfDict['layers'][key]['join_column'] and listOfDict['layers']['address']['join_column']:
-                            listOfDict['joins'][key] = {}
-                            listOfDict['joins'][key]['layer'] = key + '_ext'
-                            listOfDict['joins'][key]['cadLayer'] = 'address' + '_cmpl'
-                            listOfDict['joins'][key]['layerColumn'] = listOfDict['layers'][key]['join_column']
-                            listOfDict['joins'][key]['cadLayerColumn'] = listOfDict['layers']['address']['join_column']
-                            listOfDict['joins'][key]['layerFile'] = [x['file'] for x in listOfDict['files'] if x['p'] == listOfDict['layers'][key]['file']][0]
-                            listOfDict['joins'][key]['cadLayerFile'] = [x['file'] for x in listOfDict['files'] if x['p'] == listOfDict['layers']['address']['file']][0]
+                if listOfDict['layers'][key]['subtype'] == 'ext' and listOfDict['layers']['address']['subtype'] == 'cmpl':
+                    if listOfDict['layers'][key]['join_column'] and listOfDict['layers']['address']['join_column']:
+                        listOfDict['joins'][key] = {}
+                        listOfDict['joins'][key]['layer'] = key + '_ext'
+                        listOfDict['joins'][key]['cadLayer'] = 'address' + '_cmpl'
+                        listOfDict['joins'][key]['layerColumn'] = listOfDict['layers'][key]['join_column']
+                        listOfDict['joins'][key]['cadLayerColumn'] = listOfDict['layers']['address']['join_column']
+                        listOfDict['joins'][key]['layerFile'] = [x['file'] for x in listOfDict['files'] if x['p'] == listOfDict['layers'][key]['file']][0]
+                        listOfDict['joins'][key]['cadLayerFile'] = [x['file'] for x in listOfDict['files'] if x['p'] == listOfDict['layers']['address']['file']][0]
 
         listOfDict['joins_keys'] = [*listOfDict['joins'].keys()]
 
