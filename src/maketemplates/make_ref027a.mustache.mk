@@ -223,6 +223,22 @@ block-clean:
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
 {{/block}}
 
+{{#cadparcel}}
+cadparcel: layername = cadparcel_{{subtype}}
+cadparcel: tabname = pk$(fullPkID)_p{{file}}_cadparcel
+cadparcel: makedirs $(part{{file}}_path)
+	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "cadparcel" datatype (street axes)
+{{>common002_layerHeader}}
+	cd $(sandbox); 7z {{7z_opts}} x -y $(part{{file}}_path) "*{{orig_filename}}*" ; chmod -R a+rx . > /dev/null
+{{>common003_shp2pgsql}}
+{{>common001_pgAny_load}}
+	@echo FIM.
+
+cadparcel-clean: tabname = pk$(fullPkID)_p{{file}}_cadparcel
+cadparcel-clean:
+	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
+{{/cadparcel}}
 {{/layers}}
 
 ## ## ## ## ## ## ## ## ##
