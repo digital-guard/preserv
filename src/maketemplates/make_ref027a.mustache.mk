@@ -243,6 +243,11 @@ join-geoaddress:
 join-via:
 {{>common005_join}}
 {{/via}}
+
+{{#parcel}}
+join-parcel:
+{{>common005_join}}
+{{/parcel}}
 {{/joins}}
 
 makedirs: clean_sandbox

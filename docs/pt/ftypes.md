@@ -174,14 +174,26 @@ Relacionamentos obrigatórios:<br/>   ![](assets/asIs_relations.png)
 
 <tbody>
 <tr>
-<td>2</td>
+<td>1</td>
 <td>address_cmpl</td>
 <td>SIM</td>
 <td rowspan="2">Endereço cadastral, representação por nome de via e numeração predial.</td>
 </tr>
 <tr>
-<td>3</td>
+<td>2</td>
 <td>address_noid</td>
+<td>não</td>
+</tr>
+
+<tr>
+<td>6</td>
+<td>cadparcel_cmpl</td>
+<td>SIM</td>
+<td rowspan="2">Lote cadastral (nome de parcel), complemento da geográfica. Lote representado por dados cadastrais apenas.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>cadparcel_noid</td>
 <td>não</td>
 </tr>
 
@@ -192,6 +204,7 @@ Relacionamentos obrigatórios:<br/>   ![](assets/asIs_relations.png)
 <tr>
 <td>12</td><td>cadvia_noid</td><td>não</td>
 </tr>
+
 <tr>
 <td>16</td>
 <td>cadgenericvia_cmpl</td>
