@@ -28,8 +28,9 @@ layers:
     orig_filename: nome do arquivo (ou arquivo de referência como no caso de shape) a ser utilizado pelo método.
     orig_subfilename: para o caso de arquivo compactado dentro de arquivo compactado.
     multiple_files: boleana, informa se o layer possui mais de um arquivo. Obrigatória quando true. 
-    join_column: [OPCIONAL] nome da coluna utilizada para join com o respectivo layer de cadastro (que também deve possuir join_column)
+    join_column: [OPCIONAL] nome da coluna utilizada para join com o respectivo layer de cadastro (que também deve possuir join_column).
     orig_ext: utilizada em algumas situações com os métodos csv2sql/ogr2ogr para indicar a extensão do arquivo. Por exemplo, .gpkg ou .xlsx.
+    7z_opts: opções para o 7z.
 
   via:
     subtype: (por exemplo) full
