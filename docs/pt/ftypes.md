@@ -3,7 +3,7 @@
 
 A tabela `ingest.feature_asis` armazena todos os dados ingeridos, de "todos" os tipos (úteis para os projetos AddressForAll e OsmCodes). A tabela `ingest.feature_type` descreve cada um desses tipos.
 
-<img align="right" src="assets/asIs_tabs_geom2full.png"/>
+<img align="right" src="../assets/asIs_tabs_geom2full.png"/>
 
 ### Com geometria
 
@@ -157,13 +157,13 @@ Idealmente os dados fornecidos possuem geometria e todos os atributos obrigatór
 </tbody>
 </table>
 
-<img align="right" src="assets/asIs_tabs_geom2ext.png"/>
+<img align="right" src="../assets/asIs_tabs_geom2ext.png"/>
 
 ### Cadastral
 
 Quando a tabela AsIs do *layer* não apresenta todos os atributos obrigatórios, deve-se recorrer a um cadastro externo com o qual fará JOIN depois de ingerida. Assim, para todo *layer* com sufixo `_ext` é ingerido também o cadastro correspondente.
 
-Relacionamentos obrigatórios:<br/>   ![](assets/asIs_relations.png)
+Relacionamentos obrigatórios:<br/>   ![](../assets/asIs_relations.png)
 
 <table role="table">
 <thead>
