@@ -21,9 +21,7 @@
 {{#isCsv}}
 {{#orig_ext}}
 	@echo Convertendo de {{orig_filename}}{{orig_ext}} para {{orig_filename}}.csv em UTF8 com LF ...
-	xlsx2csv "$(sandbox)/{{orig_filename}}{{orig_ext}}" {{{method_opts}}} "$(sandbox)/{{orig_filename}}.csv"
-	@echo sed Alterando primeira linha para minúsculas ...
-	sed -i '1 s/./\L&/g' "$(sandbox)/{{orig_filename}}.csv"
+	xlsx2csv {{{method_opts}}} "$(sandbox)/{{orig_filename}}{{orig_ext}}" "$(sandbox)/{{orig_filename}}.csv"
 {{/orig_ext}}
 {{^orig_ext}}
 {{#csv_encoding}}
