@@ -10,6 +10,10 @@ Serão apresentados conceitos, especificações e um guia rápido para sanar dú
    - [**Jurisdiction**](jurisdiction.md)
 * Manuais, guias ou tutoriais:
    - [**Manual do Git-update**](man-gitUpdate.md)
+* Relatórios:
+   - [Dados primários preservados](report-primaryData.md)
+   - [Listagem dos downloads por Jurisdição](list-primaryData-byJurisdic.md)
+   - [Listagem dos downloads por Hash](list-primaryData-byHash.md)
 
 ## Elementos do repositório preserv
 
