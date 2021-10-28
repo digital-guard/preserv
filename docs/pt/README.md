@@ -10,6 +10,7 @@ Serão apresentados conceitos, especificações e um guia rápido para sanar dú
    - [**Jurisdiction**](jurisdiction.md)
 * Manuais, guias ou tutoriais:
    - [**Manual do Git-update**](man-gitUpdate.md)
+   - [**Guia do make_conf**](man-makeConf.md)
 * Relatórios:
    - [Dados primários preservados](report-primaryData.md)
    - [Listagem dos downloads por Jurisdição](list-primaryData-byJurisdic.md)
