@@ -71,7 +71,7 @@ wget_files:
 	@read _ENTER_OK_
 	mkdir -p $(orig)
 {{#files}}
-	@cd $(orig); wget http://preserv.addressforall.org/download/{{file}}
+	@cd $(orig); wget http://preserv.addressforall.org/download/{{file}} && chmod o+rw {{file}}
 {{/files}}
 	@echo "Please, if orig not default, run 'make _target_ orig=$(orig)'"
 
