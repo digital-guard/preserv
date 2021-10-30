@@ -281,6 +281,8 @@ wget_files:
 {{/files}}
 	@echo "Please, if orig not default, run 'make _target_ orig=$(orig)'"
 
+delete_file:
+	psql $(pg_uri_db) -c "DELETE FROM ingest.layer_file WHERE pck_fileref_sha256 LIKE '$(hash)%'"
 
 ## ## ## ##
 
