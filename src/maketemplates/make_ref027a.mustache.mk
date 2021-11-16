@@ -37,8 +37,8 @@ part{{p}}_path  =$(orig)/$(part{{p}}_file)
 all:
 	@echo "=== Resumo deste makefile de recuperação de dados preservados ==="
 	@printf "Targets para a geração de layers:\n\tall_layers {{#layers_keys}}{{.}} {{/layers_keys}}\n"
-	@printf "Targets para a join de layers:\n\tall_joins {{#joins_keys}}{{.}} {{/joins_keys}}\n"
-	@printf "Demais targets implementados:\n\tclean wget_files me\n"
+	@printf "Targets para join de layers:\n\tall_joins {{#joins_keys}}{{.}} {{/joins_keys}}\n"
+	@printf "Demais targets implementados:\n\tmakedirs clean clean_sandbox wget_files me readme delete_file\n"
 	@echo "A geração de layers requer os seguintes comandos e versões:\n\t$(need_commands)"
 
 all_layers: {{#layers_keys}}{{.}} {{/layers_keys}}
@@ -282,7 +282,11 @@ wget_files:
 	@echo "Please, if orig not default, run 'make _target_ orig=$(orig)'"
 
 delete_file:
-	psql $(pg_uri_db) -c "DELETE FROM ingest.layer_file WHERE pck_fileref_sha256 LIKE '$(hash)%'"
+	@echo "Uso: make delete_file hash=<inicio do hash do arquivo>"
+	@echo "hash: $(hash)"
+	@echo "[ENTER para continuar ou ^C para sair]"
+	@read _tudo_bem_
+	@[ "${hash}" ] && psql $(pg_uri_db) -c "DELETE FROM ingest.layer_file WHERE pck_fileref_sha256 LIKE '$(hash)%'" || ( echo "hash não informado.")
 
 ## ## ## ##
 
