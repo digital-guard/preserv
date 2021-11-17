@@ -2,7 +2,7 @@
 
 Listagem dos arquivos referenciados em arquivos de configuração `make_conf.yaml`, ordenada por *hash*. Ver [listagem por jurisdição aqui](list-primaryData-byJurisdic.md).
 
-A cada item são oferecidos os links de *download* (pelo *hash*) e de navegação pelos metadados. Por exemplo os pontos (da versão 1 de 2021) de Belo Horizonte estão no  arquivo de *hash* `1ce29a5` do pacote *pk012*. A Digital-guard garante por 20 anos a preservação de uma cópia deste arquivo.
+A cada item são oferecidos os links de *download* (pelo *hash*) e de navegação pelos metadados. Por exemplo os pontos (da versão 1 de 2021) de Belo Horizonte estão no  arquivo de *hash* `1ce29a5` do pacote *pk012*. A Digital-guard garante por 20 anos a preservação de uma cópia física deste arquivo e, dentro do possível, garante por esse período o *download* em `DL.digital-guard.org`.
 
 ![](../assets/a4a-linkEternoDL-hashList.png)
 
