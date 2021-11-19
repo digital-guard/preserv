@@ -1,5 +1,5 @@
 -- INGEST STEP1
--- Inicialização do Módulo Ingest dos prjetos AddressForAll.
+-- Inicialização do Módulo Ingest dos prjetos Digital-Guard.
 --
 
 CREATE extension IF NOT EXISTS postgis;
@@ -784,14 +784,43 @@ $f$ LANGUAGE SQL;
 -- select file_id, ingest.layer_file_distribution_prefixes(file_id)as prefixes FROM ingest.layer_file
 
 
-/*
-# falta
-# função ingest.any_load deveria converter lista de cols conforme padrões geoaddress_none
-*/
+------------------------
+------------------------
 
-
--- INSERT GEOMETRIA QQ com referencia a arquivo e layer
--- FILE não tem ftype!
--- ingest.layer_file tem muitos ingest.file_layer(ftype!)  que tem suas geometrias em ingest.layer_geom
-
--- SELECT ingest.geom_asis_filemeta('/tmp/bigbigfile.zip');
+CREATE or replace FUNCTION ingest.feature_asis_export(p_file_id int)
+RETURNS TABLE (gid int, ghs9 text, info jsonb, geom geometry(Point,4326)) AS $f$
+ SELECT gid, ghs,
+       CASE
+        WHEN n=1 THEN
+	  jsonb_build_object('address',addresses[1])
+	WHEN n>1 AND cardinality(via_names)=1 THEN
+	  jsonb_build_object('via_name',via_names[1], 'house_numbers',to_jsonb(house_numbers))
+	ELSE
+	  jsonb_build_object('addresses',addresses)
+      END as info,
+      CASE n WHEN 1 THEN geoms[1] ELSE ST_Centroid(ST_Collect(geoms)) END AS geom
+ FROM (
+  SELECT ghs,
+   MIN(row_id)::int as gid,
+   COUNT(*) n,
+   array_agg(geom) as geoms,
+   array_agg(DISTINCT via_name||', '||house_number) addresses,
+   array_agg(DISTINCT via_name) via_names,
+   array_agg(DISTINCT house_number) house_numbers,
+   max(DISTINCT is_compl::text)::boolean house_numbers_has_complement
+  FROM (
+     SELECT file_id, geom,
+       ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', to_integer(properties->>'house_number')) as row_id,
+       COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) as is_compl,
+       properties->>'via_name' as via_name,
+       properties->>'house_number' as house_number,
+       st_geohash(geom,9) ghs
+    FROM ingest.feature_asis
+    WHERE file_id=p_file_id
+  ) t1
+  GROUP BY 1
+ ) t2
+ WHERE cardinality(via_names)<3
+ ORDER BY gid
+$f$ LANGUAGE SQL IMMUTABLE;
+-- SELECT * FROM ingest.feature_asis_export(1) t LIMIT 1000;
