@@ -11,6 +11,13 @@ CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;
 CREATE schema    IF NOT EXISTS ingest;
 CREATE schema    IF NOT EXISTS tmp_orig;
 
+CREATE EXTENSION postgres_fdw;
+CREATE SERVER foreign_server
+        FOREIGN DATA WRAPPER postgres_fdw
+        OPTIONS (dbname 'dl03t_main')
+;
+CREATE USER MAPPING FOR PUBLIC SERVER foreign_server;
+
 -- -- --
 -- SQL and bash generators (optim-ingest submodule)
 
@@ -824,3 +831,102 @@ RETURNS TABLE (gid int, ghs9 text, info jsonb, geom geometry(Point,4326)) AS $f$
  ORDER BY gid
 $f$ LANGUAGE SQL IMMUTABLE;
 -- SELECT * FROM ingest.feature_asis_export(1) t LIMIT 1000;
+
+-- ----------------------------
+
+
+DROP FOREIGN TABLE IF EXISTS foreign_osm_city;
+CREATE FOREIGN TABLE foreign_osm_city (
+ osm_id          bigint,
+ jurisd_base_id  integer,
+ jurisd_local_id integer,
+ name            text,
+ parent_abbrev   text,
+ abbrev          text,
+ wikidata_id     bigint,
+ lexlabel        text,
+ isolabel_ext    text,
+ ddd             integer,
+ info            jsonb,
+ jtags           jsonb,
+ geom            geometry(Geometry,4326)
+) SERVER foreign_server
+  OPTIONS (schema_name 'public', table_name 'osm_city')
+;
+DROP TABLE IF EXISTS ingest.publicating_geojsons_p3exprefix; 
+CREATE TABLE ingest.publicating_geojsons_p3exprefix(
+ ghs9   text,
+ prefix text,
+ gid    integer,
+ info   jsonb,
+ geom   geometry
+);
+DROP TABLE IF EXISTS ingest.publicating_geojsons_p2distrib; 
+CREATE TABLE ingest.publicating_geojsons_p2distrib(
+ hcode    text,
+ n_items  integer,
+ geom     geometry
+);
+
+CREATE or replace FUNCTION ingest.publicating_geojsons(
+	p_file_id       int,  -- e.g. 1, see ingest.layer_file
+	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
+) RETURNS text  AS $f$ 
+
+  DELETE FROM ingest.publicating_geojsons_p3exprefix;
+  INSERT INTO ingest.publicating_geojsons_p3exprefix
+     SELECT ghs9, NULL::text, gid, info, geom
+     FROM ingest.feature_asis_export(p_file_id) t
+  ;
+  -- COMMIT1 INSERT
+  UPDATE ingest.layer_file
+  SET feature_distrib = geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7)
+  WHERE file_id= p_file_id
+  ;
+  DELETE FROM ingest.publicating_geojsons_p2distrib;
+  INSERT INTO ingest.publicating_geojsons_p2distrib 
+    SELECT t.hcode, t.n_items,  -- length(t.hcode) AS len,
+      ST_Intersection(
+        ST_SetSRID( ST_geomFromGeohash(replace(t.hcode, '*', '')) ,  4326),
+        (SELECT geom FROM foreign_osm_city WHERE isolabel_ext=p_isolabel_ext)
+      ) AS geom
+    FROM hcode_distribution_reduce_recursive_raw(
+    	(SELECT feature_distrib FROM ingest.layer_file WHERE file_id= p_file_id),
+    	1,
+    	(SELECT length(st_geohash(geom)) FROM foreign_osm_city WHERE isolabel_ext=p_isolabel_ext),
+    	750, 8000, 3
+    ) t
+  ;
+  SELECT pg_catalog.pg_file_unlink('/tmp/pg_io/pts_*.geojson');
+
+  UPDATE ingest.publicating_geojsons_p3exprefix
+  SET prefix=t4.prefix
+  FROM (
+    WITH t1 (prefix_regex) as (
+     SELECT hcode_prefixset_parse( array_agg(hcode) )
+     FROM ingest.publicating_geojsons_p2distrib
+    )
+      SELECT hcode_prefixset_element(t.ghs9,'^(?:'|| t1.prefix_regex ||')') AS prefix, t.gid
+      FROM ingest.publicating_geojsons_p3exprefix t, t1
+  ) t4
+  WHERE t4.gid = publicating_geojsons_p3exprefix.gid
+  ;
+  DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
+  -- COMMIT2
+  
+  WITH prefs AS ( SELECT DISTINCT prefix FROM ingest.publicating_geojsons_p3exprefix ORDER BY 1 )
+   SELECT write_geojsonb_Features(
+    format('SELECT * FROM ingest.publicating_geojsons_p3exprefix WHERE prefix=%L ORDER BY gid',prefix),
+    format('/tmp/pg_io/pts_%s.geojson',prefix),
+    't1.geom',
+    'info::jsonb',
+    NULL,  -- p_cols_orderby
+    NULL, -- col_id
+    2 
+  ) FROM prefs;
+  DELETE FROM ingest.publicating_geojsons_p3exprefix;  -- limpa
+  SELECT 'Arquivos de file_id='||p_file_id::text|| ' publicados em /tmp/pg_io/pts_*.geojson';
+
+$f$ language SQL VOLATILE;
+-- e.g. select ingest.publicating_geojsons(1, 'BR-MG-BeloHorizonte');
+
