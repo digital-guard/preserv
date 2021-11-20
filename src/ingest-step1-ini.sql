@@ -794,18 +794,17 @@ $f$ LANGUAGE SQL;
 ------------------------
 ------------------------
 
+
 CREATE or replace FUNCTION ingest.feature_asis_export(p_file_id int)
-RETURNS TABLE (gid int, ghs9 text, info jsonb, geom geometry(Point,4326)) AS $f$
- SELECT gid, ghs,
-       CASE
-        WHEN n=1 THEN
-	  jsonb_build_object('address',addresses[1])
-	WHEN n>1 AND cardinality(via_names)=1 THEN
-	  jsonb_build_object('via_name',via_names[1], 'house_numbers',to_jsonb(house_numbers))
-	ELSE
-	  jsonb_build_object('addresses',addresses)
-      END as info,
-      CASE n WHEN 1 THEN geoms[1] ELSE ST_Centroid(ST_Collect(geoms)) END AS geom
+RETURNS TABLE (ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
+ SELECT ghs, gid,
+    CASE
+      WHEN n=1 THEN jsonb_build_object('address',addresses[1])
+      WHEN n>1 AND cardinality(via_names)=1 THEN
+        jsonb_build_object('via_name',via_names[1], 'house_numbers',to_jsonb(house_numbers))
+      ELSE jsonb_build_object('addresses',addresses)
+    END as info,
+    CASE n WHEN 1 THEN geoms[1] ELSE ST_Centroid(ST_Collect(geoms)) END AS geom
  FROM (
   SELECT ghs,
    MIN(row_id)::int as gid,
