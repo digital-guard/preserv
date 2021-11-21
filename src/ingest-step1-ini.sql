@@ -267,7 +267,7 @@ CREATE TABLE ingest.feature_asis (
 -- -- -- --
 --  VIEWS:
 
--- DROP VIEW IF EXISTS ingest.vw01info_feature_type;
+DROP VIEW IF EXISTS ingest.vw01info_feature_type CASCADE;
 CREATE VIEW ingest.vw01info_feature_type AS
   SELECT ftid, ftname, geomtype, need_join, description,
        COALESCE(f.info,'{}'::jsonb) || (
@@ -286,9 +286,9 @@ COMMENT ON VIEW ingest.vw01info_feature_type
   IS 'Adds class_ftname, class_description and class_info to ingest.feature_type.info.'
 ;
 
-DROP VIEW IF EXISTS ingest.vw02simple_feature_asis;
--- validar fazendo count(*) comparativo entre a view e a tabela.
+DROP VIEW IF EXISTS ingest.vw02simple_feature_asis CASCADE;
 CREATE VIEW ingest.vw02simple_feature_asis AS
+ -- Pending: validar fazendo count(*) comparativo entre a view e a tabela.
  WITH dump AS (
     SELECT *, (ST_DUMP(geom)).geom AS geometry
     FROM ingest.feature_asis
@@ -308,10 +308,45 @@ CREATE VIEW ingest.vw02simple_feature_asis AS
 COMMENT ON VIEW ingest.vw02simple_feature_asis
   IS 'Normalize (and simplify) geometries of ingest.feature_asis, when it is a redundant multi-geometry.'
 ;
+-- Homologando o uso do feature_id como gid, n=n2:
+--  SELECT count(*) n, count(distinct feature_id::text||','||file_id::text) n2 FROM ingest.feature_asis;
 
--- uso do feature_id como gid:
--- select count(*) n, count(distinct feature_id::text||','||file_id::text) from ingest.feature_asis
+DROP VIEW IF EXISTS ingest.vw03full_layer_file CASCADE;
+CREATE VIEW ingest.vw03full_layer_file AS
+  SELECT lf.*, ft.ftname, ft.geomtype, ft.need_join, ft.description, ft.info AS ft_info
+  FROM ingest.layer_file lf INNER JOIN ingest.vw01info_feature_type ft
+    ON lf.ftid=ft.ftid
+;
 
+DROP VIEW IF EXISTS ingest.vw04simple_layer_file CASCADE;
+CREATE VIEW ingest.vw04simple_layer_file AS
+  SELECT file_id, geomtype, proc_step, ftid, ftname, file_type,
+         round((file_meta->'size')::int/2014^2) file_mb,
+         substr(hash_md5,1,7) as md5_prefix
+  FROM ingest.vw03full_layer_file
+;
+
+DROP VIEW IF EXISTS ingest.vw05test_feature_asis CASCADE;
+CREATE VIEW ingest.vw05test_feature_asis AS
+  SELECT v.pck_id, v.ft_info->>'class_ftname' as class_ftname, t.file_id,
+         v.file_meta->>'file' as file,
+         t.n, t.n_feature_ids,
+         CASE WHEN t.n=t.n_feature_ids  THEN 'ok' ELSE '!BUG!' END AS is_ok_msg,
+          t.n=t.n_feature_ids AS is_ok
+  FROM (
+    SELECT file_id, COUNT(*) n, COUNT(DISTINCT feature_id) n_feature_ids
+    FROM ingest.feature_asis
+    GROUP BY 1
+  ) t INNER JOIN ingest.vw03full_layer_file v
+    ON v.file_id = t.file_id
+  ORDER BY 1,2,3
+;
+/*
+DROP VIEW IF EXISTS ingest.vw06simple_layer CASCADE;
+CREATE VIEW ingest.vw06simple_layer AS
+  SELECT t.*, (SELECT COUNT(*) FROM ingest.feature_asis WHERE file_id=t.file_id) AS n_items
+  FROM ingest.vw04simple_layer_file t
+; */
 
 ----------------
 ----------------
@@ -732,28 +767,6 @@ COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],text,bo
 ;
 
 -----
-CREATE or replace VIEW ingest.vw03full_layer_file AS
-  SELECT lf.*, ft.ftname, ft.geomtype, ft.need_join, ft.description, ft.info AS ft_info
-  FROM ingest.layer_file lf INNER JOIN ingest.vw01info_feature_type ft
-    ON lf.ftid=ft.ftid
-;
-
--- DROP VIEW ingest.vw04test_feature_asis ;
-CREATE or replace VIEW ingest.vw04test_feature_asis AS
-  SELECT v.pck_id, v.ft_info->>'class_ftname' as class_ftname, t.file_id,
-         v.file_meta->>'file' as file,
-         t.n, t.n_feature_ids,
-         CASE WHEN t.n=t.n_feature_ids  THEN 'ok' ELSE '!BUG!' END AS is_ok_msg,
-          t.n=t.n_feature_ids AS is_ok
-  FROM (
-    SELECT file_id, COUNT(*) n, COUNT(DISTINCT feature_id) n_feature_ids
-    FROM ingest.feature_asis
-    GROUP BY 1
-  ) t INNER JOIN ingest.vw03full_layer_file v
-    ON v.file_id = t.file_id
-  ORDER BY 1,2,3
-;
-
 CREATE or replace FUNCTION ingest.qgis_vwadmin_feature_asis(
   p_mode text -- 'create' or 'drop'
 ) RETURNS text AS $f$
@@ -773,7 +786,7 @@ CREATE or replace FUNCTION ingest.qgis_vwadmin_feature_asis(
     INTO q_query
     FROM ingest.layer_file;
     EXECUTE q_query;
-    RETURN E'\n(check before NO BUGs with SELECT * FROM ingest.vw04test_feature_asis)\n---\nok! all '||p_mode||E'\nCheck on psql by \\dv vw_asis_*';
+    RETURN E'\n(check before NO BUGs with SELECT * FROM ingest.vw05test_feature_asis)\n---\nok! all '||p_mode||E'\nCheck on psql by \\dv vw_asis_*';
   END;
 $f$ LANGUAGE PLpgSQL;
 -- select ingest.qgis_vwadmin_feature_asis('create');
@@ -852,7 +865,7 @@ CREATE FOREIGN TABLE foreign_osm_city (
 ) SERVER foreign_server
   OPTIONS (schema_name 'public', table_name 'osm_city')
 ;
-DROP TABLE IF EXISTS ingest.publicating_geojsons_p3exprefix; 
+DROP TABLE IF EXISTS ingest.publicating_geojsons_p3exprefix;
 CREATE TABLE ingest.publicating_geojsons_p3exprefix(
  ghs9   text,
  prefix text,
@@ -860,7 +873,7 @@ CREATE TABLE ingest.publicating_geojsons_p3exprefix(
  info   jsonb,
  geom   geometry
 );
-DROP TABLE IF EXISTS ingest.publicating_geojsons_p2distrib; 
+DROP TABLE IF EXISTS ingest.publicating_geojsons_p2distrib;
 CREATE TABLE ingest.publicating_geojsons_p2distrib(
  hcode    text,
  n_items  integer,
@@ -870,7 +883,7 @@ CREATE TABLE ingest.publicating_geojsons_p2distrib(
 CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_file_id       int,  -- e.g. 1, see ingest.layer_file
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
-) RETURNS text  AS $f$ 
+) RETURNS text  AS $f$
 
   DELETE FROM ingest.publicating_geojsons_p3exprefix;
   INSERT INTO ingest.publicating_geojsons_p3exprefix
@@ -883,7 +896,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
   WHERE file_id= p_file_id
   ;
   DELETE FROM ingest.publicating_geojsons_p2distrib;
-  INSERT INTO ingest.publicating_geojsons_p2distrib 
+  INSERT INTO ingest.publicating_geojsons_p2distrib
     SELECT t.hcode, t.n_items,  -- length(t.hcode) AS len,
       ST_Intersection(
         ST_SetSRID( ST_geomFromGeohash(replace(t.hcode, '*', '')) ,  4326),
@@ -912,7 +925,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
   ;
   DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
   -- COMMIT2
-  
+
   WITH prefs AS ( SELECT DISTINCT prefix FROM ingest.publicating_geojsons_p3exprefix ORDER BY 1 )
    SELECT write_geojsonb_Features(
     format('SELECT * FROM ingest.publicating_geojsons_p3exprefix WHERE prefix=%L ORDER BY gid',prefix),
@@ -921,11 +934,10 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
     'info::jsonb',
     NULL,  -- p_cols_orderby
     NULL, -- col_id
-    2 
+    2
   ) FROM prefs;
   DELETE FROM ingest.publicating_geojsons_p3exprefix;  -- limpa
   SELECT 'Arquivos de file_id='||p_file_id::text|| ' publicados em /tmp/pg_io/pts_*.geojson';
 
 $f$ language SQL VOLATILE;
 -- e.g. select ingest.publicating_geojsons(1, 'BR-MG-BeloHorizonte');
-
