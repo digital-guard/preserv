@@ -26,6 +26,8 @@ Cada um desses arquivos é depois expandido em [*layers* na base de dados](ftype
 * [BR MG/BeloHorizonte/_pk012](https://github.com/digital-guard/preserv-BR/blob/main/data/MG/BeloHorizonte/_pk012/make_conf.yaml)
 	- [**Pontos de Endereço** (`1ce29a5`)](http://dl.digital-guard.org/1ce29a555565be5f540ab0c6f93ac55797c368293e0a6bfb479a645a5a23f542.zip)
 	- [**Vias** (`7d7d066`)](http://dl.digital-guard.org/7d7d0661683a8eebd95d544c47dd0e254fc75e3d916fe9900a3bd9fb7b2cc378.zip)
+	- LICENCÇAS: Thierri e Peter montando exemplo
+	- DADOS FILTRADOS: [preservCut-BR2021-geo/MG/BeloHorizonte/_pk012](http://git.digital-guard.org/preservCut-BR2021-geo/tree/main/data/MG/BeloHorizonte/_pk012)  (exemplo com amostra [`geoaddress/pts_7h2wju.geojson`](https://github.com/digital-guard/preservCut-BR2021-geo/blob/main/data/MG/BeloHorizonte/_pk012/geoaddress/pts_7h2wju.geojson))
 * [BR MG/Contagem/_pk033](https://github.com/digital-guard/preserv-BR/blob/main/data/MG/Contagem/_pk033/make_conf.yaml)
 	- [**GDB Geodatabase** (`058a602`)](http://dl.digital-guard.org/058a6022054e8b3f9ba81f25f7511b58cbd4ad616b0510033b917f3f7f9f23d5.rar)
 * [BR MG/GovernadorValadares/_pk043](https://github.com/digital-guard/preserv-BR/blob/main/data/MG/GovernadorValadares/_pk043/make_conf.yaml)
