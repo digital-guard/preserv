@@ -3,12 +3,12 @@
 
 A tabela `ingest.feature_asis` armazena todos os dados ingeridos, de "todos" os tipos (úteis para os projetos AddressForAll e OsmCodes). A tabela `ingest.feature_type` descreve cada um desses tipos. Resumidamente são:
 
-* **geoaddress**: Geo-endereço. Representação geográfica do endereço, como ponto.
-* **via**: Eixo de via. Logradouro representado por linha central, com nome oficial e codlog opcional.
-* **genericvia**: Via complementar generalizada. Qualquer linha divisora de lotes e quadras: rios, ferrovias, etc. Permite gerar a quadra generalizada.
-* **building**: Polígono de edificação.
-* **parcel**: Polígono de lote.
-* **nsvia**: Espaço-de-nomes para vias, um nome delimitado por polígono. Tipicamente nome de bairro ou de loteamento. Complementa o nome de via em nomes duplicados (repetidos dentro do mesmo município mas não dentro do mesmo nsvia).
+* <img src="../assets/layerIcon-geoaddress.png" align="middle" width="40"/> **geoaddress**: Geo-endereço. Representação geográfica do endereço, como ponto.
+* <img src="../assets/layerIcon-via.png" align="middle" width="40"/> **via**: Eixo de via. Logradouro representado por linha central, com nome oficial e codlog opcional.
+* <img src="../assets/layerIcon-genericVia.png" align="middle" width="40"/> **genericvia**: Via complementar generalizada. Qualquer linha divisora de lotes e quadras: rios, ferrovias, etc. Permite gerar a quadra generalizada.
+* <img src="../assets/layerIcon-building.png" align="middle" width="40"/> **building**: Polígono de edificação.
+* <img src="../assets/layerIcon-parcel.png" align="middle" width="40"/> **parcel**: Polígono de lote.
+* <img src="../assets/layerIcon-namedZone.png" align="middle" width="40"/> **nsvia**: Espaço-de-nomes para vias, um nome delimitado por polígono. Tipicamente nome de bairro ou de loteamento. Complementa o nome de via em nomes duplicados (repetidos dentro do mesmo município mas não dentro do mesmo nsvia).
 * **block**: Quadras ou divisões poligonais similares.
 
 <img align="right" src="../assets/asIs_tabs_geom2full.png"/>

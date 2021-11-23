@@ -1,6 +1,19 @@
 
+Os arquivos `make_conf.yaml` têm como finalidade principal a conversão automática para [*makefile*](https://en.wikipedia.org/wiki/Make_(software)#Makefile), e, secundariamente, conversões para geração de "conteúdo esqueleto" do README e de e-mails do _workflow_ de aprovação. 
 
-Os arquivos `make_conf.yaml` têm como finalidade principal a conversão automática para [*makefile*](https://en.wikipedia.org/wiki/Make_(software)#Makefile), e, secundariamente, conversões para geração de "conteúdo esqueleto" do README e de e-mails do _workflow_ de aprovação. Os _makefiles_ rodam softwares padronizados (ex. [shp2pgsql](https://postgis.net/docs/using_postgis_dbmanagement.html#shp2pgsql_usage)), com ampla comunidade de usuários de geoprocessamento e Unix,  consolidados por mais de 10 anos de domínio público, **garantindo [reprodutibilidade](https://pt.wikipedia.org/wiki/Reprodutibilidade)  da ingestão em banco de dados PostgreSQL+PostGIS**.
+## Resumo da ferramenta
+
+Os dados recebidos de diferentes doadores apresentam diferentes formatos e estruturas. Na Digital-Guard, por outro lado, criamos uma estrutura padrão para que os dados "conversem" e sejam comparáveis entre si... A compatibilidade dos dados é um aspecto fundamental, mas não podemos devolver os dados para os doadores dizendo "coloque no formato padrão". É uma condição de trabalho que a Digital-Guard se propôs a enfrentar. Enfrentamos o desafio através da implementação de "motores de conversão", que são softwares que convertem dados de outros formatos para o formato e estrutura padronizados.
+
+Uma outra condição é a preservação: os dados originais são guardados por 20 anos, e qualquer um que desejar, hoje ou no futuro, recuperar os dados e p
+
+Os _makefiles_ rodam softwares
+
+
+padronizados (ex. [shp2pgsql](https://postgis.net/docs/using_postgis_dbmanagement.html#shp2pgsql_usage)), com ampla comunidade de usuários de geoprocessamento e Unix,  consolidados por mais de 10 anos de domínio público, **garantindo [reprodutibilidade](https://pt.wikipedia.org/wiki/Reprodutibilidade)  da ingestão em banco de dados PostgreSQL+PostGIS**.
+
+
+Os _makefiles_ rodam softwares padronizados (ex. [shp2pgsql](https://postgis.net/docs/using_postgis_dbmanagement.html#shp2pgsql_usage)), com ampla comunidade de usuários de geoprocessamento e Unix,  consolidados por mais de 10 anos de domínio público, **garantindo [reprodutibilidade](https://pt.wikipedia.org/wiki/Reprodutibilidade)  da ingestão em banco de dados PostgreSQL+PostGIS**.
 
 ## Formato
 
