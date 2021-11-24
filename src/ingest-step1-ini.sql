@@ -1005,3 +1005,185 @@ CREATE or replace FUNCTION lib.name2lex(
     '.'
   ),'.')
 $f$ LANGUAGE SQL IMMUTABLE;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CREATE extension IF NOT EXISTS plpython3u;
+-- SELECT * FROM pg_language;
+
+CREATE OR REPLACE FUNCTION ingest.py3_return_version() RETURNS text AS $$
+    import sys
+
+    return sys.version
+$$ LANGUAGE plpython3u;
+-- SELECT * FROM ingest.py3_return_version();
+
+CREATE OR REPLACE FUNCTION ingest.lixo_chevron_test() RETURNS text AS $$
+  import chevron
+
+  return chevron.render('Hello, {{ mustache }}!', {'mustache': 'World'})
+$$ LANGUAGE plpython3u;
+-- SELECT ingest.lixo_chevron_test();
+
+CREATE OR REPLACE FUNCTION ingest.mustache_render(tpl text,i jsonb, partials_path text) RETURNS text AS $$
+  import chevron
+  import json
+  
+  j = json.loads(i)
+
+  return chevron.render(tpl,j,partials_path)
+$$ LANGUAGE plpython3u IMMUTABLE;
+-- SELECT ingest.mustache_render('Hello, {{ mustache }}!', '{"mustache":"World"}'::jsonb, '');
+
+CREATE OR REPLACE FUNCTION ingest.yaml2jsonb(file text) RETURNS jsonb AS $$
+    import yaml
+    import json
+
+    query = "SELECT pg_read_file('{}')".format(file)
+
+    result_query = plpy.execute(query)
+
+    dict = yaml.safe_load(result_query[0]['pg_read_file'])
+
+    jsonb = json.dumps(dict)
+
+    return jsonb
+$$ LANGUAGE plpython3u IMMUTABLE;
+-- SELECT ingest.yaml2jsonb('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml');
+
+CREATE OR REPLACE FUNCTION ingest.make_conf_yaml2jsonb(file text) RETURNS jsonb AS $$
+    import yaml
+    import json
+
+    query = "SELECT pg_read_file('{}')".format(file)
+
+    result_query = plpy.execute(query)
+
+    dict = yaml.safe_load(result_query[0]['pg_read_file'])
+
+    if 'layers' in dict:
+        dict['layers_keys'] = [*dict['layers'].keys()]
+
+        dict['joins'] = {}
+
+        # flags que indicam tipo de method
+        for key in dict['layers'].keys():
+            dict['layers'][key]['isCsv'] = False
+            dict['layers'][key]['isOgr'] = False
+            dict['layers'][key]['isOgrWithShp'] = False
+            dict['layers'][key]['isShp'] = False
+
+            if dict['layers'][key]['method'] == 'shp2sql':
+                dict['layers'][key]['isShp'] = True
+            elif dict['layers'][key]['method'] == 'csv2sql':
+                dict['layers'][key]['isCsv'] = True
+            elif dict['layers'][key]['method'] == 'ogr2ogr':
+                dict['layers'][key]['isOgr'] = True
+            elif dict['layers'][key]['method'] == 'ogrWshp':
+                dict['layers'][key]['isOgrWithShp'] = True
+
+            if key in dict['layers'] and 'cad' + key in dict['layers']:
+                if dict['layers'][key]['subtype'] == 'ext' and dict['layers']['cad' + key]['subtype'] == 'cmpl':
+                    if dict['layers'][key]['join_column'] and dict['layers']['cad' + key]['join_column']:
+                        dict['joins'][key] = {}
+                        dict['joins'][key]['layer'] = key + '_ext'
+                        dict['joins'][key]['cadLayer'] = 'cad' + key + '_cmpl'
+                        dict['joins'][key]['layerColumn'] = dict['layers'][key]['join_column']
+                        dict['joins'][key]['cadLayerColumn'] = dict['layers']['cad' + key]['join_column']
+                        dict['joins'][key]['layerFile'] = [x['file'] for x in dict['files'] if x['p'] == dict['layers'][key]['file']][0]
+                        dict['joins'][key]['cadLayerFile'] = [x['file'] for x in dict['files'] if x['p'] == dict['layers']['cad' + key]['file']][0]
+
+
+            if key == 'geoaddress' and 'address' in dict['layers']:
+                if dict['layers'][key]['subtype'] == 'ext' and dict['layers']['address']['subtype'] == 'cmpl':
+                    if dict['layers'][key]['join_column'] and dict['layers']['address']['join_column']:
+                        dict['joins'][key] = {}
+                        dict['joins'][key]['layer'] = key + '_ext'
+                        dict['joins'][key]['cadLayer'] = 'address' + '_cmpl'
+                        dict['joins'][key]['layerColumn'] = dict['layers'][key]['join_column']
+                        dict['joins'][key]['cadLayerColumn'] = dict['layers']['address']['join_column']
+                        dict['joins'][key]['layerFile'] = [x['file'] for x in dict['files'] if x['p'] == dict['layers'][key]['file']][0]
+                        dict['joins'][key]['cadLayerFile'] = [x['file'] for x in dict['files'] if x['p'] == dict['layers']['address']['file']][0]
+
+        dict['joins_keys'] = [*dict['joins'].keys()]
+
+    jsonb = json.dumps(dict)
+
+    return jsonb
+$$ LANGUAGE plpython3u IMMUTABLE;
+-- SELECT ingest.make_conf_yaml2jsonb('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml');
+
+CREATE OR REPLACE FUNCTION ingest.generate_makefile(
+    baseSrc text,
+    mkme_srcTpl text,
+    mkme_srcTplLast text,
+    mkme_yamlFirst text,
+    mkme_yaml text
+) RETURNS text AS $f$
+    DECLARE
+        q_query text;
+    BEGIN
+
+    WITH tpl AS (
+    SELECT pg_read_file(mkme_srcTpl) || pg_read_file(mkme_srcTplLast)
+    ),
+    conf_yaml AS (
+    SELECT yaml2jsonb(mkme_yamlFirst) || make_conf_yaml2jsonb(mkme_yaml)
+    )
+    
+    SELECT mustache_render((SELECT * FROM tpl), (SELECT * FROM conf_yaml), concat(baseSrc,'preserv/src/maketemplates/')) INTO q_query;
+ 
+    RETURN q_query;
+    END;
+$f$ LANGUAGE PLpgSQL;
+-- SELECT ingest.generate_makefile('/opt/gits/_dg/','/opt/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','/opt/gits/_dg/preserv-BR/src/maketemplates/commomLast.mustache.mk','/opt/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml');
+
+-- psql postgres://postgres@localhost/ingest1 -t -c "SELECT ingest.generate_makefile('/opt/gits/_dg/','/opt/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','/opt/gits/_dg/preserv-BR/src/maketemplates/commomLast.mustache.mk','/opt/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml')";
+
+CREATE OR REPLACE FUNCTION ingest.generate_readme(
+    baseSrc text,
+    readme_srcTpl text,
+    mkme_yaml text
+) RETURNS text AS $f$
+    DECLARE
+        q_query text;
+    BEGIN
+
+    WITH tpl AS (
+    SELECT pg_read_file(readme_srcTpl)
+    ),
+    conf_yaml AS (
+    SELECT make_conf_yaml2jsonb(mkme_yaml)
+    )
+    
+    SELECT mustache_render((SELECT * FROM tpl), (SELECT * FROM conf_yaml), concat(baseSrc,'preserv/src/maketemplates/')) INTO q_query;
+ 
+    RETURN q_query;
+    END;
+$f$ LANGUAGE PLpgSQL;
+-- SELECT ingest.generate_readme('/opt/gits/_dg/','/opt/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml');
+
+-- psql postgres://postgres@localhost/ingest1 -t -c "SELECT ingest.generate_readme('/opt/gits/_dg/','/opt/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml')";
