@@ -1038,8 +1038,8 @@ BEGIN
                       ,'cadLayer',        'cad' || key || '_cmpl'
                       ,'layerColumn',     dict->'layers'->key->'join_column'
                       ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_column'
-                      ,'layerFile',       jsonb_path_query_array(  dict, '$.files[*] ? (@.p == $.layers.'|| key ||'.file)'  )->0
-                      ,'cadLayerFile',    jsonb_path_query_array(  dict, '$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)'  )->0
+                      ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0
+                      ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)')::jsonpath  )->0
                       -- check by dict @? ('$.files[*].p ? (@ == $.layers.'|| key ||'.file)')
                    ));
                 END IF;
@@ -1055,8 +1055,8 @@ BEGIN
                       ,'cadLayer',        'address_cmpl'
                       ,'layerColumn',     dict->'layers'->key->'join_column'
                       ,'cadLayerColumn',  dict->'layers'->'address'->'join_column'
-                      ,'layerFile',       jsonb_path_query_array(  dict, '$.files[*] ? (@.p == $.layers.'|| key ||'.file)'  )->0
-                      ,'cadLayerFile',    jsonb_path_query_array(  dict, '$.files[*] ? (@.p == $.layers.address.file)'  )->0
+                      ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0
+                      ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.address.file)')::jsonpath  )->0
                    ));
                 END IF;
 	 END LOOP;
