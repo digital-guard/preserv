@@ -1029,37 +1029,43 @@ BEGIN
 		dict := jsonb_set( dict, array['layers',key,'isShp'], IIF(method='shp2sql',bt,bf) );
 		
                 IF dict->'layers'?key AND dict->'layers'?('cad'||key) 
-                   AND dict->'layers'->key->'subtype' = 'ext'
-                   AND dict->'layers'->('cad'||key)->'subtype' = 'cmpl'
+                   AND dict->'layers'->key->>'subtype' = 'ext'
+                   AND dict->'layers'->('cad'||key)->>'subtype' = 'cmpl'
                    AND dict->'layers'->key?'join_column' AND dict->'layers'->('cad'||key)?'join_column'      
                 THEN
                    dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
                        'layer',           key || '_ext'
                       ,'cadLayer',        'cad' || key || '_cmpl'
-                      ,'layerColumn',     dict['layers'][key]['join_column']
-                      ,'cadLayerColumn',  dict['layers']['cad' + key]['join_column']
-                      ,'layerFile',       [x['file'] for x in dict['files'] if x['p'] == dict['layers'][key]['file']][0]
-                      ,'cadLayerFile',    [x['file'] for x in dict['files'] if x['p'] == dict['layers']['cad' + key]['file']][0]
-                         --  dict->'layers'->key->'file'->>0 = ANY (dict['files']['p'])
-                         --  dict['layers']['cad' + key]['file']][0] = ANY (dict['files']['p'])
+                      ,'layerColumn',     dict->'layers'->key->'join_column'
+                      ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_column'
+                      ,'layerFile',       jsonb_path_query_array(  dict, '$.files[*] ? (@.p == $.layers.'|| key ||'.file)'  )->0
+                      ,'cadLayerFile',    jsonb_path_query_array(  dict, '$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)'  )->0
+                      -- check by dict @? ('$.files[*].p ? (@ == $.layers.'|| key ||'.file)')
                    ));
                 END IF;
-                IF key='geoaddress' AND dict->'layers'?'address' AND dict->'layers'?('cad'||key) 
-                   AND dict->'layers'->key->'subtype' = 'ext'
-                   AND dict->'layers'->('cad'||key)->'subtype' = 'cmpl'
-                   AND dict->'layers'->key?'join_column' AND dict->'layers'->('cad'||key)?'join_column'      
+		
+                IF key='geoaddress' AND dict->'layers'?'address'
+                   AND dict->'layers'->key->>'subtype' = 'ext'
+                   AND dict->'layers'->'address'->>'subtype' = 'cmpl'
+	           AND dict->'layers'->key?'join_column'
+                   AND dict->'layers'->'address'?'join_column'
                 THEN
-                   .. etc
+                   dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
+                       'layer',           key || '_ext'
+                      ,'cadLayer',        'address_cmpl'
+                      ,'layerColumn',     dict->'layers'->key->'join_column'
+                      ,'cadLayerColumn',  dict->'layers'->'address'->'join_column'
+                      ,'layerFile',       jsonb_path_query_array(  dict, '$.files[*] ? (@.p == $.layers.'|| key ||'.file)'  )->0
+                      ,'cadLayerFile',    jsonb_path_query_array(  dict, '$.files[*] ? (@.p == $.layers.address.file)'  )->0
+                   ));
                 END IF;
-           -- dict['joins_keys'] = jsonb_object_keys_asarray(dict->'joins')
-	 
 	 END LOOP;
- -- ELSE DO NOTHING
+ -- CASE ELSE ...?
  END CASE;
- RETURN dict;
+ RETURN dict || jsonb_build_object( 'joins_keys', jsonb_object_keys_asarray(dict->'joins') );
 END;
 $f$ language PLpgSQL;
--- select jsonb_mustache_prepare('{"layers":{"geoaddress":{"etc":1,"method":"shp2sql"}}}'::jsonb);
+-- -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
 
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
