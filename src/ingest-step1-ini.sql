@@ -1033,6 +1033,7 @@ BEGIN
                    AND dict->'layers'->('cad'||key)->>'subtype' = 'cmpl'
                    AND dict->'layers'->key?'join_column' AND dict->'layers'->('cad'||key)?'join_column'      
                 THEN
+                   dict := jsonb_set( dict, '{joins}', '{}'::jsonb ); 
                    dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
                        'layer',           key || '_ext'
                       ,'cadLayer',        'cad' || key || '_cmpl'
@@ -1050,6 +1051,7 @@ BEGIN
 	           AND dict->'layers'->key?'join_column'
                    AND dict->'layers'->'address'?'join_column'
                 THEN
+                   dict := jsonb_set( dict, '{joins}', '{}'::jsonb );                 
                    dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
                        'layer',           key || '_ext'
                       ,'cadLayer',        'address_cmpl'
@@ -1060,12 +1062,13 @@ BEGIN
                    ));
                 END IF;
 	 END LOOP;
+	 dict := dict || jsonb_build_object( 'joins_keys', jsonb_object_keys_asarray(dict->'joins') );
  -- CASE ELSE ...?
  END CASE;
- RETURN dict || jsonb_build_object( 'joins_keys', jsonb_object_keys_asarray(dict->'joins') );
+ RETURN dict;
 END;
 $f$ language PLpgSQL;
--- -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
 
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
