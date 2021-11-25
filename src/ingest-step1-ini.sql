@@ -2,14 +2,14 @@
 -- Inicialização do Módulo Ingest dos prjetos Digital-Guard.
 --
 
-CREATE extension IF NOT EXISTS postgis;
-CREATE extension IF NOT EXISTS adminpack;
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS adminpack;
 
 CREATE EXTENSION IF NOT EXISTS file_fdw;
 CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;
 
-CREATE schema    IF NOT EXISTS ingest;
-CREATE schema    IF NOT EXISTS tmp_orig;
+CREATE SCHEMA    IF NOT EXISTS ingest;
+CREATE SCHEMA    IF NOT EXISTS tmp_orig;
 
 CREATE EXTENSION postgres_fdw;
 CREATE SERVER foreign_server
@@ -1006,74 +1006,64 @@ CREATE or replace FUNCTION lib.name2lex(
   ),'.')
 $f$ LANGUAGE SQL IMMUTABLE;
 
+-------------------------------------------------
 
+CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(
+  dict jsonb,  -- input
+  p_type text DEFAULT 'make_conf'
+) RETURNS jsonb  AS $f$
+DECLARE
+ key text;
+ method text;
+ bt jsonb := 'true'::jsonb;
+ bf jsonb := 'false'::jsonb;
+BEGIN
+ CASE p_type -- preparing types
+ WHEN 'make_conf', NULL THEN
+	 FOREACH key IN ARRAY jsonb_object_keys_asarray(dict->'layers')
+	 LOOP
+	        method := dict->'layers'->key->>'method';
+		dict := jsonb_set( dict, array['layers',key,'isCsv'], IIF(method='csv2sql',bt,bf) );
+		dict := jsonb_set( dict, array['layers',key,'isOgr'], IIF(method='ogr2ogr',bt,bf) );
+		dict := jsonb_set( dict, array['layers',key,'isOgrWithShp'], IIF(method='ogrWshp',bt,bf) );
+		dict := jsonb_set( dict, array['layers',key,'isShp'], IIF(method='shp2sql',bt,bf) );
+		
+                IF dict->'layers'?key AND dict->'layers'?('cad'||key) 
+                   AND dict->'layers'->key->'subtype' = 'ext'
+                   AND dict->'layers'->('cad'||key)->'subtype' = 'cmpl'
+                   AND dict->'layers'->key?'join_column' AND dict->'layers'->('cad'||key)?'join_column'      
+                THEN
+                   dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
+                       'layer',           key || '_ext'
+                      ,'cadLayer',        'cad' || key || '_cmpl'
+                      ,'layerColumn',     dict['layers'][key]['join_column']
+                      ,'cadLayerColumn',  dict['layers']['cad' + key]['join_column']
+                      ,'layerFile',       [x['file'] for x in dict['files'] if x['p'] == dict['layers'][key]['file']][0]
+                      ,'cadLayerFile',    [x['file'] for x in dict['files'] if x['p'] == dict['layers']['cad' + key]['file']][0]
+                         --  dict->'layers'->key->'file'->>0 = ANY (dict['files']['p'])
+                         --  dict['layers']['cad' + key]['file']][0] = ANY (dict['files']['p'])
+                   ));
+                END IF;
+                IF key='geoaddress' AND dict->'layers'?'address' AND dict->'layers'?('cad'||key) 
+                   AND dict->'layers'->key->'subtype' = 'ext'
+                   AND dict->'layers'->('cad'||key)->'subtype' = 'cmpl'
+                   AND dict->'layers'->key?'join_column' AND dict->'layers'->('cad'||key)?'join_column'      
+                THEN
+                   .. etc
+                END IF;
+           -- dict['joins_keys'] = jsonb_object_keys_asarray(dict->'joins')
+	 
+	 END LOOP;
+ -- ELSE DO NOTHING
+ END CASE;
+ RETURN dict;
+END;
+$f$ language PLpgSQL;
+-- select jsonb_mustache_prepare('{"layers":{"geoaddress":{"etc":1,"method":"shp2sql"}}}'::jsonb);
 
+-- new ingest.make_conf_yaml2jsonb() = ? read file
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-CREATE extension IF NOT EXISTS plpython3u;
--- SELECT * FROM pg_language;
-
-CREATE OR REPLACE FUNCTION ingest.py3_return_version() RETURNS text AS $$
-    import sys
-
-    return sys.version
-$$ LANGUAGE plpython3u;
--- SELECT * FROM ingest.py3_return_version();
-
-CREATE OR REPLACE FUNCTION ingest.lixo_chevron_test() RETURNS text AS $$
-  import chevron
-
-  return chevron.render('Hello, {{ mustache }}!', {'mustache': 'World'})
-$$ LANGUAGE plpython3u;
--- SELECT ingest.lixo_chevron_test();
-
-CREATE OR REPLACE FUNCTION ingest.mustache_render(tpl text,i jsonb, partials_path text) RETURNS text AS $$
-  import chevron
-  import json
-  
-  j = json.loads(i)
-
-  return chevron.render(tpl,j,partials_path)
-$$ LANGUAGE plpython3u IMMUTABLE;
--- SELECT ingest.mustache_render('Hello, {{ mustache }}!', '{"mustache":"World"}'::jsonb, '');
-
-CREATE OR REPLACE FUNCTION ingest.yaml2jsonb(file text) RETURNS jsonb AS $$
-    import yaml
-    import json
-
-    query = "SELECT pg_read_file('{}')".format(file)
-
-    result_query = plpy.execute(query)
-
-    dict = yaml.safe_load(result_query[0]['pg_read_file'])
-
-    jsonb = json.dumps(dict)
-
-    return jsonb
-$$ LANGUAGE plpython3u IMMUTABLE;
--- SELECT ingest.yaml2jsonb('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml');
-
+/* * * * * OLD 
 CREATE OR REPLACE FUNCTION ingest.make_conf_yaml2jsonb(file text) RETURNS jsonb AS $$
     import yaml
     import json
@@ -1135,8 +1125,10 @@ CREATE OR REPLACE FUNCTION ingest.make_conf_yaml2jsonb(file text) RETURNS jsonb 
     return jsonb
 $$ LANGUAGE plpython3u IMMUTABLE;
 -- SELECT ingest.make_conf_yaml2jsonb('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml');
+* * * * * */
 
-CREATE OR REPLACE FUNCTION ingest.generate_makefile(
+
+CREATE or replace FUNCTION ingest.generate_makefile(
     baseSrc text,
     mkme_srcTpl text,
     mkme_srcTplLast text,
