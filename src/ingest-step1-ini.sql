@@ -1063,6 +1063,8 @@ BEGIN
                 END IF;
 	 END LOOP;
 	 dict := dict || jsonb_build_object( 'joins_keys', jsonb_object_keys_asarray(dict->'joins') );
+	 dict := dict || jsonb_build_object( 'layers_keys', jsonb_object_keys_asarray(dict->'layers') );
+	 dict := jsonb_set( dict, array['pkversion'], to_jsonb(to_char((dict->>'pkversion')::int,'fm000')) );
  -- CASE ELSE ...?
  END CASE;
  RETURN dict;
@@ -1152,10 +1154,10 @@ CREATE or replace FUNCTION ingest.generate_makefile(
     SELECT pg_read_file(mkme_srcTpl) || pg_read_file(mkme_srcTplLast)
     ),
     conf_yaml AS (
-    SELECT yaml2jsonb(mkme_yamlFirst) || make_conf_yaml2jsonb(mkme_yaml)
+    SELECT yamlfile_to_jsonb(mkme_yamlFirst) || ingest.jsonb_mustache_prepare(yamlfile_to_jsonb(mkme_yaml))
     )
     
-    SELECT mustache_render((SELECT * FROM tpl), (SELECT * FROM conf_yaml), concat(baseSrc,'preserv/src/maketemplates/')) INTO q_query;
+    SELECT jsonb_mustache_render((SELECT * FROM tpl), (SELECT * FROM conf_yaml), concat(baseSrc,'preserv/src/maketemplates/')) INTO q_query;
  
     RETURN q_query;
     END;
