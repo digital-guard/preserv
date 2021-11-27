@@ -1147,17 +1147,22 @@ CREATE or replace FUNCTION ingest.lix_generate_makefile(
     DECLARE
         q_query text;
         conf_yaml jsonb;
-        first_yaml jsonb;
+        f_yaml jsonb;
         mkme_srcTplLast text;
         mkme_srcTpl text;
+        output_file text;
     BEGIN
 
     SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
     SELECT y FROM ingest.lix_mkme_srcTpl WHERE tplInputSchema_id = conf_yaml->>'schemaId_template' INTO mkme_srcTpl;
-    SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO first_yaml;
+    SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     SELECT tpl_last FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO mkme_srcTplLast;
     
-    SELECT jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, first_yaml || ingest.jsonb_mustache_prepare(conf_yaml)), '/opt/gits/_dg/preserv/src/maketemplates/') INTO q_query;
+    SELECT f_yaml->>'pg_io' || '/makeme_' || jurisd || pkid INTO output_file;
+    
+    SELECT jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, f_yaml || ingest.jsonb_mustache_prepare(conf_yaml), '/opt/gits/_dg/preserv/src/maketemplates/') INTO q_query;
+    
+    SELECT volat_file_write(output_file,q_query) INTO q_query;
 
     RETURN q_query;
     END;
@@ -1172,13 +1177,20 @@ CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
     DECLARE
         q_query text;
         conf_yaml jsonb;
+        f_yaml jsonb;
         readme text;
+        output_file text;
     BEGIN
     SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
+    SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     SELECT readme_mk FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO readme;
     
-    SELECT mustache_render(readme, conf_yaml, concat(baseSrc,'preserv/src/maketemplates/')) INTO q_query;
- 
+    SELECT f_yaml->>'pg_io' || '/readme_' || jurisd || pkid INTO output_file;
+    
+    SELECT jsonb_mustache_render(readme, conf_yaml, concat(baseSrc,'preserv/src/maketemplates/')) INTO q_query;
+
+    SELECT volat_file_write(output_file,q_query) INTO q_query;
+    
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
