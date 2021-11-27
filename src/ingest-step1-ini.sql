@@ -1008,6 +1008,71 @@ $f$ LANGUAGE SQL IMMUTABLE;
 
 -------------------------------------------------
 
+DROP TABLE ingest.lix_conf_yaml ;
+DROP TABLE ingest.lix_mkme_srcTpl ;
+DROP TABLE ingest.lix_jurisd_tpl ;
+
+CREATE TABLE ingest.lix_conf_yaml (
+  jurisdiction text NOT NULL,
+  y jsonb,
+  UNIQUE(jurisdiction)
+);
+
+CREATE TABLE ingest.lix_mkme_srcTpl (
+  tplInputSchema_id text NOT NULL,
+  y text,
+  UNIQUE(tplInputSchema_id)
+);
+
+CREATE TABLE ingest.lix_jurisd_tpl (
+  jurisdiction text NOT NULL,
+  tpl_last text,
+  first_yaml jsonb,
+  readme_mk text,
+  UNIQUE(jurisdiction)
+);
+
+CREATE or replace FUNCTION ingest.lix_insert(
+    file text,
+    p_type text
+    ) RETURNS void AS $wrap$
+    DECLARE
+    y jsonb;
+    t text;
+    BEGIN
+        CASE p_type
+        WHEN 'make_conf' THEN
+        y:= yamlfile_to_jsonb(file);
+        INSERT INTO ingest.lix_conf_yaml VALUES ('BR',y);
+
+        WHEN 'mkme_srcTpl' THEN
+        t:= pg_read_file(file);
+        INSERT INTO ingest.lix_mkme_srcTpl VALUES (SUBSTRING(file,'(ref[0-9]{1,3}[a-z])'),t);
+
+        WHEN 'first_yaml' THEN
+        y:= yamlfile_to_jsonb(file);
+        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, first_yaml) VALUES ('BR',y)
+        ON CONFLICT (jurisdiction) DO UPDATE SET first_yaml = y;
+
+        WHEN 'mkme_srcTplLast' THEN
+        t:= pg_read_file(file);
+        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, tpl_last) VALUES ('BR',t)
+        ON CONFLICT (jurisdiction) DO UPDATE SET tpl_last = t;
+
+        WHEN 'readme' THEN
+        t:= pg_read_file(file);
+        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, readme_mk) VALUES ('BR',t)
+        ON CONFLICT (jurisdiction) DO UPDATE SET readme_mk = t;
+
+        END CASE;    
+    END;
+$wrap$ LANGUAGE PLpgSQL;
+-- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml','make_conf');
+-- SELECT ingest.lix_insert('/opt/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','mkme_srcTpl');
+-- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','first_yaml');
+-- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
+-- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','readme');
+
 CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(
   dict jsonb,  -- input
   p_type text DEFAULT 'make_conf'
@@ -1075,55 +1140,46 @@ $f$ language PLpgSQL;
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
 
-
-CREATE or replace FUNCTION ingest.generate_makefile(
-    baseSrc text,
-    mkme_srcTpl text,
-    mkme_srcTplLast text,
-    mkme_yamlFirst text,
-    mkme_yaml text
+CREATE or replace FUNCTION ingest.lix_generate_makefile(
+    jurisd text,
+    pkid int
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
+        conf_yaml jsonb;
+        first_yaml jsonb;
+        mkme_srcTplLast text;
+        mkme_srcTpl text;
     BEGIN
 
-    WITH tpl AS (
-    SELECT pg_read_file(mkme_srcTpl) || pg_read_file(mkme_srcTplLast)
-    ),
-    conf_yaml AS (
-    SELECT yamlfile_to_jsonb(mkme_yamlFirst) || ingest.jsonb_mustache_prepare(yamlfile_to_jsonb(mkme_yaml))
-    )
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
+    SELECT y FROM ingest.lix_mkme_srcTpl WHERE tplInputSchema_id = conf_yaml->>'schemaId_template' INTO mkme_srcTpl;
+    SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO first_yaml;
+    SELECT tpl_last FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO mkme_srcTplLast;
     
-    SELECT jsonb_mustache_render((SELECT * FROM tpl), (SELECT * FROM conf_yaml), concat(baseSrc,'preserv/src/maketemplates/')) INTO q_query;
+    SELECT jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, first_yaml || ingest.jsonb_mustache_prepare(conf_yaml)), '/opt/gits/_dg/preserv/src/maketemplates/') INTO q_query;
+
+    RETURN q_query;
+    END;
+$f$ LANGUAGE PLpgSQL;
+-- SELECT ingest.lix_generate_makefile('BR','18');
+
+CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
+    baseSrc text,
+    jurisd text,
+    pkid int
+) RETURNS text AS $f$
+    DECLARE
+        q_query text;
+        conf_yaml jsonb;
+        readme text;
+    BEGIN
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
+    SELECT readme_mk FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO readme;
+    
+    SELECT mustache_render(readme, conf_yaml, concat(baseSrc,'preserv/src/maketemplates/')) INTO q_query;
  
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.generate_makefile('/opt/gits/_dg/','/opt/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','/opt/gits/_dg/preserv-BR/src/maketemplates/commomLast.mustache.mk','/opt/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml');
-
--- psql postgres://postgres@localhost/ingest1 -t -c "SELECT ingest.generate_makefile('/opt/gits/_dg/','/opt/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','/opt/gits/_dg/preserv-BR/src/maketemplates/commomLast.mustache.mk','/opt/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml')";
-
-CREATE OR REPLACE FUNCTION ingest.generate_readme(
-    baseSrc text,
-    readme_srcTpl text,
-    mkme_yaml text
-) RETURNS text AS $f$
-    DECLARE
-        q_query text;
-    BEGIN
-
-    WITH tpl AS (
-    SELECT pg_read_file(readme_srcTpl)
-    ),
-    conf_yaml AS (
-    SELECT make_conf_yaml2jsonb(mkme_yaml)
-    )
-    
-    SELECT mustache_render((SELECT * FROM tpl), (SELECT * FROM conf_yaml), concat(baseSrc,'preserv/src/maketemplates/')) INTO q_query;
- 
-    RETURN q_query;
-    END;
-$f$ LANGUAGE PLpgSQL;
--- SELECT ingest.generate_readme('/opt/gits/_dg/','/opt/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml');
-
--- psql postgres://postgres@localhost/ingest1 -t -c "SELECT ingest.generate_readme('/opt/gits/_dg/','/opt/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml')";
+-- SELECT ingest.lix_generate_readme('/opt/gits/_dg/','BR','18');
