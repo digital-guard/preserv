@@ -1014,8 +1014,7 @@ DROP TABLE ingest.lix_jurisd_tpl ;
 
 CREATE TABLE ingest.lix_conf_yaml (
   jurisdiction text NOT NULL,
-  y jsonb,
-  UNIQUE(jurisdiction)
+  y jsonb
 );
 
 CREATE TABLE ingest.lix_mkme_srcTpl (
@@ -1072,6 +1071,9 @@ $wrap$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','first_yaml');
 -- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
 -- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','readme');
+
+-- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml','make_conf');
+
 
 CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(
   dict jsonb,  -- input
@@ -1185,7 +1187,7 @@ CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     SELECT readme_mk FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO readme;
     
-    SELECT f_yaml->>'pg_io' || '/readme_' || jurisd || pkid INTO output_file;
+    SELECT f_yaml->>'pg_io' || '/README-draft_' || jurisd || pkid INTO output_file;
     
     SELECT jsonb_mustache_render(readme, conf_yaml, concat(baseSrc,'preserv/src/maketemplates/')) INTO q_query;
 
