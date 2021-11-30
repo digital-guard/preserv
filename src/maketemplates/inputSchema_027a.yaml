@@ -23,8 +23,8 @@ layers:
     method_opts: opções para method.
     p: identificador do arquivo seguido de letra identificadora do layer
     file: referência ao ID de um dos itens de files.
-    query_view: [OPCIONAL] query completa referenciando "FROM $(tabname)"
-    select_sql: [OPCIONAL] lista de nomes de coluna da tabela de referência do method.
+    sql_view: [OPCIONAL] query completa referenciando "FROM $(tabname)"
+    sql_select: [OPCIONAL] lista de nomes de coluna da tabela de referência do method.
     orig_filename: nome do arquivo (ou arquivo de referência como no caso de shape) a ser utilizado pelo método.
     orig_subfilename: para o caso de arquivo compactado dentro de arquivo compactado.
     multiple_files: boleana, informa se o layer possui mais de um arquivo. Obrigatória quando true. 
@@ -37,7 +37,7 @@ layers:
     method: (por exemplo) shp2sql
     p: (por exemplo) 2a
     file: (por exemplo) 2
-    query_view:  (por exemplo) SELECT gid, TIPO_LOGRA || ' ' || NOME_LOGRA AS via_name, geom FROM $(tabname)
+    sql_view:  (por exemplo) SELECT gid, TIPO_LOGRA || ' ' || NOME_LOGRA AS via_name, geom FROM $(tabname)
     orig_filename: (por exemplo) LOGRADOUROLine
 
   etc: "geoaddress", "via", etc. consultar os tipos de layer em https://github.com/AddressForAll/WS/blob/0818dae01d3b7c80a41f8fadd3491db7d17a2b6c/src/ingest-step1-ini.sql#L143

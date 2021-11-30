@@ -65,9 +65,9 @@ Comumente, cada layer é especificado pelas seguintes chaves:
 
   * `file:` referência ao identificador `p` de um dos itens da lista de arquivos `files`.
 
-  * `query_view:` [OPCIONAL] query completa referenciando "FROM $(tabname)". Torna inócua `select_sql`.
+  * `sql_view:` [OPCIONAL] query completa referenciando "FROM $(tabname)". Torna inócua `select_sql`.
 
-  * `select_sql:` [OPCIONAL] lista de nomes de coluna da tabela de referência do method. É obrigatória se `query_view` não existir.
+  * `select_sql:` [OPCIONAL] lista de nomes de coluna da tabela de referência do method. É obrigatória se `sql_view` não existir.
 
   * `orig_filename:` nome do arquivo (ou arquivo de referência como no caso de shape) a ser utilizado pelo método de conversão.
 
