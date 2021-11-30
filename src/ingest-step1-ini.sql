@@ -1071,7 +1071,6 @@ $wrap$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','first_yaml');
 -- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
 -- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','readme');
-
 -- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml','make_conf');
 
 
@@ -1082,6 +1081,8 @@ CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(
 DECLARE
  key text;
  method text;
+ sql_select text;
+ sql_view text;
  bt jsonb := 'true'::jsonb;
  bf jsonb := 'false'::jsonb;
 BEGIN
@@ -1094,7 +1095,19 @@ BEGIN
 		dict := jsonb_set( dict, array['layers',key,'isOgr'], IIF(method='ogr2ogr',bt,bf) );
 		dict := jsonb_set( dict, array['layers',key,'isOgrWithShp'], IIF(method='ogrWshp',bt,bf) );
 		dict := jsonb_set( dict, array['layers',key,'isShp'], IIF(method='shp2sql',bt,bf) );
-		
+       
+                IF dict->'layers'->key?'sql_select'
+                THEN
+                    sql_select := replace(dict->'layers'->key->>'sql_select',$$"$$,$$\"$$);
+                   dict := jsonb_set( dict, array['layers',key,'sql_select'], to_jsonb(sql_select) );
+                END IF;
+
+                IF dict->'layers'->key?'sql_view'
+                THEN
+                    sql_view := replace(dict->'layers'->key->>'sql_view',$$"$$,$$\"$$);
+                   dict := jsonb_set( dict, array['layers',key,'sql_view'], to_jsonb(sql_view) );
+                END IF;
+
                 IF dict->'layers'?key AND dict->'layers'?('cad'||key) 
                    AND dict->'layers'->key->>'subtype' = 'ext'
                    AND dict->'layers'->('cad'||key)->>'subtype' = 'cmpl'
@@ -1139,7 +1152,8 @@ BEGIN
 END;
 $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
-
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml') );
+('/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml','make_conf');
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
 
