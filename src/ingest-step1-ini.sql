@@ -1132,6 +1132,7 @@ BEGIN
 	 dict := dict || jsonb_build_object( 'joins_keys', jsonb_object_keys_asarray(dict->'joins') );
 	 dict := dict || jsonb_build_object( 'layers_keys', jsonb_object_keys_asarray(dict->'layers') );
 	 dict := jsonb_set( dict, array['pkversion'], to_jsonb(to_char((dict->>'pkversion')::int,'fm000')) );
+	 dict := jsonb_set( dict, '{files,-1,last}','"true"');
  -- CASE ELSE ...?
  END CASE;
  RETURN dict;
