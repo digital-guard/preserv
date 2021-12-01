@@ -1016,6 +1016,7 @@ CREATE TABLE ingest.lix_conf_yaml (
   jurisdiction text NOT NULL,
   y jsonb
 );
+CREATE UNIQUE INDEX ON ingest.lix_conf_yaml ((y->>'pkid'));
 
 CREATE TABLE ingest.lix_mkme_srcTpl (
   tplInputSchema_id text NOT NULL,
@@ -1036,22 +1037,24 @@ CREATE or replace FUNCTION ingest.lix_insert(
     p_type text
     ) RETURNS void AS $wrap$
     DECLARE
-    y jsonb;
+    yl jsonb;
+    conf jsonb;
     t text;
     BEGIN
         CASE p_type
         WHEN 'make_conf' THEN
-        y:= yamlfile_to_jsonb(file);
-        INSERT INTO ingest.lix_conf_yaml VALUES ('BR',y);
+        conf:= yamlfile_to_jsonb(file);
+        INSERT INTO ingest.lix_conf_yaml (jurisdiction,y) VALUES ('BR',conf)
+        ON CONFLICT ((y->>'pkid')) DO UPDATE SET y = conf;
 
         WHEN 'mkme_srcTpl' THEN
         t:= pg_read_file(file);
         INSERT INTO ingest.lix_mkme_srcTpl VALUES (SUBSTRING(file,'(ref[0-9]{1,3}[a-z])'),t);
 
         WHEN 'first_yaml' THEN
-        y:= yamlfile_to_jsonb(file);
-        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, first_yaml) VALUES ('BR',y)
-        ON CONFLICT (jurisdiction) DO UPDATE SET first_yaml = y;
+        yl:= yamlfile_to_jsonb(file);
+        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, first_yaml) VALUES ('BR',yl)
+        ON CONFLICT (jurisdiction) DO UPDATE SET first_yaml = yl;
 
         WHEN 'mkme_srcTplLast' THEN
         t:= pg_read_file(file);
