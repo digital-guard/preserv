@@ -1019,7 +1019,7 @@ CREATE TABLE ingest.lix_conf_yaml (
   jurisdiction text NOT NULL,
   y jsonb
 );
-CREATE UNIQUE INDEX ON ingest.lix_conf_yaml ((y->>'pkid'));
+CREATE UNIQUE INDEX ON ingest.lix_conf_yaml (jurisdiction,(y->>'pkid'));
 
 CREATE TABLE ingest.lix_mkme_srcTpl (
   tplInputSchema_id text NOT NULL,
@@ -1036,6 +1036,7 @@ CREATE TABLE ingest.lix_jurisd_tpl (
 );
 
 CREATE or replace FUNCTION ingest.lix_insert(
+    jurisd text,
     file text,
     p_type text
     ) RETURNS void AS $wrap$
@@ -1047,37 +1048,39 @@ CREATE or replace FUNCTION ingest.lix_insert(
         CASE p_type
         WHEN 'make_conf' THEN
         conf:= yamlfile_to_jsonb(file);
-        INSERT INTO ingest.lix_conf_yaml (jurisdiction,y) VALUES ('BR',conf)
-        ON CONFLICT ((y->>'pkid')) DO UPDATE SET y = conf;
+        INSERT INTO ingest.lix_conf_yaml (jurisdiction,y) VALUES (jurisd,conf)
+        ON CONFLICT (jurisdiction,(y->>'pkid')) DO UPDATE SET y = conf;
 
         WHEN 'mkme_srcTpl' THEN
         t:= pg_read_file(file);
-        INSERT INTO ingest.lix_mkme_srcTpl VALUES (SUBSTRING(file,'(ref[0-9]{1,3}[a-z])'),t);
+        INSERT INTO ingest.lix_mkme_srcTpl VALUES (SUBSTRING(file,'(ref[0-9]{1,3}[a-z])'),t)
+        ON CONFLICT (tplInputSchema_id) DO UPDATE SET tplInputSchema_id = t;
 
         WHEN 'first_yaml' THEN
         yl:= yamlfile_to_jsonb(file);
-        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, first_yaml) VALUES ('BR',yl)
+        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, first_yaml) VALUES (jurisd,yl)
         ON CONFLICT (jurisdiction) DO UPDATE SET first_yaml = yl;
 
         WHEN 'mkme_srcTplLast' THEN
         t:= pg_read_file(file);
-        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, tpl_last) VALUES ('BR',t)
+        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, tpl_last) VALUES (jurisd,t)
         ON CONFLICT (jurisdiction) DO UPDATE SET tpl_last = t;
 
         WHEN 'readme' THEN
         t:= pg_read_file(file);
-        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, readme_mk) VALUES ('BR',t)
+        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, readme_mk) VALUES (jurisd,t)
         ON CONFLICT (jurisdiction) DO UPDATE SET readme_mk = t;
 
         END CASE;    
     END;
 $wrap$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml','make_conf');
--- SELECT ingest.lix_insert('/opt/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','mkme_srcTpl');
--- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','first_yaml');
--- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
--- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','readme');
--- SELECT ingest.lix_insert('/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml','make_conf');
+-- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','mkme_srcTpl');
+-- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','first_yaml');
+-- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
+-- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','readme');
+
+-- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml','make_conf');
+-- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml','make_conf');
 
 
 CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(
