@@ -11,6 +11,9 @@ CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;
 CREATE SCHEMA    IF NOT EXISTS ingest;
 CREATE SCHEMA    IF NOT EXISTS tmp_orig;
 
+CREATE schema    IF NOT EXISTS api;
+CREATE SCHEMA    IF NOT EXISTS download;
+
 CREATE EXTENSION postgres_fdw;
 CREATE SERVER foreign_server
         FOREIGN DATA WRAPPER postgres_fdw
@@ -1215,3 +1218,17 @@ CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
     END;
 $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_readme('/opt/gits/_dg/','BR','18');
+
+
+-- ----------------------------
+
+CREATE TABLE download.redirects (
+    donor_id          text,
+    filename_original text,
+    package_path      text,
+    fhash             text NOT NULL PRIMARY KEY, -- de_sha256
+    furi              text NOT NULL,             -- para_url
+    UNIQUE (fhash, furi)
+);
+
+CREATE or replace VIEW api.redirects AS SELECT * FROM download.redirects
