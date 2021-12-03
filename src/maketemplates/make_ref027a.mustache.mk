@@ -281,13 +281,6 @@ wget_files:
 {{/files}}
 	@echo "Please, if orig not default, run 'make _target_ orig=$(orig)'"
 
-delete_file:
-	@echo "Uso: make delete_file hash=<inicio do hash do arquivo>"
-	@echo "hash: $(hash)"
-	@echo "[ENTER para continuar ou ^C para sair]"
-	@read _tudo_bem_
-	@[ "${hash}" ] && psql $(pg_uri_db) -c "DELETE FROM ingest.layer_file WHERE pck_fileref_sha256 LIKE '$(hash)%'" || ( echo "hash não informado.")
-
 ## ## ## ##
 
 clean_sandbox:
