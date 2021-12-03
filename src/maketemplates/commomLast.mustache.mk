@@ -5,7 +5,7 @@
 
 mkme_input    = $(shell ls -d "${PWD}/"make_conf.yaml)
 country       = $(shell ls -d "${PWD}" | cut -d'-' -f2 | cut -d'/' -f1)
-baseSrc       = /opt/gits/_dg
+baseSrc       = /var/gits/_dg
 
 mkme_input0   = $(baseSrc)/preserv-$(country)/src/maketemplates/commomFirst.yaml
 

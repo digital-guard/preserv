@@ -18,7 +18,7 @@ Ver [digital-preservation/src](http://git.AddressForAll.org/digital-preservartio
 Com o boot do servidor todos os conteudos da pasta `/tmp` sao perdidos, devemos portanto reinicializa-la com as devidas permissoes.
 
 ```sh
-sudo make -C /opt/gits/WS/src  ini_tmprefresh    # important
-make -C /opt/gits/WS/src  ini_database_list_tmp  # only a test
-sudo make -C /opt/gits/digital-preservartion/src  ecl_run    # important
+sudo make -C /var/gits/WS/src  ini_tmprefresh    # important
+make -C /var/gits/WS/src  ini_database_list_tmp  # only a test
+sudo make -C /var/gits/digital-preservartion/src  ecl_run    # important
 ```

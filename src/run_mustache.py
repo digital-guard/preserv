@@ -33,7 +33,7 @@ def load_data(file, loaderName='SafeLoader'):
 
 
 def main(argv):
-    basepath_default = '/opt/gits/_dg/'
+    basepath_default = '/var/gits/_dg/'
     basepath_arg = ''
     partials_path = 'preserv/src/maketemplates/'
     fname_input0 = ''

@@ -1074,18 +1074,18 @@ CREATE or replace FUNCTION ingest.lix_insert(
         END CASE;    
     END;
 $wrap$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','mkme_srcTpl');
+-- SELECT ingest.lix_insert('BR','/var/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','mkme_srcTpl');
 
--- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','first_yaml');
--- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','readme');
+-- SELECT ingest.lix_insert('BR','/var/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','first_yaml');
+-- SELECT ingest.lix_insert('BR','/var/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','readme');
 
--- SELECT ingest.lix_insert('PE','/opt/gits/_dg/preserv-PE/src/maketemplates/commomFirst.yaml','first_yaml');
--- SELECT ingest.lix_insert('PE','/opt/gits/_dg/preserv-PE/src/maketemplates/readme.mustache','readme');
+-- SELECT ingest.lix_insert('PE','/var/gits/_dg/preserv-PE/src/maketemplates/commomFirst.yaml','first_yaml');
+-- SELECT ingest.lix_insert('PE','/var/gits/_dg/preserv-PE/src/maketemplates/readme.mustache','readme');
 
--- SELECT ingest.lix_insert('INT','/opt/gits/_dg/preserv/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
+-- SELECT ingest.lix_insert('INT','/var/gits/_dg/preserv/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
 
--- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml','make_conf');
--- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml','make_conf');
+-- SELECT ingest.lix_insert('BR','/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml','make_conf');
+-- SELECT ingest.lix_insert('BR','/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml','make_conf');
 
 
 CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(
@@ -1165,12 +1165,12 @@ BEGIN
  RETURN dict;
 END;
 $f$ language PLpgSQL;
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml') );
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-PE/data/CUS/Cusco/_pk001/make_conf.yaml');
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml') );
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk001/make_conf.yaml');
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/MG/GovernadorValadares/_pk043/make_conf.yaml') );
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/MG/GovernadorValadares/_pk043/make_conf.yaml') );
 /home/puma/a4a/preserv-BR/data/MG/GovernadorValadares/_pk043/make_conf.yaml
 
 
@@ -1194,7 +1194,7 @@ CREATE or replace FUNCTION ingest.lix_generate_makefile(
     
     SELECT f_yaml->>'pg_io' || '/makeme_' || jurisd || pkid INTO output_file;
     
-    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, f_yaml || ingest.jsonb_mustache_prepare(conf_yaml), '/opt/gits/_dg/preserv/src/maketemplates/'),E'\u130C9',$$\"$$) INTO q_query;
+    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, f_yaml || ingest.jsonb_mustache_prepare(conf_yaml), '/var/gits/_dg/preserv/src/maketemplates/'),E'\u130C9',$$\"$$) INTO q_query;
     
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 
@@ -1229,7 +1229,7 @@ CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_generate_readme('/opt/gits/_dg/','BR','18');
+-- SELECT ingest.lix_generate_readme('/var/gits/_dg/','BR','18');
 
 -- ----------------------------
 
