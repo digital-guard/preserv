@@ -1099,6 +1099,9 @@ DECLARE
  sql_view text;
  bt jsonb := 'true'::jsonb;
  bf jsonb := 'false'::jsonb;
+ codec_charset text DEFAULT NULL;
+ codec_content text DEFAULT NULL;
+ codec_mimeMain text DEFAULT NULL;
 BEGIN
  CASE p_type -- preparing types
  WHEN 'make_conf', NULL THEN
@@ -1122,6 +1125,50 @@ BEGIN
                    dict := jsonb_set( dict, array['layers',key,'sql_view'], to_jsonb(sql_view) );
                 END IF;
 
+
+                IF dict->'layers'->key?'codec'
+                THEN
+                   codec_content :=  substring(dict->'layers'->key->>'codec', 'content=(.*)[;$]');
+
+                    IF codec_content
+                    THEN
+                        codec_mimeMain :=  split_part(dict->'layers'->key->>'codec',';', 1 );
+                    ELSE
+                        codec_content :=  split_part(dict->'layers'->key->>'codec',';', 1 );
+                    END IF;
+
+                   codec_charset :=  substring(dict->'layers'->key->>'codec', 'charset=(.*)[;$]');
+
+                    IF codec_content <> ''
+                    THEN
+                        dict := jsonb_set( dict, array['layers',key,'codec_content'],  to_jsonb(codec_content) );
+                    END IF;
+
+                    IF codec_charset <> ''
+                    THEN
+                        dict := jsonb_set( dict, array['layers',key,'codec_charset'],  to_jsonb(codec_charset) );
+                    END IF;
+
+                    IF codec_mimeMain <> ''
+                    THEN
+                        dict := jsonb_set( dict, array['layers',key,'codec_mimeMain'], to_jsonb(codec_mimeMain) );
+                    END IF;
+                END IF;
+
+
+                IF key='address' OR key='cadgenericvia' OR key='cadvia' OR key='cadparcel' OR 
+                THEN
+                   dict := jsonb_set( dict, '{joins}', '{}'::jsonb );                 
+                   dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
+                       'layer',           key || '_ext'
+                      ,'cadLayer',        'address_cmpl'
+                      ,'layerColumn',     dict->'layers'->key->'join_column'
+                      ,'cadLayerColumn',  dict->'layers'->'address'->'join_column'
+                      ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
+                      ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.address.file)')::jsonpath  )->0->>'file'
+                   ));
+                END IF;
+
                 IF dict->'layers'?key AND dict->'layers'?('cad'||key) 
                    AND dict->'layers'->key->>'subtype' = 'ext'
                    AND dict->'layers'->('cad'||key)->>'subtype' = 'cmpl'
@@ -1138,7 +1185,7 @@ BEGIN
                       -- check by dict @? ('$.files[*].p ? (@ == $.layers.'|| key ||'.file)')
                    ));
                 END IF;
-		
+
                 IF key='geoaddress' AND dict->'layers'?'address'
                    AND dict->'layers'->key->>'subtype' = 'ext'
                    AND dict->'layers'->'address'->>'subtype' = 'cmpl'
@@ -1166,7 +1213,7 @@ BEGIN
 END;
 $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml') );
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk001/make_conf.yaml');
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
