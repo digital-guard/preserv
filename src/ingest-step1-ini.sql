@@ -1075,9 +1075,14 @@ CREATE or replace FUNCTION ingest.lix_insert(
     END;
 $wrap$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','mkme_srcTpl');
+
 -- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','first_yaml');
--- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
 -- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','readme');
+
+-- SELECT ingest.lix_insert('PE','/opt/gits/_dg/preserv-PE/src/maketemplates/commomFirst.yaml','first_yaml');
+-- SELECT ingest.lix_insert('PE','/opt/gits/_dg/preserv-PE/src/maketemplates/readme.mustache','readme');
+
+-- SELECT ingest.lix_insert('INT','/opt/gits/_dg/preserv/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
 
 -- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml','make_conf');
 -- SELECT ingest.lix_insert('BR','/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml','make_conf');
@@ -1107,13 +1112,13 @@ BEGIN
        
                 IF dict->'layers'->key?'sql_select'
                 THEN
-                    sql_select := replace(dict->'layers'->key->>'sql_select',$$"$$,$$\"$$);
-                   dict := jsonb_set( dict, array['layers',key,'sql_select'], to_jsonb(sql_select) );
+                    sql_select :=  replace(dict->'layers'->key->>'sql_select',$$\"$$,E'\u130C9');
+                   dict := jsonb_set( dict, array['layers',key,'sql_select'], sql_select::jsonb );
                 END IF;
 
                 IF dict->'layers'->key?'sql_view'
                 THEN
-                    sql_view := replace(dict->'layers'->key->>'sql_view',$$"$$,$$\"$$);
+                    sql_view := replace(dict->'layers'->key->>'sql_view',$$\"$$,E'\u130C9');
                    dict := jsonb_set( dict, array['layers',key,'sql_view'], to_jsonb(sql_view) );
                 END IF;
 
@@ -1146,8 +1151,8 @@ BEGIN
                       ,'cadLayer',        'address_cmpl'
                       ,'layerColumn',     dict->'layers'->key->'join_column'
                       ,'cadLayerColumn',  dict->'layers'->'address'->'join_column'
-                      ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0
-                      ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.address.file)')::jsonpath  )->0
+                      ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
+                      ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.address.file)')::jsonpath  )->0->>'file'
                    ));
                 END IF;
 	 END LOOP;
@@ -1162,8 +1167,11 @@ END;
 $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml') );
-('/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml','make_conf');
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-PE/data/CUS/Cusco/_pk001/make_conf.yaml');
 -- new ingest.make_conf_yaml2jsonb() = ? read file
+
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/MG/GovernadorValadares/_pk043/make_conf.yaml') );
+/home/puma/a4a/preserv-BR/data/MG/GovernadorValadares/_pk043/make_conf.yaml
 
 
 CREATE or replace FUNCTION ingest.lix_generate_makefile(
@@ -1182,11 +1190,11 @@ CREATE or replace FUNCTION ingest.lix_generate_makefile(
     SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
     SELECT y FROM ingest.lix_mkme_srcTpl WHERE tplInputSchema_id = conf_yaml->>'schemaId_template' INTO mkme_srcTpl;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
-    SELECT tpl_last FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO mkme_srcTplLast;
+    SELECT tpl_last FROM ingest.lix_jurisd_tpl WHERE jurisdiction = 'INT' INTO mkme_srcTplLast;
     
     SELECT f_yaml->>'pg_io' || '/makeme_' || jurisd || pkid INTO output_file;
     
-    SELECT jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, f_yaml || ingest.jsonb_mustache_prepare(conf_yaml), '/opt/gits/_dg/preserv/src/maketemplates/') INTO q_query;
+    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, f_yaml || ingest.jsonb_mustache_prepare(conf_yaml), '/opt/gits/_dg/preserv/src/maketemplates/'),E'\u130C9',$$\"$$) INTO q_query;
     
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 
@@ -1194,6 +1202,7 @@ CREATE or replace FUNCTION ingest.lix_generate_makefile(
     END;
 $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_makefile('BR','18');
+-- SELECT ingest.lix_generate_makefile('PE','1');
 
 CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
     baseSrc text,
@@ -1221,7 +1230,6 @@ CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
     END;
 $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_readme('/opt/gits/_dg/','BR','18');
-
 
 -- ----------------------------
 
