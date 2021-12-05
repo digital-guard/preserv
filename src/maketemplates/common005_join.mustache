@@ -4,4 +4,4 @@
 	@printf "Continue?\n [press ENTER for yes else ^C]"
 	@read _press_enter_
 	psql $(pg_uri_db) -c "SELECT ingest.join('{{layer}}','{{{layerColumn}}}','{{layerFile}}','{{cadLayer}}','{{{cadLayerColumn}}}','{{cadLayerFile}}')"
-	@echo "Confira os resultados nas tabelas ingest.feature_asis".
+	@echo "Confira os resultados na tabela ingest.feature_asis".
