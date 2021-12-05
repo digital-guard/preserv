@@ -1204,7 +1204,6 @@ $f$ language PLpgSQL;
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/MG/GovernadorValadares/_pk043/make_conf.yaml') );
-/home/puma/a4a/preserv-BR/data/MG/GovernadorValadares/_pk043/make_conf.yaml
 
 
 CREATE or replace FUNCTION ingest.lix_generate_makefile(
