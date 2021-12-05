@@ -273,6 +273,13 @@ CREATE TABLE ingest.feature_asis (
   UNIQUE(file_id,feature_id)
 );
 
+CREATE TABLE ingest.cadastral_asis (
+  file_id int NOT NULL REFERENCES ingest.layer_file(file_id) ON DELETE CASCADE,
+  cad_id int NOT NULL,
+  properties jsonb NOT NULL,
+  UNIQUE(file_id,cad_id)
+);
+
 -- -- -- --
 --  VIEWS:
 
