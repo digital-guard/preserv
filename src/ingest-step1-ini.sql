@@ -1176,7 +1176,7 @@ BEGIN
 
                 IF dict->'layers'->key?'codec'
                 THEN
-                   codec_content :=  substring(dict->'layers'->key->>'codec', 'content=(.*)[;$]');
+                   codec_content :=  substring(dict->'layers'->key->>'codec', 'content=(.*)(;|$)');
 
                     IF codec_content
                     THEN
@@ -1185,7 +1185,7 @@ BEGIN
                         codec_content :=  split_part(dict->'layers'->key->>'codec',';', 1 );
                     END IF;
 
-                   codec_charset :=  substring(dict->'layers'->key->>'codec', 'charset=(.*)[;$]');
+                   codec_charset :=  substring(dict->'layers'->key->>'codec', 'charset=(.*)(;|$)');
 
                     IF codec_content <> ''
                     THEN
