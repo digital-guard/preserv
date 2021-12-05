@@ -1322,3 +1322,120 @@ CREATE TABLE download.redirects (
 );
 
 CREATE or replace VIEW api.redirects AS SELECT * FROM download.redirects
+
+
+
+CREATE or replace FUNCTION ingest.join(
+    p_ftname_layer text,
+    p_join_col_layer text,
+    p_fileref_layer_sha256 text,
+    p_ftname_cad text,
+    p_join_col_cad text,
+    p_fileref_cad_sha256 text
+) RETURNS text AS $f$
+  DECLARE
+    q_query text;
+    msg_ret text;
+    num_items bigint;
+  BEGIN
+  q_query := format(
+      $$
+      WITH
+      cadis AS 
+      (
+        SELECT *
+        FROM ingest.cadastral_asis 
+        WHERE file_id IN 
+            (
+            SELECT file_id 
+            FROM ingest.layer_file 
+            WHERE ftid IN 
+                (
+                SELECT ftid::int 
+                FROM ingest.feature_type 
+                WHERE ftname=lower('%s')
+                ) 
+                AND pck_fileref_sha256 = '%s'
+            )
+      ),
+      duplicate_keys AS (
+        SELECT asis.properties->'%s'
+        FROM
+        (    
+            SELECT  *
+            FROM ingest.feature_asis 
+            WHERE file_id IN 
+            (
+                SELECT file_id 
+                FROM ingest.layer_file 
+                WHERE ftid IN 
+                    (
+                    SELECT ftid::int 
+                    FROM ingest.feature_type 
+                    WHERE ftname=lower('%s')
+                    ) 
+                    AND pck_fileref_sha256 = '%s'
+            )
+        ) AS asis
+
+        INNER JOIN
+
+        cadis
+
+        ON asis.properties->'%s' = cadis.properties->'%s'
+
+        GROUP BY asis.properties->'%s'
+
+        HAVING COUNT(*)>1
+      ),
+      layer_features AS (
+      UPDATE ingest.feature_asis l
+      SET properties =  l.properties || c.properties-'%s'
+      FROM cadis AS c
+      WHERE l.properties->'%s' = c.properties->'%s' 
+            AND l.file_id IN 
+            (
+            SELECT file_id 
+            FROM ingest.layer_file 
+            WHERE ftid IN 
+                (
+                SELECT ftid::int 
+                FROM ingest.feature_type 
+                WHERE ftname=lower('%s')
+                ) 
+                AND pck_fileref_sha256 = '%s' 
+            )
+            AND l.properties->'%s' NOT IN (  SELECT * FROM duplicate_keys  )
+            RETURNING 1
+            )
+      SELECT COUNT(*) FROM layer_features
+    $$,
+    p_ftname_cad,
+    p_fileref_cad_sha256,
+    p_join_col_layer,
+    p_ftname_layer,
+    p_fileref_layer_sha256,
+    p_join_col_layer,
+    p_join_col_cad,
+    p_join_col_layer,
+    p_join_col_cad,
+    p_join_col_layer,
+    p_join_col_cad,
+    p_ftname_layer,
+    p_fileref_layer_sha256,
+    p_join_col_layer
+  );
+
+  EXECUTE q_query INTO num_items;
+
+  msg_ret := format(
+    E'Join %s items.',
+    num_items
+  );
+
+  RETURN msg_ret;
+  END;
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION ingest.join(text,text,text,text,text,text)
+  IS 'Join layer and cadlayer.'
+;
