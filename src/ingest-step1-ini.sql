@@ -1169,7 +1169,7 @@ BEGIN
 
                 IF dict->'layers'->key?'sql_view'
                 THEN
-                    sql_view := replace(dict->'layers'->key->>'sql_view',$$\"$$,E'\u130C9');
+                    sql_view := replace(dict->'layers'->key->>'sql_view',$$"$$,E'\u130C9');
                    dict := jsonb_set( dict, array['layers',key,'sql_view'], to_jsonb(sql_view) );
                 END IF;
 
