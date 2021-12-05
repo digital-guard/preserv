@@ -1321,7 +1321,7 @@ CREATE TABLE download.redirects (
     UNIQUE (fhash, furi)
 );
 
-CREATE or replace VIEW api.redirects AS SELECT * FROM download.redirects
+CREATE or replace VIEW api.redirects AS SELECT * FROM download.redirects;
 
 
 
