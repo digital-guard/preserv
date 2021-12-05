@@ -1207,8 +1207,6 @@ BEGIN
                 IF key='address' OR key='cadparcel' OR key='cadvia'
                 THEN
                    dict := jsonb_set( dict, array['layers',key,'isCadLayer'], '"true"' );
-                ELSE
-                   dict := jsonb_set( dict, array['layers',key,'isCadLayer'], '"false"' );
                 END IF;
 
 
