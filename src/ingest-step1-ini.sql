@@ -657,6 +657,7 @@ CREATE or replace FUNCTION ingest.any_load_debug(
 $f$ LANGUAGE SQL;
 
 
+
 CREATE or replace FUNCTION ingest.any_load(
     p_method text,   -- shp/csv/etc.
     p_fileref text,  -- apenas referencia para ingest.layer_file
@@ -671,6 +672,7 @@ CREATE or replace FUNCTION ingest.any_load(
   DECLARE
     q_file_id integer;
     q_query text;
+    q_query_cad text;
     feature_id_col text;
     use_tabcols boolean;
     msg_ret text;
@@ -680,7 +682,7 @@ CREATE or replace FUNCTION ingest.any_load(
     p_fileref := p_fileref || '.csv';
     -- other checks
   ELSE
-    p_fileref := p_fileref || '.shp';
+    p_fileref := regexp_replace(p_fileref,'\.shp$', '') || '.shp';
   END IF;
   q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256); -- not null when proc_step=1. Ideal retornar array.
   IF q_file_id IS NULL THEN
@@ -738,7 +740,37 @@ CREATE or replace FUNCTION ingest.any_load(
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text )
   );
-  EXECUTE q_query INTO num_items;
+  q_query_cad := format(
+      $$
+      WITH
+      scan AS (
+        SELECT %s, gid, properties
+        FROM (
+            SELECT %s,  -- feature_id_col
+                 %s as properties
+            FROM %s %s
+          ) t
+      ),
+      ins AS (
+        INSERT INTO ingest.cadastral_asis
+           SELECT *
+           FROM scan WHERE properties IS NOT NULL
+        RETURNING 1
+      )
+      SELECT COUNT(*) FROM ins
+    $$,
+    q_file_id,
+    feature_id_col,
+    iIF( use_tabcols, 'to_jsonb(subq)'::text, E'\'{}\'::jsonb' ), -- properties
+    p_tabname,
+    iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text )
+  );
+
+  IF (SELECT ftid::int FROM ingest.feature_type WHERE ftname=lower(p_ftname))<20 THEN -- feature_type id
+    EXECUTE q_query_cad INTO num_items;
+  ELSE
+    EXECUTE q_query INTO num_items;
+  END IF;
   msg_ret := format(
     E'From file_id=%s inserted type=%s\nin feature_asis %s items.',
     q_file_id, p_ftname, num_items
