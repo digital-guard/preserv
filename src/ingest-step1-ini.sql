@@ -1155,20 +1155,6 @@ BEGIN
                     END IF;
                 END IF;
 
-
-                IF key='address' OR key='cadgenericvia' OR key='cadvia' OR key='cadparcel' OR 
-                THEN
-                   dict := jsonb_set( dict, '{joins}', '{}'::jsonb );                 
-                   dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
-                       'layer',           key || '_ext'
-                      ,'cadLayer',        'address_cmpl'
-                      ,'layerColumn',     dict->'layers'->key->'join_column'
-                      ,'cadLayerColumn',  dict->'layers'->'address'->'join_column'
-                      ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
-                      ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.address.file)')::jsonpath  )->0->>'file'
-                   ));
-                END IF;
-
                 IF dict->'layers'?key AND dict->'layers'?('cad'||key) 
                    AND dict->'layers'->key->>'subtype' = 'ext'
                    AND dict->'layers'->('cad'||key)->>'subtype' = 'cmpl'
