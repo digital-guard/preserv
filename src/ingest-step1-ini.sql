@@ -1128,6 +1128,7 @@ $wrap$ LANGUAGE PLpgSQL;
 --SELECT ingest.lix_insert('PE','/var/gits/_dg/preserv-CO/src/maketemplates/commomFirst.yaml','first_yaml');
 --SELECT ingest.lix_insert('PE','/var/gits/_dg/preserv-CO/src/maketemplates/readme.mustache','readme');
 
+--SELECT ingest.lix_insert('INT','/var/gits/_dg/preserv/src/maketemplates/make_ref004a.mustache.mk','mkme_srcTpl');
 --SELECT ingest.lix_insert('INT','/var/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','mkme_srcTpl');
 --SELECT ingest.lix_insert('INT','/var/gits/_dg/preserv/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
 
@@ -1202,6 +1203,15 @@ BEGIN
                     END IF;
                 END IF;
 
+
+                IF key='address' OR key='cadparcel' OR key='cadvia'
+                THEN
+                   dict := jsonb_set( dict, array['layers',key,'isCadLayer'], '"true"' );
+                ELSE
+                   dict := jsonb_set( dict, array['layers',key,'isCadLayer'], '"false"' );
+                END IF;
+
+
                 IF dict->'layers'?key AND dict->'layers'?('cad'||key) 
                    AND dict->'layers'->key->>'subtype' = 'ext'
                    AND dict->'layers'->('cad'||key)->>'subtype' = 'cmpl'
@@ -1246,7 +1256,7 @@ BEGIN
 END;
 $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/opt/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml') );
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk001/make_conf.yaml');
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
