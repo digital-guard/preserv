@@ -18,6 +18,7 @@ pg_uri_db     = $(pg_uri)/$(pg_db)
 
 mkme_output   = $(pg_io)/makeme_$(country)$(pkid)
 readme_output = $(pg_io)/README-draft_$(country)$(pkid)
+conf_output   = $(pg_io)/make_conf_$(country)$(pkid)
 
 info:
 	@echo "=== Targets ==="
@@ -49,6 +50,18 @@ readme:
 	@echo "[ENTER para rodar mv ou ^C para sair]"
 	@read _tudo_bem_
 	mv $(readme_output) ./README-draft.md
+
+insert_size: insert_make_conf.yaml
+	@echo "-- Updating make_conf with files size --"
+	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_make_conf_with_size('$(country)','$(pkid)');"
+	sudo chmod 777 $(conf_output)
+	@echo " Check diff, the '<' lines are the new ones... Something changed?"
+	@diff $(conf_output) ./make_conf.yaml || :
+	@echo "If some changes, and no error in the changes, move the script:"
+	@echo " mv $(conf_output) ./make_conf.yaml"
+	@echo "[ENTER para rodar mv ou ^C para sair]"
+	@read _tudo_bem_
+	mv $(conf_output) ./make_conf.yaml
 
 insert_make_conf.yaml:
 	@echo "-- Carrega make_conf.yaml na base de dados. --"

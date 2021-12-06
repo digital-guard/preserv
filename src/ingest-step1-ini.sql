@@ -1121,13 +1121,10 @@ CREATE or replace FUNCTION ingest.lix_insert(
 $wrap$ LANGUAGE PLpgSQL;
 --SELECT ingest.lix_insert('BR','/var/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','first_yaml');
 --SELECT ingest.lix_insert('BR','/var/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','readme');
-
 --SELECT ingest.lix_insert('PE','/var/gits/_dg/preserv-PE/src/maketemplates/commomFirst.yaml','first_yaml');
 --SELECT ingest.lix_insert('PE','/var/gits/_dg/preserv-PE/src/maketemplates/readme.mustache','readme');
-
---SELECT ingest.lix_insert('PE','/var/gits/_dg/preserv-CO/src/maketemplates/commomFirst.yaml','first_yaml');
---SELECT ingest.lix_insert('PE','/var/gits/_dg/preserv-CO/src/maketemplates/readme.mustache','readme');
-
+--SELECT ingest.lix_insert('CO','/var/gits/_dg/preserv-CO/src/maketemplates/commomFirst.yaml','first_yaml');
+--SELECT ingest.lix_insert('CO','/var/gits/_dg/preserv-CO/src/maketemplates/readme.mustache','readme');
 --SELECT ingest.lix_insert('INT','/var/gits/_dg/preserv/src/maketemplates/make_ref004a.mustache.mk','mkme_srcTpl');
 --SELECT ingest.lix_insert('INT','/var/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','mkme_srcTpl');
 --SELECT ingest.lix_insert('INT','/var/gits/_dg/preserv/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
@@ -1203,12 +1200,10 @@ BEGIN
                     END IF;
                 END IF;
 
-
                 IF key='address' OR key='cadparcel' OR key='cadvia'
                 THEN
                    dict := jsonb_set( dict, array['layers',key,'isCadLayer'], '"true"' );
                 END IF;
-
 
                 IF dict->'layers'?key AND dict->'layers'?('cad'||key) 
                    AND dict->'layers'->key->>'subtype' = 'ext'
@@ -1258,7 +1253,52 @@ $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk001/make_conf.yaml');
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/MG/GovernadorValadares/_pk043/make_conf.yaml') );
+
+CREATE or replace FUNCTION ingest.insert_bytesize(
+  dict jsonb  -- input
+) RETURNS jsonb  AS $f$
+DECLARE
+ a text;
+ sz text;
+BEGIN
+    FOR i in 0..(select jsonb_array_length(dict->'files')-1)
+    LOOP
+        a := format($$ {files,%s,file} $$, i )::text[];
+        
+        SELECT size FROM pg_stat_file(concat('/var/www/preserv.addressforall.org/download/',dict#>>a::text[])) INTO sz;
+        
+        a := format($$ {files,%s,size} $$, i );
+        dict := jsonb_set( dict, a::text[],('"' || sz || '"')::jsonb);
+    END LOOP;
+ RETURN dict;
+END;
+$f$ language PLpgSQL;
+--SELECT ingest.insert_bytesize( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
+
+CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
+    jurisd text,
+    pkid int
+) RETURNS text AS $f$
+    DECLARE
+        q_query text;
+        conf_yaml jsonb;
+        f_yaml jsonb;
+        output_file text;
+    BEGIN
+
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
+    SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
+    
+    SELECT f_yaml->>'pg_io' || '/make_conf.yaml_' || jurisd || pkid INTO output_file;
+    
+    SELECT jsonb_to_yaml(ingest.insert_bytesize(conf_yaml)::text) INTO q_query;
+    
+    SELECT volat_file_write(output_file,q_query) INTO q_query;
+
+    RETURN q_query;
+    END;
+$f$ LANGUAGE PLpgSQL;
+-- SELECT ingest.lix_generate_make_conf_with_size('BR','18');
 
 
 CREATE or replace FUNCTION ingest.lix_generate_makefile(
