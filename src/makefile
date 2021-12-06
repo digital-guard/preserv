@@ -6,23 +6,53 @@
 
 pg_io  =/tmp/pg_io
 
-pg_uri_root ="postgres://postgres@localhost"
-pg_db       ="dl03t_main"
-pg_dbingest ="ingest2"
-pg_uri      ="$(pg_uri_root)/$(pg_db)"
-pg_uringest ="$(pg_uri_root)/$(pg_dbingest)"
+pg_uri_root =postgres://postgres@localhost
+pg_db       =dl03t_main
+pg_dbingest =ingest1
+pg_uri      =$(pg_uri_root)/$(pg_db)
+pg_uringest =$(pg_uri_root)/$(pg_dbingest)
 
-countries = "'BR','CL','CO','EC','PE','VE'"  # conforme jurisdiction/get.sh
-# pendente: incluir em info a propriedade Wikidata dos geocódigos numericos locais. Aí poderemos dispensar a lista de contries e automatizar get.sh pelo SQL.
+countries = "'BR','CL','CO','EC','PE','VE'"  # em uso e conforme data/jurisdiction.csv
+
+DB_TEST := $(shell psql $(pg_uri_root) -c "\l" | awk '/$(pg_dbingest)/ {n=(n>0)?3:1} /$(pg_db)/ {n=(n>0)?3:2} END {print n;}')
+DB_TEST2 := $(shell echo '/$(pg_dbingest)/ {n=(n>0)?3:1} /$(pg_db)/ {n=(n>0)?3:2} END {print n;}')
 
 ## -- -- RULES -- --
 
-ini_all: ini_sql
+all:
+	@echo "--------  make do projeto Preserv  ----------"
+	@echo "Use primeiro   sudo make permissions"
+	@echo "Use depois     make ini_all"
+	@echo "!Importante para users deste projeto:"
+	@echo "   sudo usermod -a -G postgres masterUser"
+	@echo "   sudo usermod -a -G www-data masterUser"
 
-ini_sql:
-	@echo "run SQL spcripts"
+ini_all: ini_sql ini_sql_db
+
+ini_sql_db:
+	@echo "... Verificando bancos de dados"
+ifneq ($(DB_TEST),$(filter $(DB_TEST),1 3))
+	@echo "... Criando banco $(pg_dbingest)"
+	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_dbingest)"
+endif
+ifneq ($(DB_TEST),$(filter $(DB_TEST),3 2))
+	@echo "... Criando banco $(pg_db)"
+	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_db)"
+endif
+	@echo "Bases $(pg_db) e $(pg_dbingest) criadas."
+
+ini_sql: ../../../_a4a/pg_pubLib-v1/src/makefile
+	@echo "--- Preparing filesystem... ---"
+	rm -f /opt/lock-mkStatus/digitalPreservation-makeSQL.~feito
 	mkdir -p $(pg_io)
-	psql $(pg_uri) < /var/gits/_a4a/WS/src/pubLib.sql
+	@echo "--- Preparing databses... ---"
+	@echo "--- Running SQL pubLib ---"
+	# psql $(pg_uri) < /var/gits/_a4a/WS/src/pubLib.sql
+	cd ../../../_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_db)
+	cd ../../../_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_dbingest)
+	@echo "--- Running API SQL templates ---"
+	psql $(pg_uri) < step00-iniApi.sql
+	@echo "--- Running Eclusa ---"
 	psql $(pg_uri) < eclusa/step1-ini.sql
 	# sh eclusa-step2a-ins.sh
 	#/var/gits/WS/src? psql $(pg_uri) < eclusa/step2b-ins.sql

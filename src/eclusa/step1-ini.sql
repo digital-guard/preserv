@@ -12,9 +12,8 @@
 
 -- -- -- -- -- -- -- -- --
 -- inicializações ECLUSA:
-
-CREATE SCHEMA IF NOT EXISTS eclusa; -- módulo complementar do Schema ingest.
-
+CREATE SCHEMA    IF NOT EXISTS eclusa; -- módulo complementar do Schema ingest.
+CREATE SCHEMA    IF NOT EXISTS api;
 
 CREATE or replace FUNCTION eclusa.cityfolder_input_packdir(
   p_user text, -- e.g. 'igor'
