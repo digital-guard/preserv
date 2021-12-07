@@ -249,7 +249,7 @@ CREATE TABLE ingest.layer_file (
 
 /* LIXO
 CREATE TABLE ingest.feature_asis_report (
-  file_id int NOT NULL REFERENCES ingest.layer_file(file_id),
+  file_id int NOT NULL REFERENCES ingest.layer_file(file_id) ON DELETE CASCADE,
   feature_id int NOT NULL,
   info jsonb,
   UNIQUE(file_id,feature_id)
@@ -257,7 +257,7 @@ CREATE TABLE ingest.feature_asis_report (
 */
 
 CREATE TABLE ingest.tmp_geojson_feature (
-  file_id int NOT NULL REFERENCES ingest.layer_file(file_id),
+  file_id int NOT NULL REFERENCES ingest.layer_file(file_id) ON DELETE CASCADE,
   feature_id int,
   feature_type text,
   properties jsonb,
@@ -266,7 +266,7 @@ CREATE TABLE ingest.tmp_geojson_feature (
 ); -- to be feature_asis after GeoJSON ingestion.
 
 CREATE TABLE ingest.feature_asis (
-  file_id int NOT NULL REFERENCES ingest.layer_file(file_id),
+  file_id int NOT NULL REFERENCES ingest.layer_file(file_id) ON DELETE CASCADE,
   feature_id int NOT NULL,
   properties jsonb,
   geom geometry NOT NULL CHECK ( st_srid(geom)=4326 ),
