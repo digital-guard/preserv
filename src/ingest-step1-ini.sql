@@ -1321,7 +1321,7 @@ CREATE or replace FUNCTION ingest.lix_generate_makefile(
     
     SELECT f_yaml->>'pg_io' || '/makeme_' || jurisd || pkid INTO output_file;
     
-    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, f_yaml || ingest.jsonb_mustache_prepare(conf_yaml), '/var/gits/_dg/preserv/src/maketemplates/'),E'\u130C9',$$\"$$) INTO q_query;
+    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, f_yaml || ingest.jsonb_mustache_prepare(conf_yaml)),E'\u130C9',$$\"$$) INTO q_query;
     
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 
@@ -1332,7 +1332,6 @@ $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_makefile('PE','1');
 
 CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
-    baseSrc text,
     jurisd text,
     pkid int
 ) RETURNS text AS $f$
@@ -1349,7 +1348,7 @@ CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
     
     SELECT f_yaml->>'pg_io' || '/README-draft_' || jurisd || pkid INTO output_file;
     
-    SELECT jsonb_mustache_render(readme, conf_yaml, concat(baseSrc,'preserv/src/maketemplates/')) INTO q_query;
+    SELECT jsonb_mustache_render(readme, conf_yaml) INTO q_query;
 
     SELECT volat_file_write(output_file,q_query) INTO q_query;
     
