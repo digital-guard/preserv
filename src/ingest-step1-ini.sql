@@ -1289,7 +1289,7 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
     SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     
-    SELECT f_yaml->>'pg_io' || '/make_conf.yaml_' || jurisd || pkid INTO output_file;
+    SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pkid INTO output_file;
     
     SELECT jsonb_to_yaml(ingest.insert_bytesize(conf_yaml)::text) INTO q_query;
     
