@@ -263,13 +263,13 @@ CREATE TABLE ingest.tmp_geojson_feature (
   properties jsonb,
   jgeom jsonb,
   UNIQUE(file_id,feature_id)
-);
+); -- to be feature_asis after GeoJSON ingestion.
 
 CREATE TABLE ingest.feature_asis (
   file_id int NOT NULL REFERENCES ingest.layer_file(file_id),
   feature_id int NOT NULL,
   properties jsonb,
-  geom geometry,
+  geom geometry NOT NULL CHECK ( st_srid(geom)=4326 ),
   UNIQUE(file_id,feature_id)
 );
 
