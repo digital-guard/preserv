@@ -24,6 +24,7 @@ info:
 	@echo "=== Targets ==="
 	@printf "me: gera makefile para ingestão dos dados, a partir de make_conf.yaml.\n"
 	@printf "readme: gera rascunho de Readme.md para conjunto de dados.\n"
+	@printf "insert_size: Insere tamanho em bytes em files no arquivo make_conf.yaml.\n"
 	@printf "insert_make_conf.yaml: carrega na base de dados o arquivo make_conf.yaml.\n"
 	@printf "delete_file: deleta arquivo ingestado, a partir do sha256.\n"
 
@@ -41,7 +42,7 @@ me: insert_make_conf.yaml
 
 readme:
 	@echo "-- Create basic README-draft.md template --"
-	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_readme('$(baseSrc)','$(country)','$(pkid)');"
+	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_readme('$(country)','$(pkid)');"
 	sudo chmod 777 $(readme_output)
 	@echo " Check diff, the '<' lines are the new ones... Something changed?"
 	@diff $(readme_output) ./README-draft.md || :

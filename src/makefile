@@ -14,6 +14,8 @@ pg_uringest =$(pg_uri_root)/$(pg_dbingest)
 
 countries = "'BR','CL','CO','EC','PE','VE'"  # em uso e conforme data/jurisdiction.csv
 
+gits_basepath = /var/gits
+
 DB_TEST := $(shell psql $(pg_uri_root) -c "\l" | awk '/$(pg_dbingest)/ {n=(n>0)?3:1} /$(pg_db)/ {n=(n>0)?3:2} END {print n;}')
 DB_TEST2 := $(shell echo '/$(pg_dbingest)/ {n=(n>0)?3:1} /$(pg_db)/ {n=(n>0)?3:2} END {print n;}')
 
@@ -27,7 +29,7 @@ all:
 	@echo "   sudo usermod -a -G postgres masterUser"
 	@echo "   sudo usermod -a -G www-data masterUser"
 
-ini_all: ini_sql ini_sql_db
+ini_all: ini_sql_db ini_sql
 
 ini_sql_db:
 	@echo "... Verificando bancos de dados"
@@ -41,15 +43,18 @@ ifneq ($(DB_TEST),$(filter $(DB_TEST),3 2))
 endif
 	@echo "Bases $(pg_db) e $(pg_dbingest) criadas."
 
-ini_sql: ../../../_a4a/pg_pubLib-v1/src/makefile
+ini_sql: $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	@echo "--- Preparing filesystem... ---"
 	rm -f /opt/lock-mkStatus/digitalPreservation-makeSQL.~feito
 	mkdir -p $(pg_io)
 	@echo "--- Preparing databses... ---"
 	@echo "--- Running SQL pubLib ---"
-	# psql $(pg_uri) < /var/gits/_a4a/WS/src/pubLib.sql
-	cd ../../../_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_db)
-	cd ../../../_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_dbingest)
+	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_db)
+	psql $(pg_uringest) < $(gits_basepath)/_a4a/WS/src/pubLib.sql
+	psql $(pg_uringest) < $(gits_basepath)/_a4a/WS/src/sys_pubLib.sql
+	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_dbingest)
+	@echo "--- Running Ingest ---"
+	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
 	@echo "--- Running API SQL templates ---"
 	psql $(pg_uri) < step00-iniApi.sql
 	@echo "--- Running Eclusa ---"
