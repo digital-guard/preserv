@@ -7,12 +7,6 @@ Os dados recebidos de diferentes doadores apresentam diferentes formatos e estru
 
 Uma outra condição é a preservação: os dados originais são guardados por 20 anos, e qualquer um que desejar, hoje ou no futuro, recuperar os dados e p
 
-Os _makefiles_ rodam softwares
-
-
-padronizados (ex. [shp2pgsql](https://postgis.net/docs/using_postgis_dbmanagement.html#shp2pgsql_usage)), com ampla comunidade de usuários de geoprocessamento e Unix,  consolidados por mais de 10 anos de domínio público, **garantindo [reprodutibilidade](https://pt.wikipedia.org/wiki/Reprodutibilidade)  da ingestão em banco de dados PostgreSQL+PostGIS**.
-
-
 Os _makefiles_ rodam softwares padronizados (ex. [shp2pgsql](https://postgis.net/docs/using_postgis_dbmanagement.html#shp2pgsql_usage)), com ampla comunidade de usuários de geoprocessamento e Unix,  consolidados por mais de 10 anos de domínio público, **garantindo [reprodutibilidade](https://pt.wikipedia.org/wiki/Reprodutibilidade)  da ingestão em banco de dados PostgreSQL+PostGIS**.
 
 ## Formato
