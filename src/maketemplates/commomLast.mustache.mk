@@ -9,6 +9,11 @@ baseSrc       = /var/gits/_dg
 
 mkme_input0   = $(baseSrc)/preserv-$(country)/src/maketemplates/commomFirst.yaml
 
+ifeq ($(shell ls -d "${PWD}" | grep "-"),) # empty result from grep
+country       = INT
+mkme_input0   = $(baseSrc)/preserv/src/maketemplates/commomFirst.yaml
+endif
+
 pg_io         = $(shell grep 'pg_io'  < $(mkme_input0) | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
 pg_uri        = $(shell grep 'pg_uri' < $(mkme_input0) | cut -f2- -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
 pg_db         = $(shell grep 'pg_db'  < $(mkme_input0) | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
