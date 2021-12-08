@@ -1,0 +1,21 @@
+pkid:      1
+pkversion: 001
+schemaId_input:    ref027a
+schemaId_template: ref027a
+need_commands:    7z psql shp2pgsql
+srid: 4326
+
+files:
+  -
+    p:    1
+    file: 1ec6e4c74dc385c983e35c864cdb1d1ea30c4fb1af718a363e9a6078d57c054d.zip
+    name: Countries
+
+layers:
+  nsvia:
+        method: shp2sql
+        subtype: none
+        p: 1a
+        file: 1
+        orig_filename: ne_10m_admin_0_countries
+        sql_select: ['gid', 'ISO_A2', 'geom']

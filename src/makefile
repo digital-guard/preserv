@@ -56,6 +56,7 @@ ini_sql: $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	@echo "--- Running Ingest ---"
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/digpreserv.sql
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
+	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ini.sql
 	@echo "--- Running API SQL templates ---"
 	psql $(pg_uri) < step00-iniApi.sql
 	@echo "--- Running Eclusa ---"
@@ -144,3 +145,13 @@ redirects_update:
 	@echo Download da tabela de-para ....
 	wget "https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk/gviz/tq?tqx=out:csv&sheet={de-para}" -O "$(pg_io)/de-para.csv"
 	psql $(pg_uri) -c "DELETE FROM download.redirects; COPY download.redirects FROM '$(pg_io)/de-para.csv' CSV HEADER;"
+
+makefile_pk_first:
+	@echo "------------------------------------------------------"
+	@echo "Iniciada cópia de makefile inicial nos diretórios '_pk*' de data."
+	# retorna todos os diretórios com o padrão '*_pk*' e copia o arquivo commomLast.mustache.mk para cada um deles, renomeando o arquivo para makefile.
+	sed "s/^country *.*/country=INT/" maketemplates/commomLast.mustache.mk > maketemplates/commomLast.mustache.mk.tmp
+	find ../data -type d -name '*_pk*' -exec cp maketemplates/commomLast.mustache.mk.tmp \{\}/makefile \;
+	rm maketemplates/commomLast.mustache.mk.tmp
+	@echo "Finalizada a cópia "
+	@echo "------------------------------------------------------"
