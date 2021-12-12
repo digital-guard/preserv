@@ -65,6 +65,20 @@ ini_sql: $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	#/var/gits/WS/src? psql $(pg_uri) < eclusa/step2b-ins.sql
 	touch /opt/lock-mkStatus/digitalPreservation-makeSQL.~feito
 
+## GENERAL CHECKs:
+
+countpacks: $(pkdir)
+	@echo "---- Counting lines of $(dir) ----"
+	@echo "* sha256sum.txt files:"
+	@find $(pkdir) -name "sha256sum.txt" | wc -l
+	@echo "* _pk* directories:"
+	@(cd $(pkdir); find . -type d  -wholename "./*/*/*/_pk*" | wc -l)
+	@echo "* README.md files:"
+	@find $(pkdir) -name "README.md" | wc -l
+	@echo "* make_conf files:"
+	@find $(pkdir) -name "make_conf.*" | wc -l
+	
+	
 ## ECLUSA, commands to execute by root at crontab:
 
 ecl_run: /opt/lock-mkStatus/digitalPreservation-makeSQL.~feito
