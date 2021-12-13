@@ -1,0 +1,12 @@
+extension,variant,codec_descriptor
+CSV,default,text/csv;charset=UTF-8
+CSV,Latin1,text/csv;charset=ISO-8859-1
+CSV,MS-Windows,text/csv;charset=Windows-1252
+CSV,ASCII,text/csv;charset=us-ascii
+CSV,ponto-e-virgula,text/csv;charset=UTF-8;delimiter=%3B
+CSV.ZIP,default,application/zip;content=text/csv;charset=UTF-8
+CSV.GZ,default,application/gzip;content=text/csv;charset=UTF-8
+GeoJSON,default,application/geo+json;charset=UTF-8
+GeoJSON.GZ,default,application/gzip;content=application/geo+json;charset=UTF-8
+SHP.ZIP,default,application/zip;content=x-gis/x-shapefile
+TSV,CSV com Tab,text/csv;charset=UTF-8;delimiter=%09
