@@ -50,8 +50,6 @@ ini_sql: $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	@echo "--- Preparing databses... ---"
 	@echo "--- Running SQL pubLib ---"
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_db)
-	psql $(pg_uringest) < $(gits_basepath)/_a4a/WS/src/pubLib.sql
-	psql $(pg_uringest) < $(gits_basepath)/_a4a/WS/src/sys_pubLib.sql
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_dbingest)
 	@echo "--- Running Ingest ---"
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/digpreserv.sql
