@@ -1176,12 +1176,8 @@ BEGIN
                 THEN
                     codec_value := regexp_split_to_array( dict->'layers'->key->>'codec' ,'(~)');
                     
-                    RAISE NOTICE 'value of a : %', codec_value;
-                    
                     SELECT codec_descriptor FROM ingest.codec_type WHERE (array[extension, variant] = codec_value AND cardinality(codec_value) = 2) OR (array[extension] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_desc;
                     
-                    RAISE NOTICE 'value of a : %', codec_value[1]; 
-
                     IF codec_desc IS NOT NULL
                     THEN
                         dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_desc::jsonb );
