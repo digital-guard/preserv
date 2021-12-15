@@ -30,11 +30,11 @@
 {{/charset}}
 	@echo Executando csv2sql ...
 {{#charset}}
-	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.unix_utf8.csv', '$(tabname)' )"
+	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.unix_utf8.csv', '$(tabname)'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
 {{/charset}}
 {{/isXlsx}}
 {{^charset}}
-	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.csv', '$(tabname)' )"
+	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.csv', '$(tabname)'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
 {{/charset}}
 {{/isCsv}}
 {{#isOgr}}
