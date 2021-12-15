@@ -110,37 +110,46 @@ CREATE TABLE IF NOT EXISTS dg_preserv.jurisdiction ( -- only current
   ,UNIQUE(jurisd_base_id,parent_abbrev,abbrev)
 );
 
-CREATE TABLE dg_preserv.donor (
-  id serial NOT NULL primary key,
-  scope text, -- city code or country code
-  shortname text, -- abreviation or acronym
-  vat_id text,    -- in the Brazilian case is "CNPJ:number"
-  legalName text NOT NULL, -- in the Brazilian case is Razao Social
-  wikidata_id bigint,  -- without "Q" prefix
-  url text,     -- official home page of the organization
-  info JSONb,   -- all other information using controlled keys
-  kx_vat_id text,    -- cache for search
-  UNIQUE(vat_id),
-  UNIQUE(kx_vat_id),
-  UNIQUE(scope,legalName)
-);
-
 CREATE TABLE dg_preserv.auth_user (
   -- authorized users to be a datapack responsible and eclusa-FTP manager
   username text NOT NULL PRIMARY KEY,
   info jsonb
 );
 
-CREATE TABLE dg_preserv.donatedPack_commom(   -- Pacote não-versionado, apenas controle de pack_id e registro da entrada. Só metaqdos comuns às versóes.
-  pack_id serial NOT NULL PRIMARY KEY,
-  -- scope by jurisdiction!
-  donor_id int NOT NULL REFERENCES dg_preserv.donor(id),
-  mktpl_pack_id int,  -- update depois. pacote-modelo (null ou mesmo pack_id caso seja tambem modelo)
-  inputschema_id int  -- update depois. input schema (YAML) tomado como modelo.
+CREATE TABLE dg_preserv.donor (
+  id integer NOT NULL PRIMARY KEY CHECK (id = country_id*1000000+local_serial),
+  country_id int NOT NULL CHECK(country_id>0), -- ISO
+  local_serial  int NOT NULL CHECK(local_serial>0), -- byu contry 
+  scope text, -- city code or country code
+  shortname text, -- abreviation or acronym (local)
+  vat_id text,    -- in the Brazilian case is "CNPJ:number"
+  legalName text NOT NULL, -- in the Brazilian case is Razao Social
+  wikidata_id bigint,  -- without "Q" prefix
+  url text,     -- official home page of the organization
+  info JSONb,   -- all other information using controlled keys
+  --kx_vat_id text,    -- cache for search 
+  UNIQUE(country_id,local_serial),
+  UNIQUE(country_id,vat_id),
+  --UNIQUE(kx_vat_id),
+  UNIQUE(country_id,legalName),
+  UNIQUE(country_id,scope,shortname)
 );
 
-CREATE TABLE dg_preserv.donatedPack(   -- todo pacote tem uma abertura e um fechamento.
-  pkv_id real NOT NULL PRIMARY KEY,  -- checked by donatedPack_trigf().
+CREATE TABLE dg_preserv.donated_PackTpl(   
+   -- donated pack template, Pacote não-versionado, apenas controle de pack_id e registro da entrada. Só metaqdos comuns às versóes.
+  id bigint NOT NULL PRIMARY KEY CHECK (id = donor_id::bigint*100::bigint + pk_count::bigint),
+  donor_id int NOT NULL REFERENCES dg_preserv.donor(id),
+  pk_count int  NOT NULL CHECK(pk_count>0),
+  -- tpl text not null -- make_conf!
+  mktpl_pack_id int,  -- update depois. pacote-modelo (null ou mesmo pack_id caso seja tambem modelo)
+  inputschema_id int  -- update depois. input schema (YAML) tomado como modelo.
+  license_default text,
+  info JSONb,
+  UNIQUE(donor_id,pk_count)
+);
+
+CREATE TABLE dg_preserv.donated_PackVers(   -- todo pacote tem uma abertura e um fechamento.
+  id bigint NOT NULL PRIMARY KEY  CHECK(id=....),  -- old checked by donatedPack_trigf().
   user_resp text NOT NULL REFERENCES dg_preserv.auth_user(username), -- responsável pelo README e teste do makefile
   accepted_date date NOT NULL,   -- sem uso? ver optiom.origin
   escopo text NOT NULL, -- bbox or minimum bounding AdministrativeArea
