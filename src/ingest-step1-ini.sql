@@ -1486,3 +1486,38 @@ $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION ingest.join(text,text,text,text,text,text)
   IS 'Join layer and cadlayer.'
 ;
+
+
+CREATE TABLE ingest.codec_type (
+  extension text,
+  variant text,
+  codec_descriptor jsonb,
+  UNIQUE(extension,variant)
+);
+
+CREATE or replace FUNCTION ingest.load_codec_type(
+  p_file text,  -- path+filename+ext
+  p_delimiter text DEFAULT ',',
+  p_fdwname text DEFAULT 'tmp_codec_type' -- nome da tabela fwd
+) RETURNS text  AS $f$
+DECLARE
+        q_query text;
+BEGIN
+    SELECT ingest.fdw_generate_direct_csv(p_file,p_fdwname,p_delimiter) INTO q_query;
+
+    DELETE FROM ingest.codec_type;
+
+    EXECUTE format(E'INSERT INTO ingest.codec_type (extension,variant,codec_descriptor) SELECT extension, variant, jsonb_object(regexp_split_to_array (\'mime=\' || codec_descriptor,\'(;|=)\')) FROM %s', p_fdwname);
+
+    EXECUTE format('DROP FOREIGN TABLE IF EXISTS %s;',p_fdwname);
+
+    UPDATE ingest.codec_type
+    SET codec_descriptor = jsonb_set(codec_descriptor, '{delimiter}', to_jsonb(str_urldecode(codec_descriptor->>'delimiter')), true)
+    WHERE codec_descriptor->'delimiter' IS NOT NULL;
+
+    RETURN ' '|| E'Load codec_type from: '||p_file|| ' ';
+END;
+$f$ language PLpgSQL;
+COMMENT ON FUNCTION ingest.load_codec_type
+  IS 'Load codec_type.csv.'
+;
