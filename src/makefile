@@ -167,3 +167,7 @@ makefile_pk_first:
 	rm maketemplates/commomLast.mustache.mk.tmp
 	@echo "Finalizada a cópia "
 	@echo "------------------------------------------------------"
+
+codec_type_prepare:
+	@echo "--- codec_type load ---"
+	psql $(pg_uringest) -c "SELECT ingest.load_codec_type('$(gits_basepath)/_dg/preserv/data/codec_type.csv',',');"
