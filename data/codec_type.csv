@@ -7,6 +7,6 @@ CSV,ponto-e-virgula,text/csv;charset=UTF-8;delimiter=%3B
 CSV.ZIP,,application/zip;content=text/csv;charset=UTF-8
 CSV.GZ,,application/gzip;content=text/csv;charset=UTF-8
 GeoJSON,,application/geo+json;charset=UTF-8
-GeoJSON.GZ,default,application/gzip;content=application/geo+json;charset=UTF-8
+GeoJSON.GZ,,application/gzip;content=application/geo+json;charset=UTF-8
 SHP.ZIP,,application/zip;content=x-gis/x-shapefile
 TSV,,text/csv;charset=UTF-8;delimiter=%09
