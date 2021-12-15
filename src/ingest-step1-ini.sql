@@ -1200,6 +1200,7 @@ BEGIN
                     END IF;
                 END IF;
 
+
                 IF key='address' OR key='cadparcel' OR key='cadvia'
                 THEN
                    dict := jsonb_set( dict, array['layers',key,'isCadLayer'], '"true"' );
@@ -1507,7 +1508,7 @@ BEGIN
 
     DELETE FROM ingest.codec_type;
 
-    EXECUTE format(E'INSERT INTO ingest.codec_type (extension,variant,codec_descriptor) SELECT extension, variant, jsonb_object(regexp_split_to_array (\'mime=\' || codec_descriptor,\'(;|=)\')) FROM %s', p_fdwname);
+    EXECUTE format($$INSERT INTO ingest.codec_type (extension,variant,codec_descriptor) SELECT extension, variant, jsonb_object(regexp_split_to_array ('mime=' || codec_descriptor,'(;|=)')) FROM %s$$, p_fdwname);
 
     EXECUTE format('DROP FOREIGN TABLE IF EXISTS %s;',p_fdwname);
 
