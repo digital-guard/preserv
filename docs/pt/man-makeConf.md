@@ -71,13 +71,11 @@ Comumente, cada layer é especificado pelas seguintes chaves:
 (Avaliar se é o local correto)
 Além das opções mais comuns, outras podem ser utilizadas:
 
-  * `multiple_files:` valor boleano, informa se o respectivo `file` de um layer possui mais de um arquivo. É obrigatória quando `file` possuir vários arquivos.
-
   * `orig_subfilename:` nome do arquivo para o caso de `file` possuir arquivo compactado dentro de arquivo compactado.
 
   * `join_column:` nome da coluna utilizada para correlacionar um layer e seu respectivo layer complementar(cadastral).
 
-  * `orig_ext:` utilizada em algumas situações com os métodos csv2sql (apenas para a extensão .xlsx) e ogr2ogr para indicar a extensão do arquivo.
+  * `orig_ext:` utilizada em algumas situações com o método ogr2ogr para indicar a extensão do arquivo.
 
   * `method_opts:` opções para os programas shp2pgsql (utilizado pelo método shp2sql) e xlsx2csv (utilizado por csv2sql na conversão de um arquivo xlsx para csv, quando combinado com orig_ext: .xlsx).
 

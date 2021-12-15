@@ -1147,6 +1147,8 @@ DECLARE
  codec_charset text DEFAULT NULL;
  codec_content text DEFAULT NULL;
  codec_mimeMain text DEFAULT NULL;
+ codec_value text[];
+ codec_desc jsonb;
 BEGIN
  CASE p_type -- preparing types
  WHEN 'make_conf', NULL THEN
@@ -1170,40 +1172,37 @@ BEGIN
                    dict := jsonb_set( dict, array['layers',key,'sql_view'], to_jsonb(sql_view) );
                 END IF;
 
-
                 IF dict->'layers'->key?'codec'
                 THEN
-                   codec_content :=  substring(dict->'layers'->key->>'codec', 'content=(.*)(;|$)');
+                    codec_value := regexp_split_to_array( dict->'layers'->key->>'codec' ,'(~)');
+                    
+                    RAISE NOTICE 'value of a : %', codec_value;
+                    
+                    SELECT codec_descriptor FROM ingest.codec_type WHERE (array[extension, variant] = codec_value AND cardinality(codec_value) = 2) OR (array[extension] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_desc;
+                    
+                    RAISE NOTICE 'value of a : %', codec_value[1]; 
 
-                    IF codec_content
+                    IF codec_desc IS NOT NULL
                     THEN
-                        codec_mimeMain :=  split_part(dict->'layers'->key->>'codec',';', 1 );
-                    ELSE
-                        codec_content :=  split_part(dict->'layers'->key->>'codec',';', 1 );
+                        dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_desc::jsonb );
+                    END IF;
+                    
+                    IF codec_desc?'mime' AND codec_desc->>'mime' = 'application/zip' OR codec_desc->>'mime' = 'application/gzip'
+                    THEN
+                        dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
                     END IF;
 
-                   codec_charset :=  substring(dict->'layers'->key->>'codec', 'charset=(.*)(;|$)');
-
-                    IF codec_content <> ''
+                    IF codec_value[1] = 'XLSX' OR codec_value[1] = 'xlsx'
                     THEN
-                        dict := jsonb_set( dict, array['layers',key,'codec_content'],  to_jsonb(codec_content) );
+                        dict := jsonb_set( dict, array['layers',key,'isXlsx'], 'true'::jsonb );
                     END IF;
 
-                    IF codec_charset <> ''
-                    THEN
-                        dict := jsonb_set( dict, array['layers',key,'codec_charset'],  to_jsonb(codec_charset) );
-                    END IF;
-
-                    IF codec_mimeMain <> ''
-                    THEN
-                        dict := jsonb_set( dict, array['layers',key,'codec_mimeMain'], to_jsonb(codec_mimeMain) );
-                    END IF;
                 END IF;
 
 
                 IF key='address' OR key='cadparcel' OR key='cadvia'
                 THEN
-                   dict := jsonb_set( dict, array['layers',key,'isCadLayer'], '"true"' );
+                   dict := jsonb_set( dict, array['layers',key,'isCadLayer'], 'true'::jsonb );
                 END IF;
 
                 IF dict->'layers'?key AND dict->'layers'?('cad'||key) 
@@ -1243,7 +1242,7 @@ BEGIN
 	 dict := dict || jsonb_build_object( 'joins_keys', jsonb_object_keys_asarray(dict->'joins') );
 	 dict := dict || jsonb_build_object( 'layers_keys', jsonb_object_keys_asarray(dict->'layers') );
 	 dict := jsonb_set( dict, array['pkversion'], to_jsonb(to_char((dict->>'pkversion')::int,'fm000')) );
-	 dict := jsonb_set( dict, '{files,-1,last}','"true"');
+	 dict := jsonb_set( dict, '{files,-1,last}','true'::jsonb);
  -- CASE ELSE ...?
  END CASE;
  RETURN dict;
@@ -1253,6 +1252,9 @@ $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk001/make_conf.yaml');
 -- new ingest.make_conf_yaml2jsonb() = ? read file
+
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/PR/Cascavel/_pk016/make_conf.yaml') );
+
 
 
 CREATE or replace FUNCTION ingest.insert_bytesize(

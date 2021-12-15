@@ -11,31 +11,31 @@
 {{#isShp}}
 	@echo Executando shp2pgsql ...
 {{#multiple_files}}
-	cd $(sandbox); find $(sandbox) -iname "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" -exec sh -c "psql $(pg_uri_db) -c 'DROP TABLE IF EXISTS $(tabname)'; shp2pgsql {{#codec_charset}}-W {{codec_charset}}{{/codec_charset}} {{{method_opts}}} -s {{srid}} {} $(tabname) | psql -q $(pg_uri_db); {{#sql_view}}psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_$(tabname) AS {{{.}}}" | psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','{}','$(layername)','vw{{file}}_$(tabname)','$(fullPkID)','$(part{{file}}_file)',array[]::text[])" | psql $(pg_uri_db) -c "DROP VIEW vw{{file}}_$(tabname)"{{/sql_view}}{{^sql_view}}psql $(pg_uri_db) -c \"SELECT ingest.any_load('{{method}}','{}','$(layername)','$(tabname)','$(fullPkID)','$(part{{file}}_file)',array{{{sql_select}}})\"{{/sql_view}}; chmod -R a+rx . 2> /dev/null" \;
+	cd $(sandbox); find $(sandbox) -iname "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" -exec sh -c "psql $(pg_uri_db) -c 'DROP TABLE IF EXISTS $(tabname)'; shp2pgsql {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} {} $(tabname) | psql -q $(pg_uri_db); {{#sql_view}}psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_$(tabname) AS {{{.}}}" | psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','{}','$(layername)','vw{{file}}_$(tabname)','$(fullPkID)','$(part{{file}}_file)',array[]::text[])" | psql $(pg_uri_db) -c "DROP VIEW vw{{file}}_$(tabname)"{{/sql_view}}{{^sql_view}}psql $(pg_uri_db) -c \"SELECT ingest.any_load('{{method}}','{}','$(layername)','$(tabname)','$(fullPkID)','$(part{{file}}_file)',array{{{sql_select}}})\"{{/sql_view}}; chmod -R a+rx . 2> /dev/null" \;
 	@echo "Confira os resultados nas tabelas ingest.layer_file e ingest.feature_asis".
 {{/multiple_files}}
 {{^multiple_files}}
-	cd $(sandbox); shp2pgsql {{#codec_charset}}-W {{codec_charset}}{{/codec_charset}} {{{method_opts}}} -s {{srid}} "{{orig_filename}}.shp" $(tabname) | psql -q $(pg_uri_db) 2> /dev/null
+	cd $(sandbox); shp2pgsql {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} "{{orig_filename}}.shp" $(tabname) | psql -q $(pg_uri_db) 2> /dev/null
 {{/multiple_files}}
 {{/isShp}}
 {{#isCsv}}
-{{#orig_ext}}
-	@echo Convertendo de {{orig_filename}}{{orig_ext}} para {{orig_filename}}.csv em UTF8 com LF ...
-	xlsx2csv {{{method_opts}}} "$(sandbox)/{{orig_filename}}{{orig_ext}}" "$(sandbox)/{{orig_filename}}.csv"
-{{/orig_ext}}
-{{^orig_ext}}
-{{#codec_charset}}
+{{#isXlsx}}
+	@echo Convertendo de {{orig_filename}}.xlsx para {{orig_filename}}.csv em UTF8 com LF ...
+	xlsx2csv -i {{{method_opts}}} "$(sandbox)/{{orig_filename}}.xlsx" "$(sandbox)/{{orig_filename}}.csv"
+{{/isXlsx}}
+{{^isXlsx}}
+{{#charset}}
 	@echo Alterando codificação para UTF8 e o tipo de quebra de linha de CRLF para LF ...
-	iconv -f {{codec_charset}} -t UTF-8 $(sandbox)/{{orig_filename}}.csv | dos2unix > $(sandbox)/{{orig_filename}}.unix_utf8.csv
-{{/codec_charset}}
+	iconv -f {{charset}} -t UTF-8 $(sandbox)/{{orig_filename}}.csv | dos2unix > $(sandbox)/{{orig_filename}}.unix_utf8.csv
+{{/charset}}
 	@echo Executando csv2sql ...
-{{#codec_charset}}
+{{#charset}}
 	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.unix_utf8.csv', '$(tabname)' )"
-{{/codec_charset}}
-{{/orig_ext}}
-{{^codec_charset}}
+{{/charset}}
+{{/isXlsx}}
+{{^charset}}
 	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.csv', '$(tabname)' )"
-{{/codec_charset}}
+{{/charset}}
 {{/isCsv}}
 {{#isOgr}}
 	@echo Executando ogr2ogr ...
