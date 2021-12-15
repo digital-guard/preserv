@@ -12,3 +12,4 @@ GeoJSON.GZ,,application/gzip;content=application/geo+json;charset=UTF-8
 SHP.ZIP,,application/zip;content=x-gis/x-shapefile
 SHP,Latin1,x-gis/x-shapefile;charset=ISO-8859-1
 TSV,,text/csv;charset=UTF-8;delimiter=%09
+XLSX,,
