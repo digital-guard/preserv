@@ -1490,7 +1490,8 @@ COMMENT ON FUNCTION ingest.join(text,text,text,text,text,text)
 CREATE TABLE ingest.codec_type (
   extension text,
   variant text,
-  codec_descriptor jsonb,
+  descr_mime jsonb,
+  descr_encode jsonb,
   UNIQUE(extension,variant)
 );
 
@@ -1506,13 +1507,13 @@ BEGIN
 
     DELETE FROM ingest.codec_type;
 
-    EXECUTE format($$INSERT INTO ingest.codec_type (extension,variant,codec_descriptor) SELECT extension, variant, jsonb_object(regexp_split_to_array ('mime=' || codec_descriptor,'(;|=)')) FROM %s$$, p_fdwname);
+    EXECUTE format($$INSERT INTO ingest.codec_type (extension,variant,descr_mime,descr_encode) SELECT extension, variant, jsonb_object(regexp_split_to_array ('mime=' || descr_mime,'(;|=)')), jsonb_object(regexp_split_to_array ( descr_encode,'(;|=)')) FROM %s$$, p_fdwname);
 
     EXECUTE format('DROP FOREIGN TABLE IF EXISTS %s;',p_fdwname);
 
     UPDATE ingest.codec_type
-    SET codec_descriptor = jsonb_set(codec_descriptor, '{delimiter}', to_jsonb(str_urldecode(codec_descriptor->>'delimiter')), true)
-    WHERE codec_descriptor->'delimiter' IS NOT NULL;
+    SET descr_encode = jsonb_set(descr_encode, '{delimiter}', to_jsonb(str_urldecode(descr_encode->>'delimiter')), true)
+    WHERE descr_encode->'delimiter' IS NOT NULL;
 
     RETURN ' '|| E'Load codec_type from: '||p_file|| ' ';
 END;
