@@ -1,4 +1,4 @@
-extension,variant,descr_mime;descr_encode
+extension,variant,descr_mime,descr_encode
 CSV,,text/csv,charset=UTF-8;srid=4326
 CSV,Latin1,text/csv,charset=ISO-8859-1;srid=4326
 CSV,Latin9,text/csv,charset=ISO-8859-15;srid=4326
