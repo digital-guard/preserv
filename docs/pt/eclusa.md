@@ -1,6 +1,6 @@
 # ECLUSA DE DADOS
 
-<img src="assets/eclusa123-ico.200x.png" align="right">
+<img src="../assets/eclusa123-ico.200x.png" align="right">
 
 A entrega de dados brutos pode ser realizada arquivo por arquivo na API ou "em lote", ambas pelo *técnico responsável* devidamente autenticado. A "entrega em lote" é realizada por protocolo SFTP, no ambiente apelidado de Eclusa, garantindo-se o seguinte workflow:
 
@@ -12,7 +12,7 @@ Todo o workflow e garantia de geração de *hash* é efetuado pela Eclusa.
 
 ## Códigos-fonte da Eclusa e demais softwares
 
-Ver [digital-preservation/src](http://git.AddressForAll.org/digital-preservartion/tree/master/src).
+Ver [digital-preservation/src](https://git.digital-guard.org/preserv/tree/master/src).
 
 ## Reinicializacao depois do boot
 Com o boot do servidor todos os conteudos da pasta `/tmp` sao perdidos, devemos portanto reinicializa-la com as devidas permissoes.
