@@ -1382,9 +1382,7 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
         conf_yaml jsonb;
         f_yaml jsonb;
         output_file text;
-        q_license text;
-        q_license_is_explicit text;
-        file_licenses jsonb;
+        files_license jsonb;
     BEGIN
 
     SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
@@ -1392,16 +1390,10 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
     
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pkid INTO output_file;
     
-    SELECT license_is_explicit, license FROM tmp_donatedPack AS td WHERE td.pack_id = (SELECT pack_id FROM tmp_donatedPackold2new WHERE old_pack_id = to_char(pkid,'fm00')) INTO q_license_is_explicit, q_license;
-    
-    CASE q_license_is_explicit
-    WHEN 'yes' THEN
-        SELECT to_jsonb(t) FROM (SELECT * FROM tmp_licenses AS tl LEFT JOIN tmp_families as tf ON tl.family = tf.family WHERE tl.family = lower(q_license)) AS t INTO file_licenses;
-    WHEN 'no'  THEN
-        SELECT to_jsonb(t) FROM (SELECT * FROM tmp_implieds AS tl LEFT JOIN tmp_families as tf ON tl.family = tf.family WHERE tl.family = lower(q_license)) AS t INTO file_licenses;
-    END CASE;
+    SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE pack_id = (SELECT pack_id FROM tmp_donatedPackold2new WHERE old_pack_id = to_char(pkid,'fm00')) INTO files_license;
+
  
-    conf_yaml := jsonb_set( conf_yaml, array['file_licenses'] , file_licenses);
+    conf_yaml := jsonb_set( conf_yaml, array['files_license'], files_license);
     
     SELECT jsonb_to_yaml(conf_yaml::text) INTO q_query;
 
@@ -1411,7 +1403,7 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
     END;
 $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_make_conf_with_license('BR','18');
-
+-- SELECT ingest.lix_generate_make_conf_with_license('BR','24');
 
 CREATE or replace FUNCTION ingest.lix_generate_makefile(
     jurisd text,
