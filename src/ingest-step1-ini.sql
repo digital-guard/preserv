@@ -1390,9 +1390,8 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
     
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pkid INTO output_file;
     
-    SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE pack_id = (SELECT pack_id FROM tmp_donatedPackold2new WHERE old_pack_id = to_char(pkid,'fm00')) INTO files_license;
+    SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE old_pack_id = to_char(pkid,'fm00') INTO files_license;
 
- 
     conf_yaml := jsonb_set( conf_yaml, array['files_license'], files_license);
     
     SELECT jsonb_to_yaml(conf_yaml::text) INTO q_query;
