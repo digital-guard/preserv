@@ -1216,7 +1216,7 @@ BEGIN
                         RAISE NOTICE '2. codec_desc_sobre : %', codec_desc_sobre;
                     END IF;
 
-                    -- 3. Extensão e variação, sem sobrescrição
+                    -- 3. Extensão e variação ou apenas extensão, sem sobrescrição
                     IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~([^;]*)$')) OR EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^~;]*)$'))
                     THEN
                         codec_value := regexp_split_to_array( dict->'layers'->key->>'codec' ,'(~)');
