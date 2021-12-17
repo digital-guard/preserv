@@ -30,8 +30,10 @@ info:
 	@printf "me: gera makefile para ingestão dos dados, a partir de make_conf.yaml.\n"
 	@printf "readme: gera rascunho de Readme.md para conjunto de dados.\n"
 	@printf "insert_size: Insere tamanho em bytes em files no arquivo make_conf.yaml.\n"
+	@printf "insert_license: Insere detalhes sobre licenças no arquivo make_conf.yaml.\n"
 	@printf "insert_make_conf.yaml: carrega na base de dados o arquivo make_conf.yaml.\n"
 	@printf "delete_file: deleta arquivo ingestado, a partir do sha256.\n"
+	@printf "load_license_tables: carrega tabelas utilizadas pelo target insert_license.\n"
 
 me: insert_make_conf.yaml
 	@echo "-- Updating this make --"
@@ -69,6 +71,18 @@ insert_size: insert_make_conf.yaml
 	@read _tudo_bem_
 	mv $(conf_output) ./make_conf.yaml
 
+insert_license: insert_make_conf.yaml
+	@echo "-- Updating make_conf with files licenses --"
+	psql $(pg_uri_db) -c "SELECT lix_generate_make_conf_with_license('$(country)','$(pkid)');"
+	sudo chmod 777 $(conf_output)
+	@echo " Check diff, the '<' lines are the new ones... Something changed?"
+	@diff $(conf_output) ./make_conf.yaml || :
+	@echo "If some changes, and no error in the changes, move the script:"
+	@echo " mv $(conf_output) ./make_conf.yaml"
+	@echo "[ENTER para rodar mv ou ^C para sair]"
+	@read _tudo_bem_
+	mv $(conf_output) ./make_conf.yaml
+
 insert_make_conf.yaml:
 	@echo "-- Carrega make_conf.yaml na base de dados. --"
 	@echo "Uso: make insert_make_conf.yaml"
@@ -90,5 +104,6 @@ load_license_tables:
 	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/licenses.csv" -O "$(pg_io)/licenses.csv"
 	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/implieds.csv" -O "$(pg_io)/implieds.csv"
 	wget "https://raw.githubusercontent.com/digital-guard/preserv-BR/main/data/donatedPack.csv" -O "$(pg_io)/donatedPack.csv"
+	wget "https://raw.githubusercontent.com/digital-guard/preserv-BR/main/data/donatedPack-old2new.csv" -O "$(pg_io)/donatedPack-old2new.csv"
 
-	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv('$(pg_io)/families.csv','tmp_families'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/licenses.csv','tmp_licenses'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/implieds.csv','tmp_implieds'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/implieds.csv','tmp_donatedPack');"
+	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv('$(pg_io)/families.csv','tmp_families'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/licenses.csv','tmp_licenses'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/implieds.csv','tmp_implieds'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/donatedPack.csv','tmp_donatedPack'); SELECT ingest.fdw_generate_direct_csv('/tmp/pg_io/donatedPackold2new.csv','tmp_donatedPackold2new');"

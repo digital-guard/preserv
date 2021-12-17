@@ -1370,6 +1370,49 @@ $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_make_conf_with_size('BR','18');
 
 
+
+-- tmp_donatedPack-old2new.csv é utilizada para obter a correspondência entre o antigo e o novo padrão de identificação.
+-- A atualização dos make_conf.yaml com os novos identificadores tornará seu uso desnecessário.
+CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
+    jurisd text,
+    pkid int
+) RETURNS text AS $f$
+    DECLARE
+        q_query text;
+        conf_yaml jsonb;
+        f_yaml jsonb;
+        output_file text;
+        q_license text;
+        q_license_is_explicit text;
+        file_licenses jsonb;
+    BEGIN
+
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
+    SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
+    
+    SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pkid INTO output_file;
+    
+    SELECT license_is_explicit, license FROM tmp_donatedPack AS td WHERE td.pack_id = (SELECT pack_id FROM tmp_donatedPackold2new WHERE old_pack_id = to_char(pkid,'fm00')) INTO q_license_is_explicit, q_license;
+    
+    CASE q_license_is_explicit
+    WHEN 'yes' THEN
+        SELECT to_jsonb(t) FROM (SELECT * FROM tmp_licenses AS tl LEFT JOIN tmp_families as tf ON tl.family = tf.family WHERE tl.family = lower(q_license)) AS t INTO file_licenses;
+    WHEN 'no'  THEN
+        SELECT to_jsonb(t) FROM (SELECT * FROM tmp_implieds AS tl LEFT JOIN tmp_families as tf ON tl.family = tf.family WHERE tl.family = lower(q_license)) AS t INTO file_licenses;
+    END CASE;
+ 
+    conf_yaml := jsonb_set( conf_yaml, array['file_licenses'] , file_licenses);
+    
+    SELECT jsonb_to_yaml(conf_yaml::text) INTO q_query;
+
+    SELECT volat_file_write(output_file,q_query) INTO q_query;
+
+    RETURN q_query;
+    END;
+$f$ LANGUAGE PLpgSQL;
+-- SELECT ingest.lix_generate_make_conf_with_license('BR','18');
+
+
 CREATE or replace FUNCTION ingest.lix_generate_makefile(
     jurisd text,
     pkid int
