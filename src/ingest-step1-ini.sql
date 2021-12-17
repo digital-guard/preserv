@@ -14,6 +14,8 @@ CREATE SCHEMA    IF NOT EXISTS tmp_orig;
 CREATE SCHEMA    IF NOT EXISTS api;
 CREATE SCHEMA    IF NOT EXISTS download;
 
+CREATE SCHEMA    IF NOT EXISTS dgpreserv;
+
 CREATE EXTENSION postgres_fdw;
 CREATE SERVER foreign_server
         FOREIGN DATA WRAPPER postgres_fdw
