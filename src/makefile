@@ -54,7 +54,7 @@ ini_sql: $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	@echo "--- Running Ingest ---"
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/digpreserv.sql
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
-	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ini.sql
+	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
 	@echo "--- Running API SQL templates ---"
 	psql $(pg_uri) < step00-iniApi.sql
 	@echo "--- Running Eclusa ---"
@@ -75,8 +75,8 @@ countpacks: $(pkdir)
 	@find $(pkdir) -name "README.md" | wc -l
 	@echo "* make_conf files:"
 	@find $(pkdir) -name "make_conf.*" | wc -l
-	
-	
+
+
 ## ECLUSA, commands to execute by root at crontab:
 
 ecl_run: /opt/lock-mkStatus/digitalPreservation-makeSQL.~feito
