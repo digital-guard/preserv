@@ -1144,16 +1144,26 @@ DECLARE
  sql_view text;
  bt jsonb := 'true'::jsonb;
  bf jsonb := 'false'::jsonb;
- codec_charset text DEFAULT NULL;
- codec_content text DEFAULT NULL;
- codec_mimeMain text DEFAULT NULL;
+
  codec_value text[];
  codec_desc jsonb;
+ orig_filename_ext text[];
+ codec_desc_default jsonb;
+ codec_desc_global jsonb;
+ codec_desc_sobre jsonb;
 BEGIN
  CASE p_type -- preparing types
  WHEN 'make_conf', NULL THEN
+
+    IF dict->'codec'?'descr_encode'
+    THEN
+        codec_desc_global := jsonb_object(regexp_split_to_array ( dict->'codec'->>'descr_encode','(;|=)'));
+        RAISE NOTICE 'value of codec_desc_global : %', codec_desc_global;
+    END IF;
+
 	 FOREACH key IN ARRAY jsonb_object_keys_asarray(dict->'layers')
 	 LOOP
+        RAISE NOTICE 'layer : %', key;
 	        method := dict->'layers'->key->>'method';
 		dict := jsonb_set( dict, array['layers',key,'isCsv'], IIF(method='csv2sql',bt,bf) );
 		dict := jsonb_set( dict, array['layers',key,'isOgr'], IIF(method='ogr2ogr',bt,bf) );
@@ -1172,27 +1182,85 @@ BEGIN
                    dict := jsonb_set( dict, array['layers',key,'sql_view'], to_jsonb(sql_view) );
                 END IF;
 
+                -- obtem codec a partir da extensão do arquivo
+                orig_filename_ext := regexp_matches(dict->'layers'->key->>'orig_filename','\.(\w+)$');
+                
+                IF orig_filename_ext IS NOT NULL
+                THEN
+                    SELECT descr_encode FROM ingest.codec_type WHERE (array[extension] = orig_filename_ext) INTO codec_desc_default;
+                    RAISE NOTICE 'ext orig_filename_ext : %', orig_filename_ext;                    
+                    RAISE NOTICE 'ext codec_desc_default : %', codec_desc_default;
+                END IF;
+
                 IF dict->'layers'->key?'codec'
                 THEN
-                    codec_value := regexp_split_to_array( dict->'layers'->key->>'codec' ,'(~)');
+                    -- 1. Extensão, variação e sobrescrição. Descarta a variação.
+                    IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~(.*);(.*)$'))
+                    THEN
+                        SELECT descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', '~', 1)) AND variant IS NULL) INTO codec_desc_default;
+                        
+                        codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',3),'(;|=)'));
+                        
+                        RAISE NOTICE '1. codec_desc_default : %', codec_desc_default;
+                        RAISE NOTICE '1. codec_desc_sobre : %', codec_desc_sobre;
+                    END IF;
+
+                    -- 2. Extensão e sobrescrição, sem variação
+                    IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^;~]*);(.*)$'))
+                    THEN
+                        SELECT descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', ';', 1)) AND variant IS NULL) INTO codec_desc_default;
+                        
+                        codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',2),'(;|=)'));
+                        
+                        RAISE NOTICE '2. codec_desc_default : %', codec_desc_default;
+                        RAISE NOTICE '2. codec_desc_sobre : %', codec_desc_sobre;
+                    END IF;
+
+                    -- 3. Extensão e variação, sem sobrescrição
+                    IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~([^;]*)$')) OR EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^~;]*)$'))
+                    THEN
+                        codec_value := regexp_split_to_array( dict->'layers'->key->>'codec' ,'(~)');
+                        
+                        SELECT descr_encode FROM ingest.codec_type WHERE (array[upper(extension), variant] = codec_value AND cardinality(codec_value) = 2) OR (array[upper(extension)] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_desc_default;
+
+                        RAISE NOTICE '3. codec_desc_default : %', codec_desc_default;
+                    END IF;
+
+                    -- codec resultante
+                    -- global sobrescreve default e é sobrescrito por sobre
+                    IF codec_desc_default IS NOT NULL
+                    THEN
+                        codec_desc := codec_desc_default;
                     
-                    SELECT codec_descriptor FROM ingest.codec_type WHERE (array[extension, variant] = codec_value AND cardinality(codec_value) = 2) OR (array[extension] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_desc;
+                        IF codec_desc_global IS NOT NULL
+                        THEN
+                            codec_desc := codec_desc || codec_desc_global;
+                        END IF;
+
+                        IF codec_desc_sobre IS NOT NULL
+                        THEN
+                            codec_desc := codec_desc || codec_desc_sobre;
+                        END IF;
+                    ELSE
+                        codec_desc := codec_desc_global;
+                    END IF;
+
+                    RAISE NOTICE 'codec resultante : %', codec_desc;
                     
                     IF codec_desc IS NOT NULL
                     THEN
                         dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_desc::jsonb );
                     END IF;
-                    
+
                     IF codec_desc?'mime' AND codec_desc->>'mime' = 'application/zip' OR codec_desc->>'mime' = 'application/gzip'
                     THEN
                         dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
                     END IF;
 
-                    IF codec_value[1] = 'XLSX' OR codec_value[1] = 'xlsx'
+                    IF codec_value[1] = 'xlsx'
                     THEN
                         dict := jsonb_set( dict, array['layers',key,'isXlsx'], 'true'::jsonb );
                     END IF;
-
                 END IF;
 
 
@@ -1507,7 +1575,7 @@ BEGIN
 
     DELETE FROM ingest.codec_type;
 
-    EXECUTE format($$INSERT INTO ingest.codec_type (extension,variant,descr_mime,descr_encode) SELECT extension, variant, jsonb_object(regexp_split_to_array ('mime=' || descr_mime,'(;|=)')), jsonb_object(regexp_split_to_array ( descr_encode,'(;|=)')) FROM %s$$, p_fdwname);
+    EXECUTE format($$INSERT INTO ingest.codec_type (extension,variant,descr_mime,descr_encode) SELECT lower(extension), variant, jsonb_object(regexp_split_to_array ('mime=' || descr_mime,'(;|=)')), jsonb_object(regexp_split_to_array ( descr_encode,'(;|=)')) FROM %s$$, p_fdwname);
 
     EXECUTE format('DROP FOREIGN TABLE IF EXISTS %s;',p_fdwname);
 
