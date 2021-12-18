@@ -816,6 +816,102 @@ COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],text,bo
   IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
 ;
 
+
+
+CREATE or replace FUNCTION ingest.osm_load(
+    p_fileref text,  -- apenas referencia para ingest.layer_file
+    p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
+    p_tabname text,  -- tabela temporária de ingestáo
+    p_pck_id real,   -- id do package da Preservação.
+    p_pck_fileref_sha256 text,
+    p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
+    p_geom_name text DEFAULT 'geom',
+    p_to4326 boolean DEFAULT false -- on true converts SRID to 4326 .
+) RETURNS text AS $f$
+  DECLARE
+    q_file_id integer;
+    q_query text;
+    feature_id_col text;
+    use_tabcols boolean;
+    msg_ret text;
+    num_items bigint;
+  BEGIN
+  q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256); -- not null when proc_step=1. Ideal retornar array.
+  IF q_file_id IS NULL THEN
+    RETURN format('ERROR: file-read problem or data ingested before, see %s.',p_fileref);
+  END IF;
+  IF p_tabcols=array[]::text[] THEN  -- condição para solicitar todas as colunas
+    p_tabcols = rel_columns(p_tabname);
+  END IF;
+  IF 'gid'=ANY(p_tabcols) THEN
+    feature_id_col := 'gid';
+    p_tabcols := array_remove(p_tabcols,'gid');
+  ELSE
+    feature_id_col := 'row_number() OVER () AS gid';
+  END IF;
+  IF p_tabcols is not NULL AND array_length(p_tabcols,1)>0 THEN
+    p_tabcols   := sql_parse_selectcols(p_tabcols); -- clean p_tabcols
+    use_tabcols := true;
+  ELSE
+    use_tabcols := false;
+  END IF;
+  IF 'geom'=ANY(p_tabcols) THEN
+    p_tabcols := array_remove(p_tabcols,'geom');
+  END IF;
+  q_query := format(
+      $$
+      WITH
+      scan AS (
+        SELECT %s, gid, properties,
+               CASE
+                 WHEN ST_SRID(geom)=0 THEN ST_SetSRID(geom,4326)
+                 WHEN %s AND ST_SRID(geom)!=4326 THEN ST_Transform(geom,4326)
+                 ELSE geom
+               END AS geom
+        FROM (
+            SELECT %s,  -- feature_id_col
+                 %s as properties,
+                 %s -- geom
+            FROM %s %s
+          ) t
+      ),
+      ins AS (
+        INSERT INTO ingest.feature_asis
+           SELECT *
+           FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom)
+        RETURNING 1
+      )
+      SELECT COUNT(*) FROM ins
+    $$,
+    q_file_id,
+    iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
+    feature_id_col,
+    iIF( use_tabcols, 'to_jsonb(subq)'::text, E'tags::jsonb' ), -- properties
+    CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
+    p_tabname,
+    iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text )
+  );
+  
+  RAISE NOTICE E'\n===q_query:\n %\n===END q_query\n',  q_query;
+  
+  EXECUTE q_query INTO num_items;
+  msg_ret := format(
+    E'From file_id=%s inserted type=%s\nin feature_asis %s items.',
+    q_file_id, p_ftname, num_items
+  );
+  IF num_items>0 THEN
+    UPDATE ingest.layer_file
+    SET proc_step=2,   -- if insert process occurs after q_query.
+        feature_asis_summary= ingest.feature_asis_assign(q_file_id)
+    WHERE file_id=q_file_id;
+  END IF;
+  RETURN msg_ret;
+  END;
+$f$ LANGUAGE PLpgSQL;
+
+--psql postgres://postgres@localhost/ingest1 < osm_test_nodes.sql
+--select ingest.osm_load('/home/a4a/osm_test_nodes.sql','geoaddress','osm_test_nodes',1.1,'e28ea9585a55767d930733f292ebdd5034e8972188bb85c482030b069e39f48a.zip',array[]::text[]);
+
 -----
 CREATE or replace FUNCTION ingest.qgis_vwadmin_feature_asis(
   p_mode text -- 'create' or 'drop'
