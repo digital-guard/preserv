@@ -10,7 +10,6 @@ orig   ={{orig}}
 pg_uri ={{pg_uri}}
 sandbox_root={{sandbox}}
 need_commands= 7z v16+; psql v12+; shp2pgsql v3+; {{need_extra_commands}}
-srid   ={{srid}}
 
 pkid = {{pkid}}
 fullPkID={{pkid}}_{{pkversion}}
@@ -18,7 +17,6 @@ sandbox=$(sandbox_root)/_pk$(fullPkID)
 
 ## USER CONFIGS
 pg_db  ={{pg_db}}
-thisTplFile_root = {{thisTplFile_root}}
 
 ## ## ## ## ## ## ##
 ## THIS_MAKE, _pk{{pkid}}

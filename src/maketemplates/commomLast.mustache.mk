@@ -9,7 +9,7 @@ baseSrc       = /var/gits/_dg
 
 mkme_input0   = $(baseSrc)/preserv-$(country)/src/maketemplates/commomFirst.yaml
 
-ifeq ($(shell ls -d "${PWD}" | grep "-"),) # empty result from grep
+ifeq ($(shell ls -d "${PWD}" | grep "-"),)
 country       = INT
 mkme_input0   = $(baseSrc)/preserv/src/maketemplates/commomFirst.yaml
 endif

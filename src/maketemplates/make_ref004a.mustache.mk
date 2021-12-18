@@ -10,7 +10,6 @@ orig   ={{orig}}
 pg_uri ={{pg_uri}}
 sandbox_root={{sandbox}}
 need_commands= osm2pgsql v1.2.1+ ; {{need_extra_commands}}
-srid   ={{srid}}
 
 pkid = {{pkid}}
 fullPkID={{pkid}}_{{pkversion}}
@@ -18,8 +17,6 @@ sandbox=$(sandbox_root)/_pk$(fullPkID)
 
 ## USER CONFIGS
 pg_db  ={{pg_db}}
-thisTplFile_root = {{thisTplFile_root}}
-
 
 {{#files}}
 part{{p}}_file  ={{file}}
@@ -51,7 +48,7 @@ all_layers: {{#layers_keys}}{{.}} {{/layers_keys}}
 openstreetmap: makedirs $(part{{file}}_path)
 	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "openstreetmap" data
 	cd $(sandbox);  cp  $(part{{file}}_path) . ; chmod -R a+rx . > /dev/null
-	osm2pgsql -E $(srid) -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/$(part{{file}}_file)
+	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/$(part{{file}}_file)
 	@echo FIM.
 
 openstreetmap-clean:
