@@ -1325,10 +1325,7 @@ BEGIN
                         RAISE NOTICE '3. codec_desc_default : %', codec_desc_default;
                     END IF;
 
-                    IF codec_value[1] = 'xlsx'
-                    THEN
-                        dict := jsonb_set( dict, array['layers',key,'isXlsx'], 'true'::jsonb );
-                    END IF;
+                    dict := jsonb_set( dict, array['layers',key,'isXlsx'], IIF(lower(codec_value[1]) = 'xlsx',bt,bf) );
                 END IF;
 
                 -- codec resultante
