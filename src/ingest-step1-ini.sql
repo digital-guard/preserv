@@ -1253,9 +1253,9 @@ BEGIN
  CASE p_type -- preparing types
  WHEN 'make_conf', NULL THEN
 
-    IF dict->'codec'?'descr_encode'
+    IF dict?'codec:descr_encode'
     THEN
-        codec_desc_global := jsonb_object(regexp_split_to_array ( dict->'codec'->>'descr_encode','(;|=)'));
+        codec_desc_global := jsonb_object(regexp_split_to_array ( dict->>'codec:descr_encode','(;|=)'));
         RAISE NOTICE 'value of codec_desc_global : %', codec_desc_global;
     END IF;
 
@@ -1325,43 +1325,42 @@ BEGIN
                         RAISE NOTICE '3. codec_desc_default : %', codec_desc_default;
                     END IF;
 
-                    -- codec resultante
-                    -- global sobrescreve default e é sobrescrito por sobre
-                    IF codec_desc_default IS NOT NULL
-                    THEN
-                        codec_desc := codec_desc_default;
-                    
-                        IF codec_desc_global IS NOT NULL
-                        THEN
-                            codec_desc := codec_desc || codec_desc_global;
-                        END IF;
-
-                        IF codec_desc_sobre IS NOT NULL
-                        THEN
-                            codec_desc := codec_desc || codec_desc_sobre;
-                        END IF;
-                    ELSE
-                        codec_desc := codec_desc_global;
-                    END IF;
-
-                    RAISE NOTICE 'codec resultante : %', codec_desc;
-                    
-                    IF codec_desc IS NOT NULL
-                    THEN
-                        dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_desc::jsonb );
-                    END IF;
-
-                    IF codec_desc?'mime' AND codec_desc->>'mime' = 'application/zip' OR codec_desc->>'mime' = 'application/gzip'
-                    THEN
-                        dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
-                    END IF;
-
                     IF codec_value[1] = 'xlsx'
                     THEN
                         dict := jsonb_set( dict, array['layers',key,'isXlsx'], 'true'::jsonb );
                     END IF;
                 END IF;
 
+                -- codec resultante
+                -- global sobrescreve default e é sobrescrito por sobre
+                IF codec_desc_default IS NOT NULL
+                THEN
+                    codec_desc := codec_desc_default;
+                
+                    IF codec_desc_global IS NOT NULL
+                    THEN
+                        codec_desc := codec_desc || codec_desc_global;
+                    END IF;
+
+                    IF codec_desc_sobre IS NOT NULL
+                    THEN
+                        codec_desc := codec_desc || codec_desc_sobre;
+                    END IF;
+                ELSE
+                    codec_desc := codec_desc_global;
+                END IF;
+
+                RAISE NOTICE 'codec resultante : %', codec_desc;
+                
+                IF codec_desc IS NOT NULL
+                THEN
+                    dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_desc::jsonb );
+                END IF;
+
+                IF codec_desc?'mime' AND codec_desc->>'mime' = 'application/zip' OR codec_desc->>'mime' = 'application/gzip'
+                THEN
+                    dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
+                END IF;
 
                 IF key='address' OR key='cadparcel' OR key='cadvia'
                 THEN
