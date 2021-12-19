@@ -484,7 +484,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_format(
    feature_asis_summary->>'n_unit',
    feature_asis_summary->>'bbox_km2',
    CASE WHEN feature_asis_summary?'size' THEN 'Total size: '||(feature_asis_summary->>'size') ||' '|| (feature_asis_summary->>'size_unit') END,
-   geohash_distribution_format(feature_asis_summary->'distribution', true, p_glink|| layerinfo[3] ||'_'),
+   hcode_distribution_format(feature_asis_summary->'distribution', true, p_glink|| layerinfo[3] ||'_'),
    pck_fileref_sha256,
    file_type,
    hash_md5,
