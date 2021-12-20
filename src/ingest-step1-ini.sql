@@ -816,8 +816,6 @@ COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],text,bo
   IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
 ;
 
-
-
 CREATE or replace FUNCTION ingest.osm_load(
     p_fileref text,  -- apenas referencia para ingest.layer_file
     p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
@@ -825,7 +823,7 @@ CREATE or replace FUNCTION ingest.osm_load(
     p_pck_id real,   -- id do package da Preservação.
     p_pck_fileref_sha256 text,
     p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
-    p_geom_name text DEFAULT 'geom',
+    p_geom_name text DEFAULT 'way',
     p_to4326 boolean DEFAULT false -- on true converts SRID to 4326 .
 ) RETURNS text AS $f$
   DECLARE
@@ -849,14 +847,14 @@ CREATE or replace FUNCTION ingest.osm_load(
   ELSE
     feature_id_col := 'row_number() OVER () AS gid';
   END IF;
-  IF p_tabcols is not NULL AND array_length(p_tabcols,1)>0 THEN
+  IF p_geom_name=ANY(p_tabcols) THEN
+    p_tabcols := array_remove(p_tabcols,p_geom_name);
+  END IF;
+  IF p_tabcols is not NULL AND array_length(p_tabcols,1)>1 THEN
     p_tabcols   := sql_parse_selectcols(p_tabcols); -- clean p_tabcols
     use_tabcols := true;
   ELSE
     use_tabcols := false;
-  END IF;
-  IF 'geom'=ANY(p_tabcols) THEN
-    p_tabcols := array_remove(p_tabcols,'geom');
   END IF;
   q_query := format(
       $$
@@ -886,7 +884,7 @@ CREATE or replace FUNCTION ingest.osm_load(
     q_file_id,
     iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
     feature_id_col,
-    iIF( use_tabcols, 'to_jsonb(subq)'::text, E'tags::jsonb' ), -- properties
+    iIF( use_tabcols, $$to_jsonb(subq) - 'tags' || (subq).tags $$::text, $$tags$$ ), -- properties
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text )
@@ -909,8 +907,6 @@ CREATE or replace FUNCTION ingest.osm_load(
   END;
 $f$ LANGUAGE PLpgSQL;
 
---psql postgres://postgres@localhost/ingest1 < osm_test_nodes.sql
---select ingest.osm_load('/home/a4a/osm_test_nodes.sql','geoaddress','osm_test_nodes',1.1,'e28ea9585a55767d930733f292ebdd5034e8972188bb85c482030b069e39f48a.zip',array[]::text[]);
 
 -----
 CREATE or replace FUNCTION ingest.qgis_vwadmin_feature_asis(
