@@ -1205,7 +1205,7 @@ CREATE or replace FUNCTION ingest.lix_insert(
         INSERT INTO ingest.lix_conf_yaml (jurisdiction,y) VALUES (jurisd,conf)
         ON CONFLICT (jurisdiction,(y->>'pkid')) DO UPDATE SET y = conf;
 
-        WHEN (select (regexp_matches('make_ref027a.mustache.mk', 'make_ref[0-9]+[a-z]\.mustache.mk'))[1]) THEN
+        WHEN (select (regexp_matches(p_type, 'make_ref[0-9]+[a-z]\.mustache.mk'))[1]) THEN
         t:= pg_read_file(file);
         INSERT INTO ingest.lix_mkme_srcTpl VALUES (SUBSTRING(file,'(ref[0-9]{1,3}[a-z])'),t)
         ON CONFLICT (tplInputSchema_id) DO UPDATE SET tplInputSchema_id = t;
