@@ -50,7 +50,7 @@ openstreetmap: makedirs $(part{{file}}_path)
 	cd $(sandbox);  cp  $(part{{file}}_path) . ; chmod -R a+rx . > /dev/null
 	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/$(part{{file}}_file)
 	@echo "Convertendo hstore para jsonb"
-	psql $(pg_db) < /var/gits/_dg/preserv/src/osm_hstore2jsonb.sql
+	psql $(pg_uri_db) < /var/gits/_dg/preserv/src/osm_hstore2jsonb.sql
 	@echo FIM.
 
 openstreetmap-clean:
