@@ -1,7 +1,12 @@
 {{^multiple_files}}
 {{#sql_view}}
 	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_$(tabname) AS {{{.}}}"
+{{#isOsm}}
+	psql $(pg_uri_db) -c "SELECT ingest.osm_load('$(sandbox)/{{orig_filename}}.pbf','$(layername)','vw{{file}}_$(tabname)','$(fullPkID)','$(part{{file}}_file)',array[]::text[])"
+{{/isOsm}}
+{{^isOsm}}
 	psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','$(sandbox)/{{orig_filename}}','$(layername)','vw{{file}}_$(tabname)','$(fullPkID)','$(part{{file}}_file)',array[]::text[])"
+{{/isOsm}}
 	psql $(pg_uri_db) -c "DROP VIEW vw{{file}}_$(tabname)"
 {{/sql_view}}
 {{^sql_view}}

@@ -56,7 +56,7 @@ address: tabname = pk$(fullPkID)_p{{file}}_address
 address: makedirs $(part{{file}}_path)
 	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "address" datatype (street axes)
 {{>common002_layerHeader}}
-	cd $(sandbox); 7z {{7z_opts}} x -y $(part{{file}}_path) "{{orig_filename}}*" ; chmod -R a+rx . > /dev/null
+	cd $(sandbox); 7z {{7z_opts}} x -y $(part{{file}}_path) "*{{orig_filename}}*" ; chmod -R a+rx . > /dev/null
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
 	@echo FIM.
