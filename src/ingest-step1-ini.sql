@@ -1179,37 +1179,48 @@ CREATE TABLE ingest.lix_jurisd_tpl (
 );
 
 CREATE or replace FUNCTION ingest.lix_insert(
-    jurisd text,
-    file text,
-    p_type text
+    file text
     ) RETURNS void AS $wrap$
     DECLARE
     yl jsonb;
     conf jsonb;
     t text;
+    p_type text;
+    jurisd text;
     BEGIN
+        SELECT (regexp_matches(file, '([^/]*)$'))[1] INTO p_type;
+
+        SELECT (regexp_matches(file, '.*-([^/-]*)/.*$'))[1] INTO jurisd;
+        IF jurisd IS NULL
+        THEN
+            jurisd := 'INT';
+        END IF;
+        
+        RAISE NOTICE 'ext orig_filename_ext : %', p_type;
+        RAISE NOTICE 'ext orig_filename_ext : %', jurisd;
+
         CASE p_type
-        WHEN 'make_conf' THEN
+        WHEN 'make_conf.yaml' THEN
         conf:= yamlfile_to_jsonb(file);
         INSERT INTO ingest.lix_conf_yaml (jurisdiction,y) VALUES (jurisd,conf)
         ON CONFLICT (jurisdiction,(y->>'pkid')) DO UPDATE SET y = conf;
 
-        WHEN 'mkme_srcTpl' THEN
+        WHEN (select (regexp_matches('make_ref027a.mustache.mk', 'make_ref[0-9]+[a-z]\.mustache.mk'))[1]) THEN
         t:= pg_read_file(file);
         INSERT INTO ingest.lix_mkme_srcTpl VALUES (SUBSTRING(file,'(ref[0-9]{1,3}[a-z])'),t)
         ON CONFLICT (tplInputSchema_id) DO UPDATE SET tplInputSchema_id = t;
 
-        WHEN 'first_yaml' THEN
+        WHEN 'commomFirst.yaml' THEN
         yl:= yamlfile_to_jsonb(file);
         INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, first_yaml) VALUES (jurisd,yl)
         ON CONFLICT (jurisdiction) DO UPDATE SET first_yaml = yl;
 
-        WHEN 'mkme_srcTplLast' THEN
+        WHEN 'commomLast.mustache.mk' THEN
         t:= pg_read_file(file);
         INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, tpl_last) VALUES (jurisd,t)
         ON CONFLICT (jurisdiction) DO UPDATE SET tpl_last = t;
 
-        WHEN 'readme' THEN
+        WHEN 'readme.mustache' THEN
         t:= pg_read_file(file);
         INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, readme_mk) VALUES (jurisd,t)
         ON CONFLICT (jurisdiction) DO UPDATE SET readme_mk = t;
@@ -1217,18 +1228,20 @@ CREATE or replace FUNCTION ingest.lix_insert(
         END CASE;    
     END;
 $wrap$ LANGUAGE PLpgSQL;
---SELECT ingest.lix_insert('BR','/var/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml','first_yaml');
---SELECT ingest.lix_insert('BR','/var/gits/_dg/preserv-BR/src/maketemplates/readme.mustache','readme');
---SELECT ingest.lix_insert('PE','/var/gits/_dg/preserv-PE/src/maketemplates/commomFirst.yaml','first_yaml');
---SELECT ingest.lix_insert('PE','/var/gits/_dg/preserv-PE/src/maketemplates/readme.mustache','readme');
---SELECT ingest.lix_insert('CO','/var/gits/_dg/preserv-CO/src/maketemplates/commomFirst.yaml','first_yaml');
---SELECT ingest.lix_insert('CO','/var/gits/_dg/preserv-CO/src/maketemplates/readme.mustache','readme');
---SELECT ingest.lix_insert('INT','/var/gits/_dg/preserv/src/maketemplates/make_ref004a.mustache.mk','mkme_srcTpl');
---SELECT ingest.lix_insert('INT','/var/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk','mkme_srcTpl');
---SELECT ingest.lix_insert('INT','/var/gits/_dg/preserv/src/maketemplates/commomLast.mustache.mk','mkme_srcTplLast');
 
---SELECT ingest.lix_insert('BR','/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml','make_conf');
---SELECT ingest.lix_insert('BR','/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml','make_conf');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/src/maketemplates/readme.mustache');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv-PE/src/maketemplates/commomFirst.yaml');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv-PE/src/maketemplates/readme.mustache');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv-CO/src/maketemplates/commomFirst.yaml');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv-CO/src/maketemplates/readme.mustache');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/make_ref004a.mustache.mk');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/commomLast.mustache.mk');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/commomFirst.yaml');
+
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml');
 
 
 CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(

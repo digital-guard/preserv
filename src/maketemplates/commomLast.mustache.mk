@@ -88,7 +88,7 @@ insert_make_conf.yaml:
 	@echo "pkid: $(pkid)"
 	@echo "[ENTER para continuar ou ^C para sair]"
 	@read _tudo_bem_
-	psql $(pg_uri_db) -c "SELECT ingest.lix_insert('$(country)','$(mkme_input)','make_conf');"
+	psql $(pg_uri_db) -c "SELECT ingest.lix_insert('$(mkme_input)');"
 
 delete_file:
 	@echo "Uso: make delete_file hash=<inicio do hash do arquivo>"
