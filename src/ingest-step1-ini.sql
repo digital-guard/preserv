@@ -907,6 +907,21 @@ CREATE or replace FUNCTION ingest.osm_load(
   END;
 $f$ LANGUAGE PLpgSQL;
 
+CREATE or replace FUNCTION ingest.osm_load(
+    p_fileref text,  -- 1. apenas referencia para ingest.layer_file
+    p_ftname text,   -- 2. featureType of layer... um file pode ter mais de um layer??
+    p_tabname text,  -- 3. tabela temporária de ingestáo
+    p_pck_id text,   -- 4. id do package da Preservação no formato "a.b".
+    p_pck_fileref_sha256 text,   -- 5
+    p_tabcols text[] DEFAULT NULL,   -- 6. lista de atributos, ou só geometria
+    p_geom_name text DEFAULT 'way', -- 7
+    p_to4326 boolean DEFAULT false    -- 8. on true converts SRID to 4326 .
+) RETURNS text AS $wrap$
+   SELECT ingest.osm_load($1, $2, $3, digpreserv_packid_to_real($4), $5, $6, $7, $8)
+$wrap$ LANGUAGE SQL;
+COMMENT ON FUNCTION ingest.osm_load(text,text,text,text,text,text[],text,boolean)
+  IS 'Wrap to ingest.osm_load(1,2,3,4=real) using string format DD_DD.'
+;
 
 -----
 CREATE or replace FUNCTION ingest.qgis_vwadmin_feature_asis(

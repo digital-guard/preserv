@@ -16,6 +16,15 @@
 {{^isCsv}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
 {{/isCsv}}
+{{^isOsm}}
 	@tput bold
 	@echo Extracting ....
 	@tput sgr0
+	cd $(sandbox); 7z {{7z_opts}} x -y $(part{{file}}_path) "*{{orig_filename}}*" ; chmod -R a+rx . > /dev/null
+{{/isOsm}}
+{{#isOsm}}
+	@tput bold
+	@echo Copying ....
+	@tput sgr0
+	cd $(sandbox); cp $(part{{file}}_path) "{{orig_filename}}.pbf" ; chmod -R a+rx . > /dev/null
+{{/isOsm}}
