@@ -153,6 +153,9 @@ geoaddress: makedirs $(part{{file}}_path)
 	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "geoaddress" datatype (point with house_number but no via name)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
+{{#isOsm}}
+	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_$(tabname) AS SELECT way, tags - ARRAY['addr:housenumber','addr:street'] || jsonb_objslice(ARRAY['addr:housenumber','addr:street'], tags, ARRAY['house_number','via_name']) AS tags FROM jplanet_osm_point WHERE tags ?| ARRAY['addr:housenumber','addr:street'] "
+{{/isOsm}}
 {{>common001_pgAny_load}}
 	@echo FIM.
 
@@ -201,6 +204,9 @@ via: makedirs $(part{{file}}_path)
 	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "via" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
+{{#isOsm}}
+	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_$(tabname) AS SELECT way, tags FROM jplanet_osm_roads WHERE tags->>'highway' IN ('residential','unclassified','tertiary','secondary','primary','trunk','motorway') "
+{{/isOsm}}
 {{>common001_pgAny_load}}
 	@echo FIM.
 
