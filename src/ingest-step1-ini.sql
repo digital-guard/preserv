@@ -246,6 +246,7 @@ CREATE TABLE ingest.layer_file (
   hash_md5 text NOT NULL, -- or "size-md5" as really unique string
   file_meta jsonb,
   feature_asis_summary jsonb,
+  feature_distrib jsonb,
   UNIQUE(hash_md5) -- or size-MD5 or (ftid,hash_md5)?  não faz sentido usar duas vezes se existe _full.
 );
 
