@@ -1330,12 +1330,6 @@ BEGIN
                     dict := jsonb_set( dict, array['layers',key,'isXlsx'], IIF(lower(codec_extension) = 'xlsx',bt,bf) );
                 END IF;
 
-                IF codec_extension IS NOT NULL
-                THEN
-                    dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb(codec_extension) );
-                    RAISE NOTICE 'codec_extension : %', codec_extension;
-                END IF;
-
                 -- codec resultante
                 -- global sobrescreve default e é sobrescrito por sobre
                 IF codec_desc_default IS NOT NULL
@@ -1356,10 +1350,16 @@ BEGIN
                 END IF;
 
                 RAISE NOTICE 'codec resultante : %', codec_desc;
-                
+
                 IF codec_desc IS NOT NULL
                 THEN
                     dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_desc::jsonb );
+                END IF;
+
+                IF codec_extension IS NOT NULL
+                THEN
+                    dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb(codec_extension) );
+                    RAISE NOTICE 'codec_extension : %', codec_extension;
                 END IF;
 
                 IF codec_descr_mime IS NOT NULL
@@ -1370,6 +1370,7 @@ BEGIN
                 IF codec_descr_mime?'mime' AND codec_descr_mime->>'mime' = 'application/zip' OR codec_descr_mime->>'mime' = 'application/gzip'
                 THEN
                     dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
+                    dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb((regexp_matches(codec_extension,'(.*)\.\w+$'))[1]) );
                 END IF;
 
                 IF key='address' OR key='cadparcel' OR key='cadvia'
