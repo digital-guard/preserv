@@ -13,7 +13,7 @@
 {{#isCsv}}
 	psql $(pg_uri_db) -c "DROP FOREIGN TABLE IF EXISTS $(tabname)"
 {{/isCsv}}
-{{^isOsm}}
+{{/isOsm}}
 {{#isOsm}}
 {{#layers}}
 {{#geoaddress}}
