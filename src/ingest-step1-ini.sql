@@ -1249,6 +1249,8 @@ DECLARE
  codec_desc_default jsonb;
  codec_desc_global jsonb;
  codec_desc_sobre jsonb;
+ codec_extension text;
+ codec_descr_mime jsonb;
 BEGIN
  CASE p_type -- preparing types
  WHEN 'make_conf', NULL THEN
@@ -1286,7 +1288,7 @@ BEGIN
                 
                 IF orig_filename_ext IS NOT NULL
                 THEN
-                    SELECT descr_encode FROM ingest.codec_type WHERE (array[extension] = orig_filename_ext) INTO codec_desc_default;
+                    SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (array[extension] = orig_filename_ext) INTO codec_extension, codec_descr_mime, codec_desc_default;
                     RAISE NOTICE 'ext orig_filename_ext : %', orig_filename_ext;                    
                     RAISE NOTICE 'ext codec_desc_default : %', codec_desc_default;
                 END IF;
@@ -1296,7 +1298,7 @@ BEGIN
                     -- 1. Extensão, variação e sobrescrição. Descarta a variação.
                     IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~(.*);(.*)$'))
                     THEN
-                        SELECT descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', '~', 1)) AND variant IS NULL) INTO codec_desc_default;
+                         SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', '~', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
                         
                         codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',3),'(;|=)'));
                         
@@ -1307,7 +1309,7 @@ BEGIN
                     -- 2. Extensão e sobrescrição, sem variação
                     IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^;~]*);(.*)$'))
                     THEN
-                        SELECT descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', ';', 1)) AND variant IS NULL) INTO codec_desc_default;
+                        SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', ';', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
                         
                         codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',2),'(;|=)'));
                         
@@ -1320,12 +1322,18 @@ BEGIN
                     THEN
                         codec_value := regexp_split_to_array( dict->'layers'->key->>'codec' ,'(~)');
                         
-                        SELECT descr_encode FROM ingest.codec_type WHERE (array[upper(extension), variant] = codec_value AND cardinality(codec_value) = 2) OR (array[upper(extension)] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_desc_default;
+                        SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (array[upper(extension), variant] = codec_value AND cardinality(codec_value) = 2) OR (array[upper(extension)] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
 
                         RAISE NOTICE '3. codec_desc_default : %', codec_desc_default;
                     END IF;
 
-                    dict := jsonb_set( dict, array['layers',key,'isXlsx'], IIF(lower(codec_value[1]) = 'xlsx',bt,bf) );
+                    dict := jsonb_set( dict, array['layers',key,'isXlsx'], IIF(lower(codec_extension) = 'xlsx',bt,bf) );
+                END IF;
+
+                IF codec_extension IS NOT NULL
+                THEN
+                    dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb(codec_extension) );
+                    RAISE NOTICE 'codec_extension : %', codec_extension;
                 END IF;
 
                 -- codec resultante
@@ -1354,7 +1362,12 @@ BEGIN
                     dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_desc::jsonb );
                 END IF;
 
-                IF codec_desc?'mime' AND codec_desc->>'mime' = 'application/zip' OR codec_desc->>'mime' = 'application/gzip'
+                IF codec_descr_mime IS NOT NULL
+                THEN
+                    dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_descr_mime::jsonb );
+                END IF;
+
+                IF codec_descr_mime?'mime' AND codec_descr_mime->>'mime' = 'application/zip' OR codec_descr_mime->>'mime' = 'application/gzip'
                 THEN
                     dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
                 END IF;
@@ -1407,13 +1420,11 @@ BEGIN
  RETURN dict;
 END;
 $f$ language PLpgSQL;
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml') );
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01/make_conf.yaml') );
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk0008.01/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk001/make_conf.yaml');
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/SP/SaoPaulo/_pk0033.01/make_conf.yaml') );
 -- new ingest.make_conf_yaml2jsonb() = ? read file
-
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/PR/Cascavel/_pk016/make_conf.yaml') );
-
 
 
 CREATE or replace FUNCTION ingest.insert_bytesize(
