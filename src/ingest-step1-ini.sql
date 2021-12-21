@@ -1285,6 +1285,14 @@ BEGIN
         codec_desc_global := jsonb_object(regexp_split_to_array ( dict->>'codec:descr_encode','(;|=)'));
         RAISE NOTICE 'value of codec_desc_global : %', codec_desc_global;
     END IF;
+    
+    IF dict?'openstreetmap'
+    THEN
+        IF codec_desc_global IS NOT NULL
+        THEN
+            dict := jsonb_set( dict, array['openstreetmap'], (dict->>'openstreetmap')::jsonb || codec_desc_global::jsonb );
+        END IF;
+    END IF; 
 
 	 FOREACH key IN ARRAY jsonb_object_keys_asarray(dict->'layers')
 	 LOOP
