@@ -242,6 +242,19 @@ join-parcel:
 {{/parcel}}
 {{/joins}}
 
+{{#openstreetmap}}
+openstreetmap: makedirs $(part{{file}}_path)
+	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "openstreetmap" data
+	cd $(sandbox);  cp  $(part{{file}}_path) . ; chmod -R a+rx . > /dev/null
+	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/$(part{{file}}_file)
+	@echo "Convertendo hstore para jsonb"
+	psql $(pg_uri_db) < /var/gits/_dg/preserv/src/osm_hstore2jsonb.sql
+	@echo FIM.
+
+openstreetmap-clean:
+	rm -f "$(sandbox)/{{orig_filename}}.*" || true
+{{/openstreetmap}}
+
 makedirs: clean_sandbox
 	@mkdir -m 777 -p $(sandbox_root)
 	@mkdir -m 777 -p $(sandbox)
@@ -262,4 +275,4 @@ wget_files:
 clean_sandbox:
 	@rm -rf $(sandbox) || true
 
-clean: {{#layers_keys}}{{.}}-clean {{/layers_keys}}
+clean: {{#layers_keys}}{{.}}-clean {{/layers_keys}}{{#openstreetmap}} openstreetmap-clean{{/openstreetmap}}
