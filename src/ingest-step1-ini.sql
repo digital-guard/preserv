@@ -247,7 +247,7 @@ CREATE TABLE ingest.layer_file (
   file_meta jsonb,
   feature_asis_summary jsonb,
   feature_distrib jsonb,
-  UNIQUE(hash_md5) -- or size-MD5 or (ftid,hash_md5)?  não faz sentido usar duas vezes se existe _full.
+  UNIQUE(ftid,hash_md5) -- or size-MD5 or (ftid,hash_md5)?  não faz sentido usar duas vezes se existe _full.
 );
 
 /* LIXO
