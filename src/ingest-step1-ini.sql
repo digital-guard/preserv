@@ -1038,7 +1038,7 @@ CREATE TABLE ingest.publicating_geojsons_p2distrib(
  geom     geometry
 );
 
-CREATE or replace FUNCTION ingest.publicating_geojsons(
+CREATE or replace FUNCTION ingest.publicating_geojsons_p1(
 	p_file_id       int,  -- e.g. 1, see ingest.layer_file
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
 ) RETURNS text  AS $f$
@@ -1048,11 +1048,26 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
      SELECT ghs9, NULL::text, gid, info, geom
      FROM ingest.feature_asis_export(p_file_id) t
   ;
-  -- COMMIT1 INSERT
+  SELECT 'p1';
+$f$ language SQL VOLATILE; --fim p1
+  
+CREATE or replace FUNCTION ingest.publicating_geojsons_p2(
+	p_file_id       int,  -- e.g. 1, see ingest.layer_file
+	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
+) RETURNS text  AS $f$
+  
   UPDATE ingest.layer_file
   SET feature_distrib = geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7)
   WHERE file_id= p_file_id
   ;
+  SELECT 'p2';
+$f$ language SQL VOLATILE; --fim p2
+  
+CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
+	p_file_id       int,  -- e.g. 1, see ingest.layer_file
+	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
+) RETURNS text  AS $f$
+  
   DELETE FROM ingest.publicating_geojsons_p2distrib;
   INSERT INTO ingest.publicating_geojsons_p2distrib
     SELECT t.hcode, t.n_items,  -- length(t.hcode) AS len,
@@ -1082,7 +1097,13 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
   WHERE t4.gid = publicating_geojsons_p3exprefix.gid
   ;
   DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
-  -- COMMIT2
+  SELECT 'p3';
+$f$ language SQL VOLATILE; --fim p3
+
+CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
+	p_file_id       int,  -- e.g. 1, see ingest.layer_file
+	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
+) RETURNS text  AS $f$
 
   WITH prefs AS ( SELECT DISTINCT prefix FROM ingest.publicating_geojsons_p3exprefix ORDER BY 1 )
    SELECT write_geojsonb_Features(
@@ -1095,10 +1116,21 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
     2
   ) FROM prefs;
   DELETE FROM ingest.publicating_geojsons_p3exprefix;  -- limpa
-  SELECT 'Arquivos de file_id='||p_file_id::text|| ' publicados em /tmp/pg_io/pts_*.geojson';
+  SELECT 'Arquivos de file_id='||p_file_id::text|| ' publicados em /tmp/pg_io/pts_*.geojson'
+  ;
+$f$ language SQL VOLATILE; -- fim p4
 
-$f$ language SQL VOLATILE;
--- e.g. select ingest.publicating_geojsons(1, 'BR-MG-BeloHorizonte');
+CREATE or replace FUNCTION ingest.publicating_geojsons_(
+	p_file_id       int,  -- e.g. 1, see ingest.layer_file
+	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
+) RETURNS text  AS $f$
+  SELECT ingest.publicating_geojsons_p1($1,$2);
+  SELECT ingest.publicating_geojsons_p2($1,$2);
+  SELECT ingest.publicating_geojsons_p3($1,$2);
+  SELECT ingest.publicating_geojsons_p4($1,$2);
+  SELECT 'fim';
+$f$ language SQL VOLATILE; -- need be a sequential PLpgSQL to neatly COMMIT?
+
 
 --------------------
 --------------------
