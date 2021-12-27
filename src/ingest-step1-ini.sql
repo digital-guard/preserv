@@ -1005,8 +1005,8 @@ $f$ LANGUAGE SQL IMMUTABLE;
 -- ----------------------------
 
 
-DROP FOREIGN TABLE IF EXISTS foreign_osm_city;
-CREATE FOREIGN TABLE foreign_osm_city (
+DROP FOREIGN TABLE IF EXISTS ingest.fdw_foreign_jurisdiction_geom;
+CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
  osm_id          bigint,
  jurisd_base_id  integer,
  jurisd_local_id integer,
@@ -1021,7 +1021,7 @@ CREATE FOREIGN TABLE foreign_osm_city (
  jtags           jsonb,
  geom            geometry(Geometry,4326)
 ) SERVER foreign_server
-  OPTIONS (schema_name 'public', table_name 'osm_city')
+  OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
 ;
 DROP TABLE IF EXISTS ingest.publicating_geojsons_p3exprefix;
 CREATE TABLE ingest.publicating_geojsons_p3exprefix(
@@ -1040,7 +1040,7 @@ CREATE TABLE ingest.publicating_geojsons_p2distrib(
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_p1(
 	p_file_id       int,  -- e.g. 1, see ingest.layer_file
-	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
+	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
 
   DELETE FROM ingest.publicating_geojsons_p3exprefix;
@@ -1053,7 +1053,7 @@ $f$ language SQL VOLATILE; --fim p1
   
 CREATE or replace FUNCTION ingest.publicating_geojsons_p2(
 	p_file_id       int,  -- e.g. 1, see ingest.layer_file
-	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
+	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
   
   UPDATE ingest.layer_file
@@ -1065,7 +1065,7 @@ $f$ language SQL VOLATILE; --fim p2
   
 CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 	p_file_id       int,  -- e.g. 1, see ingest.layer_file
-	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
+	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
   
   DELETE FROM ingest.publicating_geojsons_p2distrib;
@@ -1073,12 +1073,12 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
     SELECT t.hcode, t.n_items,  -- length(t.hcode) AS len,
       ST_Intersection(
         ST_SetSRID( ST_geomFromGeohash(replace(t.hcode, '*', '')) ,  4326),
-        (SELECT geom FROM foreign_osm_city WHERE isolabel_ext=p_isolabel_ext)
+        (SELECT geom FROM foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
       ) AS geom
     FROM hcode_distribution_reduce_recursive_raw(
     	(SELECT feature_distrib FROM ingest.layer_file WHERE file_id= p_file_id),
     	1,
-    	(SELECT length(st_geohash(geom)) FROM foreign_osm_city WHERE isolabel_ext=p_isolabel_ext),
+    	(SELECT length(st_geohash(geom)) FROM foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
     	750, 8000, 3
     ) t
   ;
@@ -1102,7 +1102,7 @@ $f$ language SQL VOLATILE; --fim p3
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
 	p_file_id       int,  -- e.g. 1, see ingest.layer_file
-	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
+	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
 
   WITH prefs AS ( SELECT DISTINCT prefix FROM ingest.publicating_geojsons_p3exprefix ORDER BY 1 )
@@ -1122,7 +1122,7 @@ $f$ language SQL VOLATILE; -- fim p4
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_(
 	p_file_id       int,  -- e.g. 1, see ingest.layer_file
-	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see osm_city
+	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
   SELECT ingest.publicating_geojsons_p1($1,$2);
   SELECT ingest.publicating_geojsons_p2($1,$2);
