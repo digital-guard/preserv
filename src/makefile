@@ -52,7 +52,7 @@ ini_sql: $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_db)
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_dbingest)
 	@echo "--- Running Ingest ---"
-	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/digpreserv.sql
+	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/lib-dg_preserv.sql
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
 	@echo "--- Running API SQL templates ---"

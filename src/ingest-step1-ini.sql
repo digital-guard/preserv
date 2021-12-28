@@ -14,8 +14,6 @@ CREATE SCHEMA    IF NOT EXISTS tmp_orig;
 CREATE SCHEMA    IF NOT EXISTS api;
 CREATE SCHEMA    IF NOT EXISTS download;
 
-CREATE SCHEMA    IF NOT EXISTS dg_preserv;
-
 CREATE EXTENSION postgres_fdw;
 CREATE SERVER foreign_server
         FOREIGN DATA WRAPPER postgres_fdw
@@ -238,7 +236,7 @@ INSERT INTO ingest.feature_type VALUES
 -- DROP TABLE ingest.layer_file;
 CREATE TABLE ingest.layer_file (
   file_id serial NOT NULL PRIMARY KEY,
-  pck_id real NOT NULL CHECK( digpreserv_packid_isvalid(pck_id) ), -- package file ID, not controled here. Talvez seja packVers (package and version) ou pck_id com real
+  pck_id real NOT NULL CHECK( dg_preserv.packid_isvalid(pck_id) ), -- package file ID, not controled here. Talvez seja packVers (package and version) ou pck_id com real
   pck_fileref_sha256 text NOT NULL CHECK( pck_fileref_sha256 ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ),
   ftid smallint NOT NULL REFERENCES ingest.feature_type(ftid),
   file_type text,  -- csv, geojson, shapefile, etc.
@@ -811,7 +809,7 @@ CREATE or replace FUNCTION ingest.any_load(
     p_geom_name text DEFAULT 'geom', -- 8
     p_to4326 boolean DEFAULT true    -- 9. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.any_load($1, $2, $3, $4, digpreserv_packid_to_real($5), $6, $7, $8, $9)
+   SELECT ingest.any_load($1, $2, $3, $4, dg_preserv.packid_to_real($5), $6, $7, $8, $9)
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],text,boolean)
   IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
@@ -918,7 +916,7 @@ CREATE or replace FUNCTION ingest.osm_load(
     p_geom_name text DEFAULT 'way', -- 7
     p_to4326 boolean DEFAULT false    -- 8. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.osm_load($1, $2, $3, digpreserv_packid_to_real($4), $5, $6, $7, $8)
+   SELECT ingest.osm_load($1, $2, $3, dg_preserv.packid_to_real($4), $5, $6, $7, $8)
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.osm_load(text,text,text,text,text,text[],text,boolean)
   IS 'Wrap to ingest.osm_load(1,2,3,4=real) using string format DD_DD.'
@@ -936,7 +934,7 @@ CREATE or replace FUNCTION ingest.qgis_vwadmin_feature_asis(
         WHEN 'drop' THEN 'DROP VIEW IF EXISTS vw_asis_pk%s_f%s_%s; -- %s.'
         ELSE 'CREATE VIEW vw_asis_pk%s_f%s_%s AS SELECT feature_id AS gid, properties, geom FROM ingest.feature_asis WHERE file_id=%s;'
       END
-      ,digpreserv_packid_to_str(pck_id,true)
+      ,dg_preserv.packid_to_str(pck_id,true)
       ,file_id
       ,feature_asis_summary->>'n_unit'
       ,file_id
