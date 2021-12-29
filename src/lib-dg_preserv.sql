@@ -251,7 +251,7 @@ CREATE TABLE optim.donated_PackComponent(
   packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
   ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
   is_evidence boolean default false,
-  ash_md5 text NOT NULL, -- or "size-md5" as really unique string
+  hash_md5 text NOT NULL, -- or "size-md5" as really unique string
   proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
   file_meta jsonb,
   feature_asis_summary jsonb,
