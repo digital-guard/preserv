@@ -1071,12 +1071,12 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
     SELECT t.hcode, t.n_items,  -- length(t.hcode) AS len,
       ST_Intersection(
         ST_SetSRID( ST_geomFromGeohash(replace(t.hcode, '*', '')) ,  4326),
-        (SELECT geom FROM foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
+        (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
       ) AS geom
     FROM hcode_distribution_reduce_recursive_raw(
     	(SELECT feature_distrib FROM ingest.layer_file WHERE file_id= p_file_id),
     	1,
-    	(SELECT length(st_geohash(geom)) FROM foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
+    	(SELECT length(st_geohash(geom)) FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
     	750, 8000, 3
     ) t
   ;
