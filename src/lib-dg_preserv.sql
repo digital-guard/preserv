@@ -3,8 +3,11 @@
  * System's Public library (commom for others)
  */
 
+CREATE SCHEMA IF NOT EXISTS optim;
 CREATE SCHEMA IF NOT EXISTS dg_preserv;
 
+--------------
+-- BEGIN LIXO:
 CREATE or replace FUNCTION dg_preserv.packid_to_real(pkid int, version int) RETURNS real AS $f$
   SELECT pkid::real + (CASE WHEN version IS NULL or version<=0 THEN 1 ELSE version END)::real/1000.0::real
   -- Estimativa de versões: 1 por semana ao longo de 15 anos. 15*12*4.3=780. Ainda sobram 320 por segurança.
@@ -87,10 +90,13 @@ COMMENT ON FUNCTION dg_preserv.packid_getmax
  IS 'Obtais the current (or the next when p_plusOne) pck_id of a table.'
 ;
 
+-- FIM LIXO
+-------------
+
+
 ------------------------
 
-
-CREATE TABLE IF NOT EXISTS dg_preserv.jurisdiction ( -- only current
+CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   -- need a view vw01current_jurisdiction to avoid the lost of non-current.
   -- https://schema.org/AdministrativeArea or https://schema.org/jurisdiction ?
   -- OSM use AdminLevel, etc. but LexML uses Jurisdiction.
@@ -116,13 +122,13 @@ CREATE TABLE IF NOT EXISTS dg_preserv.jurisdiction ( -- only current
   ,UNIQUE(jurisd_base_id,parent_abbrev,abbrev)
 );
 
-CREATE TABLE dg_preserv.auth_user (
+CREATE TABLE optim.auth_user (
   -- authorized users to be a datapack responsible and eclusa-FTP manager
   username text NOT NULL PRIMARY KEY,
   info jsonb
 );
 
-CREATE TABLE dg_preserv.donor (
+CREATE TABLE optim.donor (
   id integer NOT NULL PRIMARY KEY CHECK (id = country_id*1000000+local_serial),
   country_id int NOT NULL CHECK(country_id>0), -- ISO
   local_serial  int NOT NULL CHECK(local_serial>0), -- byu contry 
@@ -141,10 +147,10 @@ CREATE TABLE dg_preserv.donor (
   UNIQUE(country_id,scope,shortname)
 );
 
-CREATE TABLE dg_preserv.donated_PackTpl(   
+CREATE TABLE optim.donated_PackTpl(   
    -- donated pack template, Pacote não-versionado, apenas controle de pack_id e registro da entrada. Só metaqdos comuns às versóes.
   id bigint NOT NULL PRIMARY KEY CHECK (id = donor_id::bigint*100::bigint + pk_count::bigint),
-  donor_id int NOT NULL REFERENCES dg_preserv.donor(id),
+  donor_id int NOT NULL REFERENCES optim.donor(id),
   pk_count int  NOT NULL CHECK(pk_count>0),
   -- tpl text not null -- make_conf!
   mktpl_pack_id int,  -- update depois. pacote-modelo (null ou mesmo pack_id caso seja tambem modelo)
@@ -154,9 +160,9 @@ CREATE TABLE dg_preserv.donated_PackTpl(
   UNIQUE(donor_id,pk_count)
 );
 
-CREATE TABLE dg_preserv.donated_PackVers(   -- todo pacote tem uma abertura e um fechamento.
+CREATE TABLE optim.donated_PackVers(   -- todo pacote tem uma abertura e um fechamento.
   id bigint NOT NULL PRIMARY KEY  CHECK(id=....),  -- old checked by donatedPack_trigf().
-  user_resp text NOT NULL REFERENCES dg_preserv.auth_user(username), -- responsável pelo README e teste do makefile
+  user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pelo README e teste do makefile
   accepted_date date NOT NULL,   -- sem uso? ver optiom.origin
   escopo text NOT NULL, -- bbox or minimum bounding AdministrativeArea
   -- license?  tirar do info e trazer para REFERENCES licenças.
@@ -169,6 +175,7 @@ CREATE TABLE dg_preserv.donated_PackVers(   -- todo pacote tem uma abertura e um
 
 -----
 
+--- LIXO: adaptar para o novo esquema de ID
 CREATE FUNCTION dg_preserv.donatedPack_trigf() RETURNS trigger AS $f$
 DECLARE
   p_pack_id int;
