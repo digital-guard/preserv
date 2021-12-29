@@ -21,6 +21,7 @@ countries = "'BR','CL','CO','EC','PE','VE'"  # em uso e conforme data/jurisdicti
 gits_basepath = /var/gits
 pk_basepath = $(gits_basepath)/_dg
 
+## not working!
 DB_TEST := $(shell psql $(pg_uri_root) -c "\l" | awk '/$(pg_dbingest)/ {n=(n>0)?3:1} /$(pg_db)/ {n=(n>0)?3:2} END {print n;}')
 DB_TEST2 := $(shell echo '/$(pg_dbingest)/ {n=(n>0)?3:1} /$(pg_db)/ {n=(n>0)?3:2} END {print n;}')
 
@@ -53,7 +54,13 @@ all: ini_all
 ini_all: ini_sql_db ini_sql
 
 ini_sql_db:
-	@echo "... Checking databases"
+	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_dbingest)"
+	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_db)"
+
+ini_sql_db_BUG:
+	@echo "... Checking databases "
+	@echo " debug $(DB_TEST), test2=$(DB_TEST2)"
+	exit
 ifneq ($(DB_TEST),$(filter $(DB_TEST),1 3))
 	@echo "... Creating database $(pg_dbingest)"
 	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_dbingest)"
@@ -63,6 +70,7 @@ ifneq ($(DB_TEST),$(filter $(DB_TEST),3 2))
 	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_db)"
 endif
 	@echo "Databases $(pg_db) and $(pg_dbingest) created."
+
 
 ini_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	@echo "--- Preparing filesystem... ---"
@@ -76,9 +84,11 @@ ini_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
 	@echo "--- Running API SQL templates ---"
-	psql $(pg_uri) < step00-iniApi.sql
+	@echo "!nao fazendo ainda, futuro"
+	#psql $(pg_uri) < step00-iniApi.sql
 	@echo "--- Running Eclusa ---"
-	psql $(pg_uri) < eclusa/step1-ini.sql
+	@echo "!nao fazendo ainda, futuro"
+	#psql $(pg_uri) < eclusa/step1-ini.sql
 	# sh eclusa-step2a-ins.sh
 	#/var/gits/WS/src? psql $(pg_uri) < eclusa/step2b-ins.sql
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito

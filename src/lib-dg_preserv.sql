@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   jurisd_base_id int NOT NULL,  -- ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans)
   jurisd_local_id int   NOT NULL, -- numeric official ID like IBGE_ID of BR jurisdiction.
   -- for example BR's ACRE is 12 and its cities are {1200013, 1200054,etc}.
-  parent_id bigint references dg_preserv.jurisdiction(osm_id), -- null for INT.
+  parent_id bigint references optim.jurisdiction(osm_id), -- null for INT.
   admin_level smallint NOT NULL CHECK(admin_level>0 AND admin_level<100), -- 2=country (e.g. BR), at BR: 4=UFs, 8=municipios.
   name    text  NOT NULL CHECK(length(name)<60), -- city name for admin_level=8.
   parent_abbrev   text  NOT NULL, -- state is admin-level2, country level1
@@ -131,7 +131,7 @@ CREATE TABLE optim.auth_user (
 CREATE TABLE optim.donor (
   id integer NOT NULL PRIMARY KEY CHECK (id = country_id*1000000+local_serial),
   country_id int NOT NULL CHECK(country_id>0), -- ISO
-  local_serial  int NOT NULL CHECK(local_serial>0), -- byu contry 
+  local_serial  int NOT NULL CHECK(local_serial>0), -- byu contry
   scope text, -- city code or country code
   shortname text, -- abreviation or acronym (local)
   vat_id text,    -- in the Brazilian case is "CNPJ:number"
@@ -139,7 +139,7 @@ CREATE TABLE optim.donor (
   wikidata_id bigint,  -- without "Q" prefix
   url text,     -- official home page of the organization
   info JSONb,   -- all other information using controlled keys
-  --kx_vat_id text,    -- cache for search 
+  --kx_vat_id text,    -- cache for search
   UNIQUE(country_id,local_serial),
   UNIQUE(country_id,vat_id),
   --UNIQUE(kx_vat_id),
@@ -147,7 +147,7 @@ CREATE TABLE optim.donor (
   UNIQUE(country_id,scope,shortname)
 );
 
-CREATE TABLE optim.donated_PackTpl(   
+CREATE TABLE optim.donated_PackTpl(
    -- donated pack template, Pacote não-versionado, apenas controle de pack_id e registro da entrada. Só metaqdos comuns às versóes.
   id bigint NOT NULL PRIMARY KEY CHECK (id = donor_id::bigint*100::bigint + pk_count::bigint),
   donor_id int NOT NULL REFERENCES optim.donor(id),
@@ -163,9 +163,9 @@ CREATE TABLE optim.donated_PackTpl(
 CREATE TABLE optim.donated_PackFileVers(
   -- armazena histórico de versões, requer VIEW contendo apenas registros de MAX(pack_item_accepted_date).
   id bigint NOT NULL PRIMARY KEY  CHECK(id=pack_id*1000000000+pack_item*100+kx_pack_item_version),  -- old checked by donatedPack_trigf().
-  hashedfname text NOT NULL  CHECK( hashedfname ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ),, -- formato "size~sha256.ext". Hashed filename.
+  hashedfname text NOT NULL  CHECK( hashedfname ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
   pack_id bigint NOT NULL REFERENCES optim.donated_PackTpl(id),
-  pack_item int NOT NULL DEFAULT 1, --  um dos make_conf_tpl->files->file de pack_id 
+  pack_item int NOT NULL DEFAULT 1, --  um dos make_conf_tpl->files->file de pack_id
   pack_item_accepted_date date NOT NULL, --  data tipo ano-mês-01, mês da homologação da doação
   kx_pack_item_version int NOT NULL DEFAULT 1, --  versão (serial) correspondente à pack_item_accepted_date. Requer Trigguer para automatizar.
   user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pela ingestão do arquivo (testemunho)
@@ -173,16 +173,84 @@ CREATE TABLE optim.donated_PackFileVers(
   -- license?  tirar do info e trazer para REFERENCES licenças.
   --- about text,
   info jsonb  -- livre
-  ,UNIQUE(hashedfname),
-  ,UNIQUE(pack_id,pack_item,pack_item_accepted_date),
-  ,UNIQUE(donor_id,accepted_date,escopo) -- revisar se precisa.
+  ,UNIQUE(hashedfname)
+  ,UNIQUE(pack_id,pack_item,pack_item_accepted_date)
+  ,UNIQUE(pack_id,pack_item,kx_pack_item_version) -- revisar se precisa.
 );
+-------
 
+---------
+CREATE TABLE optim.feature_type (  -- replacing old optim.origin_content_type
+  ftid smallint PRIMARY KEY NOT NULL,
+  ftname text NOT NULL CHECK(lower(ftname)=ftname), -- ftlabel
+  geomtype text NOT NULL CHECK(lower(geomtype)=geomtype), -- old model_geo
+  need_join boolean, -- false=não, true=sim, null=both (at class).
+  description text NOT NULL,
+  info jsonb, -- is_useful, score, model_septable, description_pt, description_es, synonymous_pt, synonymous_es
+  UNIQUE (ftname)
+);
+-- DELETE FROM optim.feature_type;
+INSERT INTO optim.feature_type VALUES
+  (0,'address',       'class', null,  'Cadastral address.','{"shortname_pt":"endereço","description_pt":"Endereço cadastral, representação por nome de via e numeração predial.","synonymous_pt":["endereço postal","endereço","planilha dos endereços","cadastro de endereços"]}'::jsonb),
+  --(1,'address_full',  'none', true,   'Cadastral address (gid,via_id,via_name,number,postal_code,etc), joining with geoaddress_ext by a gid.', NULL),
+  (1,'address_cmpl',  'none', true,   'Cadastral address, like address_full with only partial core metadata.', NULL),
+  (2,'address_noid',  'none', false,  'Cadastral address with some basic metadata but no standard gid for join with geo).', NULL),
+
+  (5,'cadparcel',           'class', null,  'Cadastral parcel (name of parcel).', '{"shortname_pt":"lote","description_pt":"Lote cadastral (nome de parcel), complemento da geográfica. Lote representado por dados cadastrais apenas.","synonymous_pt":["terreno","parcela"]}'::jsonb),
+  (6,'cadparcel_cmpl',      'none', true,   'Cadastral parcel with metadata complementing parcel_ext (parcel_cod,parcel_name).', NULL),
+  (7,'cadparcel_noid',      'none', false,   'Parcel name (and optional metadata) with no ID for join with parcel_ext.', NULL),
+
+  (10,'cadvia',           'class', null,  'Cadastral via (name of via).', '{"shortname_pt":"logradouro","description_pt":"Via cadastral (nome de via), complemento da geográfica. Logradouro representado por dados cadastrais apenas.","synonymous_pt":["nomes de logradouro","nomes de rua"]}'::jsonb),
+  (11,'cadvia_cmpl',      'none', true,   'Cadastral via with metadata complementing via_ext (via_cod,via_name).', NULL),
+  (12,'cadvia_noid',      'none', false,   'Via name (and optional metadata) with no ID for join with via_ext.', NULL),
+
+  (20,'geoaddress',         'class', null,  'Geo-address point.', '{"shortname_pt":"endereço","description_pt":"Geo-endereço. Representação geográfica do endereço, como ponto.","synonymous_pt":["geo-endereço","ponto de endereço","endereço georreferenciado","ponto de endereçamento postal"]}'::jsonb),
+  (21,'geoaddress_full',    'point', false, 'Geo-address point with all attributes, via_name and number.', NULL),
+  (22,'geoaddress_ext',     'point', true,  'Geo-address point with no (or some) metadata, external metadata at address_cmpl or address_full.', NULL),
+  (23,'geoaddress_none',    'point', false, 'Geo-address point-only, no metadata (or no core metadata).', NULL),
+
+  (30,'via',           'class', null,  'Via line.', '{"shortname_pt":"eixo de via","description_pt":"Eixo de via. Logradouro representado por linha central, com nome oficial e codlog opcional.","synonymous_pt":["eixo de logradouro","ruas"]}'::jsonb),
+  (31,'via_full',       'line', false, 'Via line, with all metadata (official name, optional code and others)', NULL),
+  (32,'via_ext',        'line', true,  'Via line, with external metadata at cadvia_cmpl', NULL),
+  (33,'via_none',       'line', false, 'Via line with no metadata', NULL),
+
+  (40,'genericvia',           'class', null,  'Generic-via line. Complementar parcel and block divider: railroad, waterway or other.', '{"shortname_pt":"eixo de etc-via","description_pt":"Via complementar generalizada. Qualquer linha divisora de lotes e quadras: rios, ferrovias, etc. Permite gerar a quadra generalizada.","synonymous_pt":["hidrovia","ferrovia","limite de município"]}'::jsonb),
+  (41,'genericvia_full',       'line', false, 'Generic-via line, with all metadata (type, official name, optional code and others)', NULL),
+  (42,'genericvia_ext',        'line', true,  'Generic-via line, with external metadata at cadgenericvia_cmpl', NULL),
+  (43,'genericvia_none',       'line', false, 'Generic-via line with no metadata', NULL),
+
+  (50,'building',        'class', null, 'Building polygon.', '{"shortname_pt":"construção","description_pt":"Polígono de edificação.","synonymous_pt":["construções","construção"]}'::jsonb),
+  (51,'building_full',   'poly', false, 'Building polygon with all attributes, via_name and number.', NULL),
+  (52,'building_ext',    'poly', true,  'Building polygon with no (or some) metadata, external metadata at address_cmpl or address_full.', NULL),
+  (53,'building_none',   'poly', false, 'Building polygon-only, no metadata (or no core metadata).', NULL),
+
+  (60,'parcel',        'class', null, 'Parcel polygon (land lot).', '{"shortname_pt":"lote","description_pt":"Polígono de lote.","synonymous_pt":["lote","parcela","terreno"]}'::jsonb),
+  (61,'parcel_full',   'poly', false, 'Parcel polygon with all attributes, its main via_name and number.', NULL),
+  (62,'parcel_ext',    'poly', true,  'Parcel polygon-only, all metadata external.', NULL),
+  (63,'parcel_none',   'poly', false, 'Parcel polygon-only, no metadata.', NULL),
+
+  (70,'nsvia',        'class', null, 'Namespace of vias, a name delimited by a polygon.', '{"shortname_pt":"bairro","description_pt":"Espaço-de-nomes para vias, um nome delimitado por polígono. Tipicamente nome de bairro ou de loteamento. Complementa o nome de via em nomes duplicados (repetidos dentro do mesmo município mas não dentro do mesmo nsvia).","synonymous_pt":["bairro","loteamento"]}'::jsonb),
+  (71,'nsvia_full',   'poly', false, 'Namespace of vias polygon with name and optional metadata', NULL),
+  (72,'nsvia_ext',    'poly', true,  'Namespace of vias polygon with external metadata', NULL),
+  (73,'nsvia_none',   'poly', true,  'Namespace of vias polygon-only, no metadata', NULL),
+  -- renomear para 'namedArea'
+
+  (80,'block',        'class', null, 'Urban block and similar structures, delimited by a polygon.', '{"shortname_pt":"quadra","description_pt":"Quadras ou divisões poligonais similares.","synonymous_pt":["quadra"]}'::jsonb),
+  (81,'block_full',   'poly', false, 'Urban block with IDs and all other jurisdiction needs', NULL),
+  (82,'block_none',   'poly', false,  'Urban block with no ID', NULL)
+;
+-- Para a iconografia do site:
+-- SELECT f.ftname as "feature type", t.geomtype as "geometry type", f.description from optim.feature_type f inner JOIN (select  substring(ftname from '^[^_]+') as ftgroup, geomtype  from optim.feature_type where geomtype!='class' group by 1,2) t ON t.ftgroup=f.ftname ;--where t.geomtype='class';
+-- Para gerar backup CSV:
+-- copy ( select lpad(ftid::text,2,'0') ftid, ftname, description, info->>'description_pt' as description_pt, array_to_string(jsonb_array_totext(info->'synonymous_pt'),'; ') as synonymous_pt from optim.feature_type where geomtype='class' ) to '/tmp/pg_io/featur_type_classes.csv' CSV HEADER;
+-- copy ( select lpad(ftid::text,2,'0') ftid, ftname,geomtype, iif(need_join,'yes'::text,'no') as need_join, description  from optim.feature_type where geomtype!='class' ) to '/tmp/pg_io/featur_types.csv' CSV HEADER;
+
+--------
 CREATE TABLE optim.donated_PackComponent(
   -- ... similar ao ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
   layerfile_id bigserial NOT NULL PRIMARY KEY,
   packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
-  ftid smallint NOT NULL REFERENCES ingest.feature_type(ftid),
+  ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
   is_evidence boolean default false,
   ash_md5 text NOT NULL, -- or "size-md5" as really unique string
   proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
@@ -196,6 +264,7 @@ CREATE TABLE optim.donated_PackComponent(
 -----
 
 --- LIXO: adaptar para o novo esquema de ID
+/* mudou
 CREATE FUNCTION dg_preserv.donatedPack_trigf() RETURNS trigger AS $f$
 DECLARE
   p_pack_id int;
@@ -212,3 +281,4 @@ $f$ LANGUAGE PLpgSQL;
 CREATE TRIGGER tbefore BEFORE INSERT OR UPDATE ON dg_preserv.donatedPack
   FOR EACH ROW EXECUTE PROCEDURE dg_preserv.donatedPack_trigf()
 ;
+*/
