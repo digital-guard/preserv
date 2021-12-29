@@ -249,6 +249,9 @@ load_license_tables: pgio
 	ON d.pack_id = t.pack_id;\
 	DROP FOREIGN TABLE IF EXISTS tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_donatedPack; DROP FOREIGN TABLE IF EXISTS tmp_donatedPackold2new;"
 
+idnew_test:
+	psql $(pg_uringest) < id_new.sql
+
 ## ## ## ##
 ## -- ADMIN FIX TOOLS --
 fix_permissions: pgio
