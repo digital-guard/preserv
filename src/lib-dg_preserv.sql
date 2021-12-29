@@ -151,27 +151,47 @@ CREATE TABLE optim.donated_PackTpl(
    -- donated pack template, Pacote não-versionado, apenas controle de pack_id e registro da entrada. Só metaqdos comuns às versóes.
   id bigint NOT NULL PRIMARY KEY CHECK (id = donor_id::bigint*100::bigint + pk_count::bigint),
   donor_id int NOT NULL REFERENCES optim.donor(id),
+  user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pelo README e teste do makefile
   pk_count int  NOT NULL CHECK(pk_count>0),
-  -- tpl text not null -- make_conf!
-  mktpl_pack_id int,  -- update depois. pacote-modelo (null ou mesmo pack_id caso seja tambem modelo)
-  inputschema_id int  -- update depois. input schema (YAML) tomado como modelo.
-  license_default text,
-  info JSONb,
+  original_tpl text NOT NULL, -- cópia de segurança do make_conf.yaml trocando "version" e "file" por placeholder mustache.
+  make_conf_tpl JSONb,  -- cache, resultado de parsing do original_tpl (YAML) para JSON
+  kx_num_files int, -- cache para  jsonb_array_length(make_conf_tpl->files).
+  info JSONb, -- uso futuro caso necessário.
   UNIQUE(donor_id,pk_count)
+);  -- cada file de  make_conf_tpl->files  resulta em um registro optim.donated_PackFileVers
+
+CREATE TABLE optim.donated_PackFileVers(
+  -- armazena histórico de versões, requer VIEW contendo apenas registros de MAX(pack_item_accepted_date).
+  id bigint NOT NULL PRIMARY KEY  CHECK(id=pack_id*1000000000+pack_item*100+kx_pack_item_version),  -- old checked by donatedPack_trigf().
+  hashedfname text NOT NULL  CHECK( hashedfname ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ),, -- formato "size~sha256.ext". Hashed filename.
+  pack_id bigint NOT NULL REFERENCES optim.donated_PackTpl(id),
+  pack_item int NOT NULL DEFAULT 1, --  um dos make_conf_tpl->files->file de pack_id 
+  pack_item_accepted_date date NOT NULL, --  data tipo ano-mês-01, mês da homologação da doação
+  kx_pack_item_version int NOT NULL DEFAULT 1, --  versão (serial) correspondente à pack_item_accepted_date. Requer Trigguer para automatizar.
+  user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pela ingestão do arquivo (testemunho)
+  -- escopo text NOT NULL, -- bbox or minimum bounding AdministrativeArea
+  -- license?  tirar do info e trazer para REFERENCES licenças.
+  --- about text,
+  info jsonb  -- livre
+  ,UNIQUE(hashedfname),
+  ,UNIQUE(pack_id,pack_item,pack_item_accepted_date),
+  ,UNIQUE(donor_id,accepted_date,escopo) -- revisar se precisa.
 );
 
-CREATE TABLE optim.donated_PackVers(   -- todo pacote tem uma abertura e um fechamento.
-  id bigint NOT NULL PRIMARY KEY  CHECK(id=....),  -- old checked by donatedPack_trigf().
-  user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pelo README e teste do makefile
-  accepted_date date NOT NULL,   -- sem uso? ver optiom.origin
-  escopo text NOT NULL, -- bbox or minimum bounding AdministrativeArea
-  -- license?  tirar do info e trazer para REFERENCES licenças.
-  about text,
-  config_commom jsonb, -- parte da config de ingestão comum a todos os arquivos (ver caso Sampa)
-  info jsonb
-  ,UNIQUE(pack_id) -- ,pack_version
-  ,UNIQUE(donor_id,accepted_date,escopo) -- revisar se precisa.
-); -- pack é intermediário de agregação
+CREATE TABLE optim.donated_PackComponent(
+  -- ... similar ao ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
+  layerfile_id bigserial NOT NULL PRIMARY KEY,
+  packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
+  ftid smallint NOT NULL REFERENCES ingest.feature_type(ftid),
+  is_evidence boolean default false,
+  ash_md5 text NOT NULL, -- or "size-md5" as really unique string
+  proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
+  file_meta jsonb,
+  feature_asis_summary jsonb,
+  feature_distrib jsonb,
+  UNIQUE(ftid,hash_md5),
+  UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de multiplos files ingerindo no mesmo layer.
+);
 
 -----
 
