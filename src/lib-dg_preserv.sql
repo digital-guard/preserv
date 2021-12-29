@@ -147,8 +147,8 @@ CREATE TABLE optim.donor (
 );
 
 CREATE TABLE optim.donated_PackTpl(
-   -- donated pack template, Pacote não-versionado, apenas controle de pack_id e registro da entrada. Só metaqdos comuns às versóes.
-  id bigint NOT NULL PRIMARY KEY CHECK (id = donor_id::bigint*100::bigint + pk_count::bigint),
+   -- donated pack template, Pacote não-versionado, apenas controle de pack_id e registro da entrada. Só metadados comuns às versões.
+  id bigint NOT NULL PRIMARY KEY CHECK (id = donor_id::bigint*100::bigint + pk_count::bigint),  -- by trigger!
   donor_id int NOT NULL REFERENCES optim.donor(id),
   user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pelo README e teste do makefile
   pk_count int  NOT NULL CHECK(pk_count>0),
@@ -161,12 +161,12 @@ CREATE TABLE optim.donated_PackTpl(
 
 CREATE TABLE optim.donated_PackFileVers(
   -- armazena histórico de versões, requer VIEW contendo apenas registros de MAX(pack_item_accepted_date).
-  id bigint NOT NULL PRIMARY KEY  CHECK(id=pack_id*1000000000+pack_item*100+kx_pack_item_version),  -- old checked by donatedPack_trigf().
+  id bigint NOT NULL PRIMARY KEY  CHECK(id=pack_id*1000000000+pack_item*100+kx_pack_item_version),  -- by trigger!
   hashedfname text NOT NULL  CHECK( hashedfname ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
   pack_id bigint NOT NULL REFERENCES optim.donated_PackTpl(id),
   pack_item int NOT NULL DEFAULT 1, --  um dos make_conf_tpl->files->file de pack_id
   pack_item_accepted_date date NOT NULL, --  data tipo ano-mês-01, mês da homologação da doação
-  kx_pack_item_version int NOT NULL DEFAULT 1, --  versão (serial) correspondente à pack_item_accepted_date. Requer Trigguer para automatizar.
+  kx_pack_item_version int NOT NULL DEFAULT 1, --  versão (serial) correspondente à pack_item_accepted_date. Trigguer: next value.
   user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pela ingestão do arquivo (testemunho)
   -- escopo text NOT NULL, -- bbox or minimum bounding AdministrativeArea
   -- license?  tirar do info e trazer para REFERENCES licenças.
@@ -257,10 +257,49 @@ CREATE TABLE optim.donated_PackComponent(
   feature_asis_summary jsonb,
   feature_distrib jsonb,
   UNIQUE(ftid,hash_md5),
-  UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de multiplos files ingerindo no mesmo layer.
+  UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
 
 -----
+
+CREATE FUNCTION optim.vat_id_normalize(p_vat_id text) RETURNS text AS $f$
+  SELECT lower(regexp_replace($1,'[,\.;/\-\+\*~]+','','g'))
+$f$ language SQL immutable;
+
+CREATE FUNCTION optim.input_donor() RETURNS TRIGGER AS $f$
+BEGIN
+  NEW.kx_vat_id := optim.vat_id_normalize(NEW.vat_id);
+  NEW.id = NEW.country_id*1000000 + NEW.local_serial;
+	RETURN NEW;
+END;
+$f$ LANGUAGE PLpgSQL;
+CREATE TRIGGER check_kx_vat_id
+    BEFORE INSERT OR UPDATE ON optim.donor
+    FOR EACH ROW EXECUTE PROCEDURE optim.input_donor()
+;
+
+CREATE FUNCTION optim.input_donated_PackTpl() RETURNS TRIGGER AS $f$
+BEGIN
+  NEW.id = NEW.donor_id::bigint*100 + NEW.pk_count::bigint;
+	RETURN NEW;
+END;
+$f$ LANGUAGE PLpgSQL;
+CREATE TRIGGER generate_id_PackTpl
+    BEFORE INSERT OR UPDATE ON optim.donated_PackTpl
+    FOR EACH ROW EXECUTE PROCEDURE optim.input_donated_PackTpl()
+;
+
+CREATE FUNCTION optim.input_donated_PackFileVers() RETURNS TRIGGER AS $f$
+BEGIN
+  NEW.kx_pack_item_version := (SELECT MAX(kx_pack_item_version)+1 FROM optim.donated_PackFileVers WHERE pack_id = NEW.pack_id AND pack_item = NEW.pack_item); 
+  NEW.id = NEW.pack_id*1000000000 + NEW.pack_item*100 + NEW.kx_pack_item_version;
+	RETURN NEW;
+END;
+$f$ LANGUAGE PLpgSQL;
+CREATE TRIGGER generate_id_PackFileVers
+    BEFORE INSERT OR UPDATE ON optim.donated_PackFileVers
+    FOR EACH ROW EXECUTE PROCEDURE optim.input_donated_PackFileVers()
+;
 
 --- LIXO: adaptar para o novo esquema de ID
 /* mudou
@@ -283,22 +322,6 @@ CREATE TRIGGER tbefore BEFORE INSERT OR UPDATE ON dg_preserv.donatedPack
 */
 
 ---
-
-CREATE FUNCTION optim.vat_id_normalize(p_vat_id text) RETURNS text AS $f$
-  SELECT lower(regexp_replace($1,'[,\.;/\-\+\*~]+','','g'))
-$f$ language SQL immutable;
-
-CREATE FUNCTION optim.input_donor() RETURNS TRIGGER AS $f$
-BEGIN
-  NEW.kx_vat_id := optim.vat_id_normalize(NEW.vat_id);
-  NEW.id = NEW.country_id*1000000 + NEW.local_serial;
-	RETURN NEW;
-END;
-$f$ LANGUAGE PLpgSQL;
-CREATE TRIGGER check_kx_vat_id
-    BEFORE INSERT OR UPDATE ON optim.donor
-    FOR EACH ROW EXECUTE PROCEDURE optim.input_donor()
-;
 
 /* OLD LIXO:
 CREATE FUNCTION lixo optim.donor_id_build_trig() RETURNS trigger AS $f$
