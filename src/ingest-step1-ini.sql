@@ -1196,9 +1196,9 @@ $f$ LANGUAGE SQL IMMUTABLE;
 
 -------------------------------------------------
 
-DROP TABLE ingest.lix_conf_yaml ;
-DROP TABLE ingest.lix_mkme_srcTpl ;
-DROP TABLE ingest.lix_jurisd_tpl ;
+--DROP TABLE ingest.lix_conf_yaml ;
+--DROP TABLE ingest.lix_mkme_srcTpl ;
+--DROP TABLE ingest.lix_jurisd_tpl ;
 
 CREATE TABLE ingest.lix_conf_yaml (
   jurisdiction text NOT NULL,
