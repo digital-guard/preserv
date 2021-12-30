@@ -250,7 +250,8 @@ load_license_tables: pgio
 	DROP FOREIGN TABLE IF EXISTS tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_donatedPack; DROP FOREIGN TABLE IF EXISTS tmp_donatedPackold2new;"
 
 idnew_test:
-	psql $(pg_uringest) < id_new.sql
+	psql $(pg_uringest) -c "select ingest.load_donor_pack('br');"
+	psql $(pg_uringest) -c "select ingest.insert_donor_pack();"
 
 ## ## ## ##
 ## -- ADMIN FIX TOOLS --
