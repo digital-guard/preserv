@@ -352,7 +352,7 @@ BEGIN
     return ' '|| fdwname || E' was created!\n source: '||f|| ' ';
 END;
 $f$ language PLpgSQL;
-COMMENT ON FUNCTION optim.fdw_generate
+COMMENT ON FUNCTION optim.fdw_generate2
   IS 'Generates a structure FOREIGN TABLE for ingestion.'
 ;
 
@@ -372,7 +372,7 @@ CREATE or replace FUNCTION optim.fdw_generate_getclone2(
     p_path
   )
 $wrap$ language SQL;
-COMMENT ON FUNCTION optim.fdw_generate_getclone
+COMMENT ON FUNCTION optim.fdw_generate_getclone2
   IS 'Generates a clone-structure FOREIGN TABLE for ingestion. Wrap for fdw_generate().'
 ;
 
