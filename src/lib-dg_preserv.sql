@@ -382,7 +382,7 @@ CREATE or replace FUNCTION optim.load_donor_pack(
 DECLARE
   p_path text;
 BEGIN
-  p_path := '/var/gits/_dg/preserv' || iIF(jurisdiction='INT', '', '-' || UPPER(jurisdiction) || '/data');
+  p_path := '/var/gits/_dg/preserv' || iIF(jurisdiction='INT', '', '-' || UPPER(jurisdiction)) || '/data';
   RETURN (SELECT optim.fdw_generate_getclone2('donor', null, 'optim', array['id','country_id', 'info', 'kx_vat_id'], null, p_path)) || (SELECT optim.fdw_generate2('donatedPack', null, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'donor_label text', 'user_resp text', 'accepted_date date', 'escopo text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,p_path));
 END;
 $f$ LANGUAGE PLpgSQL;
