@@ -306,7 +306,7 @@ CREATE TRIGGER generate_id_PackFileVers
 
 CREATE FUNCTION optim.mkdonated_PackTpl() RETURNS TRIGGER AS $f$
 BEGIN
-  NEW.kx_num_files = jsonb_array_length(NEW.make_conf_tpl->files);
+  NEW.kx_num_files = jsonb_array_length(NEW.make_conf_tpl->'files');
 	RETURN NEW;
 END;
 $f$ LANGUAGE PLpgSQL;
