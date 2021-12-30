@@ -290,8 +290,11 @@ CREATE TRIGGER generate_id_PackTpl
 ;
 
 CREATE FUNCTION optim.input_donated_PackFileVers() RETURNS TRIGGER AS $f$
+DECLARE
+  p_kx_pack_item_version int DEFAULT 0;
 BEGIN
-  NEW.kx_pack_item_version := (SELECT MAX(kx_pack_item_version)+1 FROM optim.donated_PackFileVers WHERE pack_id = NEW.pack_id AND pack_item = NEW.pack_item); 
+  p_kx_pack_item_version := (SELECT MAX(kx_pack_item_version)+1 FROM optim.donated_PackFileVers WHERE pack_id = NEW.pack_id AND pack_item = NEW.pack_item);
+  NEW.kx_pack_item_version = CASE WHEN p_kx_pack_item_version IS NULL THEN 1 ELSE p_kx_pack_item_version END; 
   NEW.id = NEW.pack_id*1000000000 + NEW.pack_item*100 + NEW.kx_pack_item_version;
 	RETURN NEW;
 END;
