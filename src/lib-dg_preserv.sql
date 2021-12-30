@@ -317,7 +317,7 @@ CREATE TRIGGER check_kx_num_files
 
 
 -- funções fdw_generate2 e fdw_generate_getclone2 não inserem aspas duplas quando p_addtxtype=false
-CREATE or replace FUNCTION ingest.fdw_generate2(
+CREATE or replace FUNCTION optim.fdw_generate2(
   p_name text,  -- table name and CSV input filename
   p_context text DEFAULT 'br',  -- or null
   p_schemaname text DEFAULT 'optim',
@@ -352,11 +352,11 @@ BEGIN
     return ' '|| fdwname || E' was created!\n source: '||f|| ' ';
 END;
 $f$ language PLpgSQL;
-COMMENT ON FUNCTION ingest.fdw_generate
+COMMENT ON FUNCTION optim.fdw_generate
   IS 'Generates a structure FOREIGN TABLE for ingestion.'
 ;
 
-CREATE or replace FUNCTION ingest.fdw_generate_getclone2(
+CREATE or replace FUNCTION optim.fdw_generate_getclone2(
   -- foreign-data wrapper generator
   p_tablename text,  -- cloned-table name
   p_context text DEFAULT 'br',  -- or null
@@ -365,29 +365,29 @@ CREATE or replace FUNCTION ingest.fdw_generate_getclone2(
   p_add text[] DEFAULT NULL, -- colunms to be added.
   p_path text DEFAULT NULL  -- default based on ids
 ) RETURNS text  AS $wrap$
-  SELECT ingest.fdw_generate2(
+  SELECT optim.fdw_generate2(
     $1,$2,$3,
     pg_tablestruct_dump_totext(p_schemaname||'.'||p_tablename,p_ignore,p_add),
     false, -- p_addtxtype
     p_path
   )
 $wrap$ language SQL;
-COMMENT ON FUNCTION ingest.fdw_generate_getclone
+COMMENT ON FUNCTION optim.fdw_generate_getclone
   IS 'Generates a clone-structure FOREIGN TABLE for ingestion. Wrap for fdw_generate().'
 ;
 
-CREATE or replace FUNCTION ingest.load_donor_pack(
+CREATE or replace FUNCTION optim.load_donor_pack(
     jurisdiction text
 ) RETURNS text AS $f$
 DECLARE
   p_path text;
 BEGIN
   p_path := '/var/gits/_dg/preserv' || iIF(jurisdiction='INT', '', '-' || UPPER(jurisdiction) || '/data');
-  RETURN (SELECT ingest.fdw_generate_getclone2('donor', null, 'optim', array['id','country_id', 'info', 'kx_vat_id'], null, p_path)) || (SELECT ingest.fdw_generate2('donatedPack', null, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'donor_label text', 'user_resp text', 'accepted_date date', 'escopo text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,p_path));
+  RETURN (SELECT optim.fdw_generate_getclone2('donor', null, 'optim', array['id','country_id', 'info', 'kx_vat_id'], null, p_path)) || (SELECT optim.fdw_generate2('donatedPack', null, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'donor_label text', 'user_resp text', 'accepted_date date', 'escopo text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,p_path));
 END;
 $f$ LANGUAGE PLpgSQL;
 
-CREATE or replace FUNCTION ingest.insert_donor_pack() RETURNS text AS $f$
+CREATE or replace FUNCTION optim.insert_donor_pack() RETURNS text AS $f$
 BEGIN
     -- popula optim.donor a partir de tmp_orig.fdw_donor
     INSERT INTO optim.donor (country_id,local_serial, scope, shortname, vat_id, legalname, wikidata_id, url)
