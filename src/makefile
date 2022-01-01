@@ -4,25 +4,25 @@
 
 ## -- -- VARS -- --
 
-pg_io  =/tmp/pg_io
-lockpath = /var/gits/_lock-mkStatus
+pg_io       := /tmp/pg_io
+lockpath    := /var/gits/_lock-mkStatus
 
-pg_uri_root =postgres://postgres@localhost
+pg_uri_root := postgres://postgres@localhost
 
 ## danger dl03t_main, ingest1. Use dummy 99 to test.
-pg_db       =dl99t_main
-pg_dbingest =ingest99
+pg_db       := dl99t_main
+pg_dbingest := ingest99
 
-pg_uri      =$(pg_uri_root)/$(pg_db)
-pg_uringest =$(pg_uri_root)/$(pg_dbingest)
+pg_uri      := $(pg_uri_root)/$(pg_db)
+pg_uringest := $(pg_uri_root)/$(pg_dbingest)
 
-countries = "'BR','CL','CO','EC','PE','VE'"  # em uso e conforme data/jurisdiction.csv
+countries   := "'BR','CL','CO','EC','PE','VE'"  # em uso e conforme data/jurisdiction.csv
 
-gits_basepath = /var/gits
-pk_basepath = $(gits_basepath)/_dg
+gits_basepath := /var/gits
+pk_basepath   := $(gits_basepath)/_dg
 
 ## not working!
-DB_TEST := $(shell psql $(pg_uri_root) -c "\l" | awk '/$(pg_dbingest)/ {n=(n>0)?3:1} /$(pg_db)/ {n=(n>0)?3:2} END {print n;}')
+DB_TEST  := $(shell psql $(pg_uri_root) -c "\l" | awk '/$(pg_dbingest)/ {n=(n>0)?3:1} /$(pg_db)/ {n=(n>0)?3:2} END {print n;}')
 DB_TEST2 := $(shell echo '/$(pg_dbingest)/ {n=(n>0)?3:1} /$(pg_db)/ {n=(n>0)?3:2} END {print n;}')
 
 ## -- CONFIGS --
@@ -93,6 +93,16 @@ ini_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	#/var/gits/WS/src? psql $(pg_uri) < eclusa/step2b-ins.sql
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
+
+
+build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwnName=name
+	@echo "DROP FOREIGN TABLE IF EXISTS $(fdwName);"
+	@echo "CREATE FOREIGN TABLE $(fdwName) ("
+	@psql postgres://postgres@localhost/$(fdwOrigBase) -c "\d $(fdwOrigSchema).$(fdwOrigName)" |  awk '/^ [a-z]/ {print $$1,$$3 ",";}'
+	@echo ") SERVER foreign_server"
+	@echo "  OPTIONS (schema_name '$(fdwOrigSchema)', table_name '$(fdwOrigName)');"
+	@echo
+
 
 ## ## ## ## ##
 ## -- -- REPORT tools -- --
