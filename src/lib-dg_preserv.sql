@@ -127,6 +127,7 @@ CREATE TABLE optim.auth_user (
   username text NOT NULL PRIMARY KEY,
   info jsonb
 );
+INSERT INTO optim.auth_user(username) VALUES ('carlos'),('igor'),('enio'),('peter'); -- minimal one Linux's /home/username
 
 CREATE TABLE optim.donor (
   id integer NOT NULL PRIMARY KEY CHECK (id = country_id*1000000+local_serial),  -- by trigger!
