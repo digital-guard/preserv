@@ -83,6 +83,8 @@ ini_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/lib-dg_preserv.sql
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
 	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
+	@echo "Creating optim schema at $(pg_db) database"
+	psql $(pg_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	@echo "--- Running API SQL templates ---"
 	@echo "!nao fazendo ainda, futuro"
 	#psql $(pg_uri) < step00-iniApi.sql
