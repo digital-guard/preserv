@@ -269,7 +269,7 @@ idnew_test:
 ## -- ADMIN FIX TOOLS --
 fix_permissions: pgio
 	@echo "... Fixing standard permissions, as sudor:"
-	sudo bash fixaPermissoes.sh /var/gits /tmp/pg_io
+	sudo bash fixaPermissoes.sh /var/gits /tmp/pg_io /var/www
 
 fix_usergroup:
 	@echo "... Adding standard usergroups, as sudor:"
