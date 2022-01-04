@@ -263,7 +263,7 @@ load_license_tables: pgio
 
 idnew_test:
 	psql $(pg_uri) -c "DROP TABLE optim.jurisdiction ;"
-	pg_dump -t optim.jurisdiction $(pg_uri_root)/dl02t_main | $(pg_uri)
+	pg_dump -t optim.jurisdiction $(pg_uri_root)/dl02s_main | $(pg_uri)
 	psql $(pg_uri) -c "select optim.load_donor_pack('br');"
 	psql $(pg_uri) -c "select optim.insert_donor_pack();"
 
