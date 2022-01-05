@@ -1306,6 +1306,7 @@ DECLARE
  codec_desc_sobre jsonb;
  codec_extension text;
  codec_descr_mime jsonb;
+ orig_filename_string text;
 BEGIN
  CASE p_type -- preparing types
  WHEN 'make_conf', NULL THEN
@@ -1334,6 +1335,16 @@ BEGIN
 		dict := jsonb_set( dict, array['layers',key,'isShp'], IIF(method='shp2sql',bt,bf) );
 		dict := jsonb_set( dict, array['layers',key,'isOsm'], IIF(method='osm2sql',bt,bf) );
        
+       
+                IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
+                THEN
+                   SELECT string_agg('*' || trim(txt::text, $$"$$) || '*', ' ') FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
+                   dict := jsonb_set( dict, array['layers',key,'orig_filename_string_extract'], to_jsonb(orig_filename_string) );
+
+                   SELECT string_agg($$-iname '*$$ || trim(txt::text, $$"$$) || $$*.shp'$$, ' -o ') FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
+                   dict := jsonb_set( dict, array['layers',key,'orig_filename_string_find'], to_jsonb(orig_filename_string) );
+                END IF;
+
                 IF dict->'layers'->key?'sql_select'
                 THEN
                     sql_select :=  replace(dict->'layers'->key->>'sql_select',$$\"$$,E'\u130C9');
@@ -1347,7 +1358,11 @@ BEGIN
                 END IF;
 
                 -- obtem codec a partir da extensão do arquivo
-                orig_filename_ext := regexp_matches(dict->'layers'->key->>'orig_filename','\.(\w+)$');
+                IF jsonb_typeof(dict->'layers'->key->'orig_filename') <> 'array'
+                THEN
+                    orig_filename_ext := regexp_matches(dict->'layers'->key->>'orig_filename','\.(\w+)$');
+                END IF;
+                
                 
                 IF orig_filename_ext IS NOT NULL
                 THEN
