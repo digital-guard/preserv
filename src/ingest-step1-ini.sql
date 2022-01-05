@@ -1529,7 +1529,7 @@ $f$ language PLpgSQL;
 
 CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
     jurisd text,
-    pack_id int
+    pack_id text
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
@@ -1538,7 +1538,7 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
         output_file text;
     BEGIN
 
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id')::int = pack_id INTO conf_yaml;
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
@@ -1558,7 +1558,7 @@ $f$ LANGUAGE PLpgSQL;
 -- A atualização dos make_conf.yaml com os novos identificadores tornará seu uso desnecessário.
 CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
     jurisd text,
-    pack_id int
+    pack_id text
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
@@ -1568,7 +1568,7 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
         files_license jsonb;
     BEGIN
 
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id')::int = pack_id INTO conf_yaml;
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
@@ -1589,7 +1589,7 @@ $f$ LANGUAGE PLpgSQL;
 
 CREATE or replace FUNCTION ingest.lix_generate_makefile(
     jurisd text,
-    pack_id int
+    pack_id text
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
@@ -1600,7 +1600,7 @@ CREATE or replace FUNCTION ingest.lix_generate_makefile(
         output_file text;
     BEGIN
 
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id')::int = pack_id INTO conf_yaml;
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml;
     SELECT y FROM ingest.lix_mkme_srcTpl WHERE tplInputSchema_id = conf_yaml->>'schemaId_template' INTO mkme_srcTpl;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     SELECT tpl_last FROM ingest.lix_jurisd_tpl WHERE jurisdiction = 'INT' INTO mkme_srcTplLast;
@@ -1619,7 +1619,7 @@ $f$ LANGUAGE PLpgSQL;
 
 CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
     jurisd text,
-    pack_id int
+    pack_id text
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
@@ -1628,7 +1628,7 @@ CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
         readme text;
         output_file text;
     BEGIN
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id')::int = pack_id INTO conf_yaml;
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     SELECT readme_mk FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO readme;
     
