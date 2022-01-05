@@ -323,7 +323,7 @@ BEGIN
     INSERT INTO optim.donated_PackFileVers (hashedfname, pack_id, pack_item, pack_item_accepted_date, user_resp)
     SELECT j->>'file'::text AS hashedfname, pack_id , (j->>'p')::int AS pack_item, '1970-01-01'::date, user_resp::text
     FROM (SELECT id AS pack_id, user_resp, jsonb_array_elements(make_conf_tpl->'files')::jsonb AS j FROM optim.donated_packtpl) AS t 
-    WHERE j->'file' IS NOT NULL AND j->>'file' NOT IN ('fbc62efdbd0f16a7db03b5b775c50c9425367a8dee8a85d9b53e4475bbdb99d2.zip','258772459588f7941ac6eeda7c6839df02d58741cf6bc3e48825aecd60418251.zip','c35e3b2825d3da122a74c6c8dd5f3157a3bd6201208d2a6d13dec433a6ded9fc.zip'); -- verificar hashs null e repetidos
+    WHERE j->'file' IS NOT NULL; -- verificar hash null
 
     RETURN (SELECT 'OK, inserted new itens at jurisdiction, donor and donatedPack. ');
 END;
