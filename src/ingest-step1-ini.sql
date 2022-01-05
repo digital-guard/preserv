@@ -1196,27 +1196,27 @@ $f$ LANGUAGE SQL IMMUTABLE;
 
 -------------------------------------------------
 
---DROP TABLE ingest.lix_conf_yaml ;
---DROP TABLE ingest.lix_mkme_srcTpl ;
---DROP TABLE ingest.lix_jurisd_tpl ;
-
+-- Armazena arquivos make_conf.yaml
 CREATE TABLE ingest.lix_conf_yaml (
-  jurisdiction text NOT NULL,
-  y jsonb
+  jurisdiction text NOT NULL, -- jurisdição, por exemplo: BR
+  y jsonb                     -- arquivo make_conf.yaml. Pode ser substituído por make_conf_tpl de optim.donated_PackTpl. Tornando essa tabela desnecessária.
 );
-CREATE UNIQUE INDEX ON ingest.lix_conf_yaml (jurisdiction,(y->>'pkid'));
+CREATE UNIQUE INDEX ON ingest.lix_conf_yaml (jurisdiction,(y->>'pack_id'));
 
+-- Armazena templates para geração de makefile
 CREATE TABLE ingest.lix_mkme_srcTpl (
-  tplInputSchema_id text NOT NULL,
-  y text,
+  tplInputSchema_id text NOT NULL, -- identificador do template. por exemplo: ref027a
+  y text,                          -- template, por exemplo make_ref027a.mustache.mk
   UNIQUE(tplInputSchema_id)
 );
 
+-- Armazena conteúdos de arquivos referentes a uma jurisdição, para geração de makefile.
+-- Pode ser absorvida por optim.jurisdiction
 CREATE TABLE ingest.lix_jurisd_tpl (
-  jurisdiction text NOT NULL,
-  tpl_last text,
-  first_yaml jsonb,
-  readme_mk text,
+  jurisdiction text NOT NULL, -- jurisdição, por exemplo: BR
+  tpl_last text,              -- commomLast.mustache.mk
+  first_yaml jsonb,           -- commomFirst.yaml da jurisdição.
+  readme_mk text,             -- template mustache para readme.
   UNIQUE(jurisdiction)
 );
 
@@ -1245,7 +1245,7 @@ CREATE or replace FUNCTION ingest.lix_insert(
         WHEN 'make_conf.yaml' THEN
         conf:= yamlfile_to_jsonb(file);
         INSERT INTO ingest.lix_conf_yaml (jurisdiction,y) VALUES (jurisd,conf)
-        ON CONFLICT (jurisdiction,(y->>'pkid')) DO UPDATE SET y = conf;
+        ON CONFLICT (jurisdiction,(y->>'pack_id')) DO UPDATE SET y = conf;
 
         WHEN (select (regexp_matches(p_type, 'make_ref[0-9]+[a-z]\.mustache.mk'))[1]) THEN
         t:= pg_read_file(file);
@@ -1525,11 +1525,11 @@ BEGIN
  RETURN dict;
 END;
 $f$ language PLpgSQL;
---SELECT ingest.insert_bytesize( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml') );
+--SELECT ingest.insert_bytesize( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01/make_conf.yaml') );
 
 CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
     jurisd text,
-    pkid int
+    pack_id int
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
@@ -1538,10 +1538,10 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
         output_file text;
     BEGIN
 
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id')::int = pack_id INTO conf_yaml;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     
-    SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pkid INTO output_file;
+    SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
     
     SELECT jsonb_to_yaml(ingest.insert_bytesize(conf_yaml)::text) INTO q_query;
     
@@ -1550,7 +1550,7 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_generate_make_conf_with_size('BR','18');
+-- SELECT ingest.lix_generate_make_conf_with_size('BR','16.1');
 
 
 
@@ -1558,7 +1558,7 @@ $f$ LANGUAGE PLpgSQL;
 -- A atualização dos make_conf.yaml com os novos identificadores tornará seu uso desnecessário.
 CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
     jurisd text,
-    pkid int
+    pack_id int
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
@@ -1568,12 +1568,12 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
         files_license jsonb;
     BEGIN
 
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id')::int = pack_id INTO conf_yaml;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     
-    SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pkid INTO output_file;
+    SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
     
-    SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE old_pack_id = to_char(pkid,'fm00') INTO files_license;
+    SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE pack_id = (to_char(substring(y->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(y->>'pack_id','([^\.]*)$')::int,'fm00')) INTO files_license;
 
     conf_yaml := jsonb_set( conf_yaml, array['files_license'], files_license);
     
@@ -1584,12 +1584,12 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_generate_make_conf_with_license('BR','18');
+-- SELECT ingest.lix_generate_make_conf_with_license('BR','16.1');
 -- SELECT ingest.lix_generate_make_conf_with_license('BR','24');
 
 CREATE or replace FUNCTION ingest.lix_generate_makefile(
     jurisd text,
-    pkid int
+    pack_id int
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
@@ -1600,12 +1600,12 @@ CREATE or replace FUNCTION ingest.lix_generate_makefile(
         output_file text;
     BEGIN
 
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id')::int = pack_id INTO conf_yaml;
     SELECT y FROM ingest.lix_mkme_srcTpl WHERE tplInputSchema_id = conf_yaml->>'schemaId_template' INTO mkme_srcTpl;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     SELECT tpl_last FROM ingest.lix_jurisd_tpl WHERE jurisdiction = 'INT' INTO mkme_srcTplLast;
     
-    SELECT f_yaml->>'pg_io' || '/makeme_' || jurisd || pkid INTO output_file;
+    SELECT f_yaml->>'pg_io' || '/makeme_' || jurisd || pack_id INTO output_file;
     
     SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, f_yaml || ingest.jsonb_mustache_prepare(conf_yaml)),E'\u130C9',$$\"$$) INTO q_query;
     
@@ -1614,12 +1614,12 @@ CREATE or replace FUNCTION ingest.lix_generate_makefile(
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_generate_makefile('BR','18');
+-- SELECT ingest.lix_generate_makefile('BR','16.1');
 -- SELECT ingest.lix_generate_makefile('PE','1');
 
 CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
     jurisd text,
-    pkid int
+    pack_id int
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
@@ -1628,11 +1628,11 @@ CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
         readme text;
         output_file text;
     BEGIN
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pkid')::int = pkid INTO conf_yaml;
+    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id')::int = pack_id INTO conf_yaml;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     SELECT readme_mk FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO readme;
     
-    SELECT f_yaml->>'pg_io' || '/README-draft_' || jurisd || pkid INTO output_file;
+    SELECT f_yaml->>'pg_io' || '/README-draft_' || jurisd || pack_id INTO output_file;
     
     SELECT jsonb_mustache_render(readme, conf_yaml) INTO q_query;
 
@@ -1641,7 +1641,7 @@ CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_generate_readme('/var/gits/_dg/','BR','18');
+-- SELECT ingest.lix_generate_readme('/var/gits/_dg/','BR','16.1');
 
 -- ----------------------------
 

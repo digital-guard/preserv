@@ -14,16 +14,16 @@ country       = INT
 mkme_input0   = $(baseSrc)/preserv/src/maketemplates/commomFirst.yaml
 endif
 
-pg_io         = $(shell grep 'pg_io'  < $(mkme_input0) | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
-pg_uri        = $(shell grep 'pg_uri' < $(mkme_input0) | cut -f2- -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
-pg_db         = $(shell grep 'pg_db'  < $(mkme_input0) | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
-pkid          = $(shell grep 'pkid'   < $(mkme_input)  | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
+pg_io         = $(shell grep 'pg_io'   < $(mkme_input0) | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
+pg_uri        = $(shell grep 'pg_uri'  < $(mkme_input0) | cut -f2- -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
+pg_db         = $(shell grep 'pg_db'   < $(mkme_input0) | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
+pack_id       = $(shell grep 'pack_id' < $(mkme_input)  | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
 
 pg_uri_db     = $(pg_uri)/$(pg_db)
 
-mkme_output   = $(pg_io)/makeme_$(country)$(pkid)
-readme_output = $(pg_io)/README-draft_$(country)$(pkid)
-conf_output   = $(pg_io)/make_conf_$(country)$(pkid)
+mkme_output   = $(pg_io)/makeme_$(country)$(pack_id)
+readme_output = $(pg_io)/README-draft_$(country)$(pack_id)
+conf_output   = $(pg_io)/make_conf_$(country)$(pack_id)
 
 info:
 	@echo "=== Targets ==="
@@ -36,7 +36,7 @@ info:
 
 me: insert_make_conf.yaml
 	@echo "-- Updating this make --"
-	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_makefile('$(country)','$(pkid)');"
+	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_makefile('$(country)','$(pack_id)');"
 	sudo chmod 777 $(mkme_output)
 	@echo " Check diff, the '<' lines are the new ones... Something changed?"
 	@diff $(mkme_output) ./makefile || :
@@ -48,7 +48,7 @@ me: insert_make_conf.yaml
 
 readme:
 	@echo "-- Create basic README-draft.md template --"
-	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_readme('$(country)','$(pkid)');"
+	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_readme('$(country)','$(pack_id)');"
 	sudo chmod 777 $(readme_output)
 	@echo " Check diff, the '<' lines are the new ones... Something changed?"
 	@diff $(readme_output) ./README-draft.md || :
@@ -60,7 +60,7 @@ readme:
 
 insert_size: insert_make_conf.yaml
 	@echo "-- Updating make_conf with files size --"
-	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_make_conf_with_size('$(country)','$(pkid)');"
+	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_make_conf_with_size('$(country)','$(pack_id)');"
 	sudo chmod 777 $(conf_output)
 	@echo " Check diff, the '<' lines are the new ones... Something changed?"
 	@diff $(conf_output) ./make_conf.yaml || :
@@ -72,7 +72,7 @@ insert_size: insert_make_conf.yaml
 
 insert_license: insert_make_conf.yaml
 	@echo "-- Updating make_conf with files licenses --"
-	psql $(pg_uri_db) -c "SELECT lix_generate_make_conf_with_license('$(country)','$(pkid)');"
+	psql $(pg_uri_db) -c "SELECT lix_generate_make_conf_with_license('$(country)','$(pack_id)');"
 	sudo chmod 777 $(conf_output)
 	@echo " Check diff, the '<' lines are the new ones... Something changed?"
 	@diff $(conf_output) ./make_conf.yaml || :
@@ -85,7 +85,7 @@ insert_license: insert_make_conf.yaml
 insert_make_conf.yaml:
 	@echo "-- Carrega make_conf.yaml na base de dados. --"
 	@echo "Uso: make insert_make_conf.yaml"
-	@echo "pkid: $(pkid)"
+	@echo "pack_id: $(pack_id)"
 	@echo "[ENTER para continuar ou ^C para sair]"
 	@read _tudo_bem_
 	psql $(pg_uri_db) -c "SELECT ingest.lix_insert('$(mkme_input)');"
