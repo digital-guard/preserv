@@ -15,7 +15,6 @@ layers:
   nsvia:
         method: shp2sql
         subtype: none
-        p: 1a
         file: 1
         orig_filename: ne_10m_admin_0_countries
         sql_select: ['gid', 'ISO_A2', 'geom']
