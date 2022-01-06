@@ -1574,7 +1574,7 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
     
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
     
-    SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE pack_id = (to_char(substring(y->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(y->>'pack_id','([^\.]*)$')::int,'fm00')) INTO files_license;
+    SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE tmp_pack_licenses.pack_id = (to_char(substring(conf_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(conf_yaml->>'pack_id','([^\.]*)$')::int,'fm00')) INTO files_license;
 
     conf_yaml := jsonb_set( conf_yaml, array['files_license'], files_license);
     
