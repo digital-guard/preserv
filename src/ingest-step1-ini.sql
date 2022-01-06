@@ -167,19 +167,6 @@ COMMENT ON TABLE ingest.via_line
   IS 'Ingested via lines (street axis) of one or more packages, temporary data (not need package-version).'
 ;
 
-CREATE TABLE ingest.housenumber_system_type (
-  hstid smallint PRIMARY KEY NOT NULL,
-  hstname text NOT NULL CHECK(lower(hstname)=hstname), -- hslabel
-  regex_sort text NOT NULL,
-  description text NOT NULL,
-  UNIQUE (hstid)
-);
-INSERT INTO ingest.housenumber_system_type VALUES
-  (0,'metric',        '[0-9]+ integer',                        $$Distance in meters from city's origin (or similar mark). Example: BR-SP-PIR housenumbers [123, 4560].$$),
-  (1,'street-metric', '[0-9]+[A-Z]? \- [0-9]+ [SNEL]? string', 'First code refers to the previous intersecting street, and the second is the distance to that intersection. Optional last letter is sort-direction. Example: CO-DC-Bogota housenumbers [96A -11, 12 - 34, 14A - 31 E].'),
-  (2,'block-metric',  '[0-9]+ \- [0-9]+ integer function',     $$First number refers to the urban-block counter, and the second is the distance to the begin of the block in the city's origin order. Sort function is $1*10000 + $2. Example: BR-SP-Bauru housenumbers [30-14, 2-1890].$$)
-;
-  
 ---------
 CREATE TABLE ingest.feature_type (  -- replacing old optim.origin_content_type
   ftid smallint PRIMARY KEY NOT NULL,
