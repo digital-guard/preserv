@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   lexlabel     text NOT NULL,  -- cache from name; e.g. 'sao.paulo'.
   isolabel_ext text NOT NULL,  -- cache from parent_abbrev (ISO) and name (camel case); e.g. 'BR-SP-SaoPaulo'.
   ddd          integer, -- Direct distance dialing
+  housenumber_system_type text, -- housenumber system
+  lex_urn text, -- housenumber system law
   info JSONb -- creation, extinction, postalCode_ranges, notes, etc.
   ,UNIQUE(isolabel_ext)
   ,UNIQUE(wikidata_id)
