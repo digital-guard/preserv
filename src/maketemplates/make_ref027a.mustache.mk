@@ -5,7 +5,7 @@
 tplInputSchema_id=027a
 
 ## BASIC CONFIG
-pg_uri ={{srid}}
+srid   ={{srid}}
 pg_io  ={{pg_io}}
 orig   ={{orig}}
 pg_uri ={{pg_uri}}
