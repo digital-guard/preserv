@@ -1313,6 +1313,10 @@ BEGIN
     IF dict?'codec:descr_encode'
     THEN
         codec_desc_global := jsonb_object(regexp_split_to_array ( dict->>'codec:descr_encode','(;|=)'));
+        
+        -- Compatibilidade com sql_view de BR-MG-BeloHorizonte/_pk0008.01
+        dict := dict || codec_desc_global;
+        
         RAISE NOTICE 'value of codec_desc_global : %', codec_desc_global;
     END IF;
     
