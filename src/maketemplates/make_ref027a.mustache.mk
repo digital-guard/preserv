@@ -11,15 +11,15 @@ pg_uri ={{pg_uri}}
 sandbox_root={{sandbox}}
 need_commands= 7z v16+; psql v12+; shp2pgsql v3+; {{need_extra_commands}}
 
-pkid = {{pkid}}
-fullPkID={{pkid}}_{{pkversion}}
+pack_id = {{pack_id}}
+fullPkID={{pack_id}}_{{pkversion}}
 sandbox=$(sandbox_root)/_pk$(fullPkID)
 
 ## USER CONFIGS
 pg_db  ={{pg_db}}
 
 ## ## ## ## ## ## ##
-## THIS_MAKE, _pk{{pkid}}
+## THIS_MAKE, _pk{{pack_id}}
 
 {{#files}}
 part{{p}}_file  ={{file}}
@@ -54,7 +54,7 @@ all_joins: {{#joins_keys}}join-{{.}} {{/joins_keys}}
 address: layername = address_{{subtype}}
 address: tabname = pk$(fullPkID)_p{{file}}_address
 address: makedirs $(part{{file}}_path)
-	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "address" datatype (street axes)
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "address" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -70,7 +70,7 @@ address-clean:
 block: layername = block_{{subtype}}
 block: tabname = pk$(fullPkID)_p{{file}}_block
 block: makedirs $(part{{file}}_path)
-	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "block" datatype (street axes)
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "block" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -86,7 +86,7 @@ block-clean:
 building: layername = building_{{subtype}}
 building: tabname = pk$(fullPkID)_p{{file}}_building
 building: makedirs $(part{{file}}_path)
-	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "building" datatype (point with house_number but no via name)
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "building" datatype (point with house_number but no via name)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -102,7 +102,7 @@ building-clean:
 cadparcel: layername = cadparcel_{{subtype}}
 cadparcel: tabname = pk$(fullPkID)_p{{file}}_cadparcel
 cadparcel: makedirs $(part{{file}}_path)
-	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "cadparcel" datatype (street axes)
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "cadparcel" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -118,7 +118,7 @@ cadparcel-clean:
 cadvia: layername = cadvia_{{subtype}}
 cadvia: tabname = pk$(fullPkID)_p{{file}}_cadvia
 cadvia: makedirs $(part{{file}}_path)
-	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "cadvia" datatype (street axes)
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "cadvia" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -134,7 +134,7 @@ cadvia-clean:
 genericvia: layername = genericvia_{{subtype}}
 genericvia: tabname = pk$(fullPkID)_p{{file}}_genericvia
 genericvia: makedirs $(part{{file}}_path)
-	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "genericvia" datatype (zone with name)
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "genericvia" datatype (zone with name)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -150,7 +150,7 @@ genericvia-clean:
 geoaddress: layername = geoaddress_{{subtype}}
 geoaddress: tabname = pk$(fullPkID)_p{{file}}_geoaddress
 geoaddress: makedirs $(part{{file}}_path)
-	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "geoaddress" datatype (point with house_number but no via name)
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "geoaddress" datatype (point with house_number but no via name)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
@@ -169,7 +169,7 @@ geoaddress-clean:
 nsvia: layername = nsvia_{{subtype}}
 nsvia: tabname = pk$(fullPkID)_p{{file}}_nsvia
 nsvia: makedirs $(part{{file}}_path)
-	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "nsvia" datatype (zone with name)
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "nsvia" datatype (zone with name)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -185,7 +185,7 @@ nsvia-clean:
 parcel: layername = parcel_{{subtype}}
 parcel: tabname = pk$(fullPkID)_p{{file}}_parcel
 parcel: makedirs $(part{{file}}_path)
-	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "parcel" datatype (street axes)
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "parcel" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -201,7 +201,7 @@ parcel-clean:
 via: layername = via_{{subtype}}
 via: tabname = pk$(fullPkID)_p{{file}}_via
 via: makedirs $(part{{file}}_path)
-	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "via" datatype (street axes)
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "via" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
@@ -244,7 +244,7 @@ join-parcel:
 
 {{#openstreetmap}}
 openstreetmap: makedirs $(part{{file}}_path)
-	@# pk{{pkid}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "openstreetmap" data
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "openstreetmap" data
 	cd $(sandbox);  cp  $(part{{file}}_path) . ; chmod -R a+rx . > /dev/null
 	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/$(part{{file}}_file)
 	@echo "Convertendo hstore para jsonb"
