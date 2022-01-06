@@ -248,9 +248,8 @@ load_license_tables: pgio
 	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/licenses.csv" -O "$(pg_io)/licenses.csv"
 	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/implieds.csv" -O "$(pg_io)/implieds.csv"
 	wget "https://raw.githubusercontent.com/digital-guard/preserv-BR/main/data/donatedPack.csv" -O "$(pg_io)/donatedPack.csv"
-# 	wget "https://raw.githubusercontent.com/digital-guard/preserv-BR/main/data/donatedPack-old2new.csv" -O "$(pg_io)/donatedPack-old2new.csv"
 
-	psql $(pg_uringest) -c "SELECT ingest.fdw_generate_direct_csv('$(pg_io)/licenses.csv','tmp_licenses'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/implieds.csv','tmp_implieds'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/donatedPack.csv','tmp_donatedPack'); SELECT ingest.fdw_generate_direct_csv('/tmp/pg_io/donatedPackold2new.csv','tmp_donatedPackold2new'); \
+	psql $(pg_uringest) -c "SELECT ingest.fdw_generate_direct_csv('$(pg_io)/licenses.csv','tmp_licenses'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/implieds.csv','tmp_implieds'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/donatedPack.csv','tmp_donatedPack'); \
 	DROP TABLE IF EXISTS tmp_pack_licenses; CREATE TABLE tmp_pack_licenses AS SELECT d.pack_id, l.* FROM tmp_donatedPack AS d \
 	LEFT JOIN (\
 	SELECT id_label, name, family, url, 'yes' AS license_is_explicit FROM tmp_licenses \

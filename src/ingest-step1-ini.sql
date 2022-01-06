@@ -1557,9 +1557,6 @@ $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_make_conf_with_size('BR','16.1');
 
 
-
--- tmp_donatedPack-old2new.csv é utilizada para obter a correspondência entre o antigo e o novo padrão de identificação.
--- A atualização dos make_conf.yaml com os novos identificadores tornará seu uso desnecessário.
 CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
     jurisd text,
     pack_id text
