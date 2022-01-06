@@ -1277,7 +1277,6 @@ $wrap$ LANGUAGE PLpgSQL;
 --SELECT ingest.lix_insert('/var/gits/_dg/preserv-PE/src/maketemplates/readme.mustache');
 --SELECT ingest.lix_insert('/var/gits/_dg/preserv-CO/src/maketemplates/commomFirst.yaml');
 --SELECT ingest.lix_insert('/var/gits/_dg/preserv-CO/src/maketemplates/readme.mustache');
---SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/make_ref004a.mustache.mk');
 --SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk');
 --SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/commomLast.mustache.mk');
 --SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/commomFirst.yaml');
@@ -1323,7 +1322,12 @@ BEGIN
         THEN
             dict := jsonb_set( dict, array['openstreetmap'], (dict->>'openstreetmap')::jsonb || codec_desc_global::jsonb );
         END IF;
-    END IF; 
+    END IF;
+
+    IF dict?'pack_id'
+    THEN
+        dict := jsonb_set( dict, array['pack_id'], replace(dict->>'pack_id','.','')::jsonb);
+    END IF;
 
 	 FOREACH key IN ARRAY jsonb_object_keys_asarray(dict->'layers')
 	 LOOP
