@@ -319,7 +319,7 @@ CREATE VIEW ingest.vw03full_layer_file AS
 DROP VIEW IF EXISTS ingest.vw04simple_layer_file CASCADE;
 CREATE VIEW ingest.vw04simple_layer_file AS
   --SELECT id, geomtype, proc_step, ftid, ftname, file_type,
-  SELECT id, geomtype, proc_step, ftid, ftname, file_type,
+  SELECT id, geomtype, proc_step, ftid, ftname, 
          round((file_meta->'size')::int/2014^2) file_mb,
          substr(hash_md5,1,7) as md5_prefix
   FROM ingest.vw03full_layer_file
@@ -570,19 +570,19 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
    ) t
  ),
   file_exists AS (
-    SELECT file_id,proc_step
+    SELECT id,proc_step
     FROM ingest.donated_PackComponent
     WHERE pck_id=p_pck_id AND hash_md5=(SELECT hash_md5 FROM filedata)
   ), ins AS (
    INSERT INTO ingest.donated_PackComponent(pck_id,ftid,/*file_type,*/hash_md5,file_meta,pck_fileref_sha256)
       SELECT *, p_pck_fileref_sha256 FROM filedata
    ON CONFLICT DO NOTHING
-   RETURNING file_id
+   RETURNING id
   )
-  SELECT file_id FROM (
-      SELECT file_id, 1 as proc_step FROM ins
+  SELECT id FROM (
+      SELECT id, 1 as proc_step FROM ins
       UNION ALL
-      SELECT file_id, proc_step      FROM file_exists
+      SELECT id, proc_step      FROM file_exists
   ) t WHERE proc_step=1
 $f$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,real,text,text)
