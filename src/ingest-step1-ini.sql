@@ -318,6 +318,7 @@ CREATE VIEW ingest.vw03full_layer_file AS
 
 DROP VIEW IF EXISTS ingest.vw04simple_layer_file CASCADE;
 CREATE VIEW ingest.vw04simple_layer_file AS
+  --SELECT id, geomtype, proc_step, ftid, ftname, file_type,
   SELECT id, geomtype, proc_step, ftid, ftname, file_type,
          round((file_meta->'size')::int/2014^2) file_mb,
          substr(hash_md5,1,7) as md5_prefix
@@ -466,7 +467,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_format(
    CASE WHEN feature_asis_summary?'size' THEN 'Total size: '||(feature_asis_summary->>'size') ||' '|| (feature_asis_summary->>'size_unit') END,
    hcode_distribution_format(feature_asis_summary->'distribution', true, p_glink|| layerinfo[3] ||'_'),
    pck_fileref_sha256,
-   file_type,
+   --file_type,
    hash_md5,
    file_meta->>'size',
    substr(file_meta->>'modification',1,10)
@@ -510,7 +511,7 @@ CREATE or replace FUNCTION ingest.geojson_load(
     q_ret text;
   BEGIN
 
-  INSERT INTO ingest.donated_PackComponent(p_pck_id,ftid,file_type,file_meta,pck_fileref_sha256)
+  INSERT INTO ingest.donated_PackComponent(p_pck_id,ftid,/*file_type,*/file_meta,pck_fileref_sha256)
      SELECT p_pck_id, p_ftid::smallint,
             COALESCE( p_ftype, substring(p_file from '[^\.]+$') ),
             geojson_readfile_headers(p_file),
@@ -573,7 +574,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
     FROM ingest.donated_PackComponent
     WHERE pck_id=p_pck_id AND hash_md5=(SELECT hash_md5 FROM filedata)
   ), ins AS (
-   INSERT INTO ingest.donated_PackComponent(pck_id,ftid,file_type,hash_md5,file_meta,pck_fileref_sha256)
+   INSERT INTO ingest.donated_PackComponent(pck_id,ftid,/*file_type,*/hash_md5,file_meta,pck_fileref_sha256)
       SELECT *, p_pck_fileref_sha256 FROM filedata
    ON CONFLICT DO NOTHING
    RETURNING file_id
