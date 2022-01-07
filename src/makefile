@@ -79,10 +79,6 @@ ini_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	@echo "--- Running SQL pubLib ---"
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_db)
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_dbingest)
-	@echo "--- Running Ingest ---"
-	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/lib-dg_preserv.sql
-	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
-	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
 	@echo "Creating optim schema at $(pg_db) database"
 	psql $(pg_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	@echo "--- Running API SQL templates ---"
@@ -93,6 +89,11 @@ ini_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	#psql $(pg_uri) < eclusa/step1-ini.sql
 	# sh eclusa-step2a-ins.sh
 	#/var/gits/WS/src? psql $(pg_uri) < eclusa/step2b-ins.sql
+	@echo "--- Running Ingest ---"
+	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/lib-dg_preserv.sql
+	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
+	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
+
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
 
