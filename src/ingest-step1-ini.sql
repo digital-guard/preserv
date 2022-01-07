@@ -168,77 +168,25 @@ COMMENT ON TABLE ingest.via_line
 ;
 
 ---------
-CREATE TABLE ingest.feature_type (  -- replacing old optim.origin_content_type
-  ftid smallint PRIMARY KEY NOT NULL,
-  ftname text NOT NULL CHECK(lower(ftname)=ftname), -- ftlabel
-  geomtype text NOT NULL CHECK(lower(geomtype)=geomtype), -- old model_geo
-  need_join boolean, -- false=não, true=sim, null=both (at class).
-  description text NOT NULL,
-  info jsonb, -- is_useful, score, model_septable, description_pt, description_es, synonymous_pt, synonymous_es
-  UNIQUE (ftname)
-);
--- DELETE FROM ingest.feature_type;
-INSERT INTO ingest.feature_type VALUES
-  (0,'address',       'class', null,  'Cadastral address.','{"shortname_pt":"endereço","description_pt":"Endereço cadastral, representação por nome de via e numeração predial.","synonymous_pt":["endereço postal","endereço","planilha dos endereços","cadastro de endereços"]}'::jsonb),
-  --(1,'address_full',  'none', true,   'Cadastral address (gid,via_id,via_name,number,postal_code,etc), joining with geoaddress_ext by a gid.', NULL),
-  (1,'address_cmpl',  'none', true,   'Cadastral address, like address_full with only partial core metadata.', NULL),
-  (2,'address_noid',  'none', false,  'Cadastral address with some basic metadata but no standard gid for join with geo).', NULL),
 
-  (5,'cadparcel',           'class', null,  'Cadastral parcel (name of parcel).', '{"shortname_pt":"lote","description_pt":"Lote cadastral (nome de parcel), complemento da geográfica. Lote representado por dados cadastrais apenas.","synonymous_pt":["terreno","parcela"]}'::jsonb),
-  (6,'cadparcel_cmpl',      'none', true,   'Cadastral parcel with metadata complementing parcel_ext (parcel_cod,parcel_name).', NULL),
-  (7,'cadparcel_noid',      'none', false,   'Parcel name (and optional metadata) with no ID for join with parcel_ext.', NULL),
+DROP FOREIGN TABLE IF EXISTS ingest.fdw_feature_type;
+CREATE FOREIGN TABLE ingest.fdw_feature_type (
+ftid smallint,
+ftname text,
+geomtype text,
+need_join boolean,
+description text,
+info jsonb,
+) SERVER foreign_server
+  OPTIONS (schema_name 'optim', table_name 'feature_type');
 
-  (10,'cadvia',           'class', null,  'Cadastral via (name of via).', '{"shortname_pt":"logradouro","description_pt":"Via cadastral (nome de via), complemento da geográfica. Logradouro representado por dados cadastrais apenas.","synonymous_pt":["nomes de logradouro","nomes de rua"]}'::jsonb),
-  (11,'cadvia_cmpl',      'none', true,   'Cadastral via with metadata complementing via_ext (via_cod,via_name).', NULL),
-  (12,'cadvia_noid',      'none', false,   'Via name (and optional metadata) with no ID for join with via_ext.', NULL),
-
-  (20,'geoaddress',         'class', null,  'Geo-address point.', '{"shortname_pt":"endereço","description_pt":"Geo-endereço. Representação geográfica do endereço, como ponto.","synonymous_pt":["geo-endereço","ponto de endereço","endereço georreferenciado","ponto de endereçamento postal"]}'::jsonb),
-  (21,'geoaddress_full',    'point', false, 'Geo-address point with all attributes, via_name and number.', NULL),
-  (22,'geoaddress_ext',     'point', true,  'Geo-address point with no (or some) metadata, external metadata at address_cmpl or address_full.', NULL),
-  (23,'geoaddress_none',    'point', false, 'Geo-address point-only, no metadata (or no core metadata).', NULL),
-
-  (30,'via',           'class', null,  'Via line.', '{"shortname_pt":"eixo de via","description_pt":"Eixo de via. Logradouro representado por linha central, com nome oficial e codlog opcional.","synonymous_pt":["eixo de logradouro","ruas"]}'::jsonb),
-  (31,'via_full',       'line', false, 'Via line, with all metadata (official name, optional code and others)', NULL),
-  (32,'via_ext',        'line', true,  'Via line, with external metadata at cadvia_cmpl', NULL),
-  (33,'via_none',       'line', false, 'Via line with no metadata', NULL),
-
-  (40,'genericvia',           'class', null,  'Generic-via line. Complementar parcel and block divider: railroad, waterway or other.', '{"shortname_pt":"eixo de etc-via","description_pt":"Via complementar generalizada. Qualquer linha divisora de lotes e quadras: rios, ferrovias, etc. Permite gerar a quadra generalizada.","synonymous_pt":["hidrovia","ferrovia","limite de município"]}'::jsonb),
-  (41,'genericvia_full',       'line', false, 'Generic-via line, with all metadata (type, official name, optional code and others)', NULL),
-  (42,'genericvia_ext',        'line', true,  'Generic-via line, with external metadata at cadgenericvia_cmpl', NULL),
-  (43,'genericvia_none',       'line', false, 'Generic-via line with no metadata', NULL),
-
-  (50,'building',        'class', null, 'Building polygon.', '{"shortname_pt":"construção","description_pt":"Polígono de edificação.","synonymous_pt":["construções","construção"]}'::jsonb),
-  (51,'building_full',   'poly', false, 'Building polygon with all attributes, via_name and number.', NULL),
-  (52,'building_ext',    'poly', true,  'Building polygon with no (or some) metadata, external metadata at address_cmpl or address_full.', NULL),
-  (53,'building_none',   'poly', false, 'Building polygon-only, no metadata (or no core metadata).', NULL),
-
-  (60,'parcel',        'class', null, 'Parcel polygon (land lot).', '{"shortname_pt":"lote","description_pt":"Polígono de lote.","synonymous_pt":["lote","parcela","terreno"]}'::jsonb),
-  (61,'parcel_full',   'poly', false, 'Parcel polygon with all attributes, its main via_name and number.', NULL),
-  (62,'parcel_ext',    'poly', true,  'Parcel polygon-only, all metadata external.', NULL),
-  (63,'parcel_none',   'poly', false, 'Parcel polygon-only, no metadata.', NULL),
-
-  (70,'nsvia',        'class', null, 'Namespace of vias, a name delimited by a polygon.', '{"shortname_pt":"bairro","description_pt":"Espaço-de-nomes para vias, um nome delimitado por polígono. Tipicamente nome de bairro ou de loteamento. Complementa o nome de via em nomes duplicados (repetidos dentro do mesmo município mas não dentro do mesmo nsvia).","synonymous_pt":["bairro","loteamento"]}'::jsonb),
-  (71,'nsvia_full',   'poly', false, 'Namespace of vias polygon with name and optional metadata', NULL),
-  (72,'nsvia_ext',    'poly', true,  'Namespace of vias polygon with external metadata', NULL),
-  (73,'nsvia_none',   'poly', true,  'Namespace of vias polygon-only, no metadata', NULL),
-  -- renomear para 'namedArea'
-
-  (80,'block',        'class', null, 'Urban block and similar structures, delimited by a polygon.', '{"shortname_pt":"quadra","description_pt":"Quadras ou divisões poligonais similares.","synonymous_pt":["quadra"]}'::jsonb),
-  (81,'block_full',   'poly', false, 'Urban block with IDs and all other jurisdiction needs', NULL),
-  (82,'block_none',   'poly', false,  'Urban block with no ID', NULL)
-;
--- Para a iconografia do site:
--- SELECT f.ftname as "feature type", t.geomtype as "geometry type", f.description from ingest.feature_type f inner JOIN (select  substring(ftname from '^[^_]+') as ftgroup, geomtype  from ingest.feature_type where geomtype!='class' group by 1,2) t ON t.ftgroup=f.ftname ;--where t.geomtype='class';
--- Para gerar backup CSV:
--- copy ( select lpad(ftid::text,2,'0') ftid, ftname, description, info->>'description_pt' as description_pt, array_to_string(jsonb_array_totext(info->'synonymous_pt'),'; ') as synonymous_pt from ingest.feature_type where geomtype='class' ) to '/tmp/pg_io/featur_type_classes.csv' CSV HEADER;
--- copy ( select lpad(ftid::text,2,'0') ftid, ftname,geomtype, iif(need_join,'yes'::text,'no') as need_join, description  from ingest.feature_type where geomtype!='class' ) to '/tmp/pg_io/featur_types.csv' CSV HEADER;
 
 -- DROP TABLE ingest.layer_file;
 CREATE TABLE ingest.layer_file (
   file_id serial NOT NULL PRIMARY KEY,
   pck_id real NOT NULL CHECK( dg_preserv.packid_isvalid(pck_id) ), -- package file ID, not controled here. Talvez seja packVers (package and version) ou pck_id com real
   pck_fileref_sha256 text NOT NULL CHECK( pck_fileref_sha256 ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ),
-  ftid smallint NOT NULL REFERENCES ingest.feature_type(ftid),
+  ftid smallint NOT NULL REFERENCES ingest.fdw_feature_type(ftid),
   file_type text,  -- csv, geojson, shapefile, etc.
   proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
   hash_md5 text NOT NULL, -- or "size-md5" as really unique string
@@ -292,15 +240,15 @@ CREATE VIEW ingest.vw01info_feature_type AS
            SELECT c.ftid as class_ftid, c.ftname as class_ftname,
                   c.description as class_description,
                   c.info as class_info
-           FROM ingest.feature_type c
+           FROM ingest.fdw_feature_type c
            WHERE c.geomtype='class' AND c.ftid = 10*round(f.ftid/10)
          ) t2
        ) AS info
-  FROM ingest.feature_type f
+  FROM ingest.fdw_feature_type f
   WHERE f.geomtype!='class'
 ;
 COMMENT ON VIEW ingest.vw01info_feature_type
-  IS 'Adds class_ftname, class_description and class_info to ingest.feature_type.info.'
+  IS 'Adds class_ftname, class_description and class_info to ingest.fdw_feature_type.info.'
 ;
 
 DROP VIEW IF EXISTS ingest.vw02simple_feature_asis CASCADE;
@@ -516,7 +464,7 @@ $f$ LANGUAGE SQL;
 
 CREATE or replace FUNCTION ingest.geojson_load(
   p_file text, -- absolute path and filename, test with '/tmp/pg_io/EXEMPLO3.geojson'
-  p_ftid int,  -- REFERENCES ingest.feature_type(ftid)
+  p_ftid int,  -- REFERENCES ingest.fdw_feature_type(ftid)
   p_pck_id real,
   p_pck_fileref_sha256 text,
   p_ftype text DEFAULT NULL,
@@ -615,7 +563,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
 ) RETURNS int AS $wrap$
     SELECT ingest.getmeta_to_file(
       $1,
-      (SELECT ftid::int FROM ingest.feature_type WHERE ftname=lower($2)),
+      (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower($2)),
       $3, $4, $5
     );
 $wrap$ LANGUAGE SQL;
@@ -626,23 +574,23 @@ COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,real,text,text)
 -- ex. select ingest.getmeta_to_file('/tmp/b.shp','geoaddress_full',555);
 
 /* ver VIEW
-CREATE or replace FUNCTION ingest.feature_type_refclass_tab(
+CREATE or replace FUNCTION ingest.fdw_feature_type_refclass_tab(
   p_ftid integer
-) RETURNS TABLE (like ingest.feature_type) AS $f$
+) RETURNS TABLE (like ingest.fdw_feature_type) AS $f$
   SELECT *
-  FROM ingest.feature_type
+  FROM ingest.fdw_feature_type
   WHERE ftid = 10*round(p_ftid/10)
 $f$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.feature_type_refclass_tab(integer)
+COMMENT ON FUNCTION ingest.fdw_feature_type_refclass_tab(integer)
   IS 'Feature class of a feature_type, returing it as table.'
 ;
-CREATE or replace FUNCTION ingest.feature_type_refclass_jsonb(
+CREATE or replace FUNCTION ingest.fdw_feature_type_refclass_jsonb(
   p_ftid integer
 ) RETURNS JSONB AS $wrap$
   SELECT to_jsonb(t)
-  FROM ingest.feature_type_refclass_tab($1) t
+  FROM ingest.fdw_feature_type_refclass_tab($1) t
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.feature_type_refclass_jsonb(integer)
+COMMENT ON FUNCTION ingest.fdw_feature_type_refclass_jsonb(integer)
   IS 'Feature class of a feature_type, returing it as JSONb.'
 ;
 */
@@ -774,7 +722,7 @@ CREATE or replace FUNCTION ingest.any_load(
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text )
   );
 
-  IF (SELECT ftid::int FROM ingest.feature_type WHERE ftname=lower(p_ftname))<20 THEN -- feature_type id
+  IF (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower(p_ftname))<20 THEN -- feature_type id
     EXECUTE q_query_cad INTO num_items;
   ELSE
     EXECUTE q_query INTO num_items;
@@ -1690,7 +1638,7 @@ CREATE or replace FUNCTION ingest.join(
             WHERE ftid IN 
                 (
                 SELECT ftid::int 
-                FROM ingest.feature_type 
+                FROM ingest.fdw_feature_type 
                 WHERE ftname=lower('%s')
                 ) 
                 AND pck_fileref_sha256 = '%s'
@@ -1709,7 +1657,7 @@ CREATE or replace FUNCTION ingest.join(
                 WHERE ftid IN 
                     (
                     SELECT ftid::int 
-                    FROM ingest.feature_type 
+                    FROM ingest.fdw_feature_type 
                     WHERE ftname=lower('%s')
                     ) 
                     AND pck_fileref_sha256 = '%s'
@@ -1738,7 +1686,7 @@ CREATE or replace FUNCTION ingest.join(
             WHERE ftid IN 
                 (
                 SELECT ftid::int 
-                FROM ingest.feature_type 
+                FROM ingest.fdw_feature_type 
                 WHERE ftname=lower('%s')
                 ) 
                 AND pck_fileref_sha256 = '%s' 

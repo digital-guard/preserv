@@ -97,7 +97,7 @@ ini_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
 
 
-build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwnName=name
+build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=name
 	@echo "DROP FOREIGN TABLE IF EXISTS $(fdwName);"
 	@echo "CREATE FOREIGN TABLE $(fdwName) ("
 	@psql postgres://postgres@localhost/$(fdwOrigBase) -c "\d $(fdwOrigSchema).$(fdwOrigName)" |  awk '/^ [a-z]/ {print $$1,$$3 ",";}'
@@ -259,10 +259,11 @@ load_license_tables: pgio
 	DROP FOREIGN TABLE IF EXISTS tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_donatedPack;"
 
 idnew_test:
-	psql $(pg_uri) -c "DROP TABLE IF EXISTS optim.jurisdiction ;"
+	psql $(pg_uri) -c "DROP TABLE IF EXISTS optim.jurisdiction ; ALTER TABLE optim.jurisdiction ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
 	pg_dump -t optim.jurisdiction $(pg_uri_root)/dl02s_main | psql $(pg_uri)
 	psql $(pg_uri) -c "select optim.load_donor_pack('br');"
 	psql $(pg_uri) -c "select optim.insert_donor_pack();"
+
 
 ## ## ## ##
 ## -- ADMIN FIX TOOLS --
