@@ -337,7 +337,7 @@ CREATE VIEW ingest.vw05test_feature_asis AS
     FROM ingest.feature_asis
     GROUP BY 1
   ) t INNER JOIN ingest.vw03full_layer_file v
-    ON v.file_id = t.file_id
+    ON v.id = t.file_id
   ORDER BY 1,2,3
 ;
 /*
@@ -935,7 +935,7 @@ CREATE or replace FUNCTION ingest.donated_PackComponent_distribution_prefixes(
 ) RETURNS text[] AS $f$
   SELECT array_agg(p ORDER BY length(p) desc, p) FROM (
     SELECT jsonb_object_keys(feature_asis_summary->'distribution') p
-    FROM ingest.donated_PackComponent WHERE file_id=p_file_id
+    FROM ingest.donated_PackComponent WHERE id=p_file_id
   ) t
 $f$ LANGUAGE SQL;
 -- for use with geohash_checkprefix()
@@ -1056,7 +1056,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
         (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
       ) AS geom
     FROM hcode_distribution_reduce_recursive_raw(
-    	(SELECT feature_distrib FROM ingest.donated_PackComponent WHERE file_id= p_file_id),
+    	(SELECT feature_distrib FROM ingest.donated_PackComponent WHERE id= p_file_id),
     	1,
     	(SELECT length(st_geohash(geom)) FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
     	750, 8000, 3
