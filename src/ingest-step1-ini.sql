@@ -180,17 +180,6 @@ info jsonb
 ) SERVER foreign_server
   OPTIONS (schema_name 'optim', table_name 'feature_type');
 
---DROP MATERIALIZED VIEW IF EXISTS ingest.mvw_feature_type;
---CREATE MATERIALIZED VIEW ingest.mvw_feature_type AS
---SELECT *
---FROM ingest.fdw_feature_type;
-
-
-DROP TABLE IF EXISTS ingest.t_feature_type;
-CREATE TABLE ingest.t_feature_type AS
-SELECT *
-FROM ingest.fdw_feature_type;
-
 DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackFileVers;
 CREATE FOREIGN TABLE ingest.fdw_donated_PackFileVers (
 id bigint,
@@ -204,21 +193,13 @@ info jsonb
 ) SERVER foreign_server
   OPTIONS (schema_name 'optim', table_name 'donated_packfilevers');
 
---DROP MATERIALIZED VIEW IF EXISTS ingest.mvw_donated_PackFileVers;
---CREATE MATERIALIZED VIEW ingest.mvw_donated_PackFileVers AS
---SELECT *
---FROM ingest.fdw_donated_PackFileVers;
-
-DROP TABLE VIEW IF EXISTS ingest.t_donated_PackFileVers;
-CREATE TABLE ingest.t_donated_PackFileVers AS
-SELECT *
-FROM ingest.fdw_donated_PackFileVers;
-
 CREATE TABLE ingest.donated_PackComponent(
   -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
   id bigserial NOT NULL PRIMARY KEY,  -- layerfile_id
-  packvers_id bigint NOT NULL REFERENCES ingest.t_donated_PackFileVers(id),
-  ftid smallint NOT NULL REFERENCES ingest.t_feature_type(ftid),
+  --packvers_id bigint NOT NULL REFERENCES ingest.t_donated_PackFileVers(id),
+  --ftid smallint NOT NULL REFERENCES ingest.t_feature_type(ftid),
+  packvers_id bigint NOT,
+  ftid smallint NOT NULL,
   is_evidence boolean default false,
   hash_md5 text NOT NULL, -- or "size-md5" as really unique string
   proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
@@ -255,7 +236,8 @@ CREATE TABLE ingest.feature_asis_report (
 */
 
 CREATE TABLE ingest.tmp_geojson_feature (
-  file_id int NOT NULL REFERENCES ingest.donated_PackComponent(file_id) ON DELETE CASCADE,
+  --file_id int NOT NULL REFERENCES ingest.donated_PackComponent(file_id) ON DELETE CASCADE,
+  file_id int NOT NULL,
   feature_id int,
   feature_type text,
   properties jsonb,
@@ -264,7 +246,8 @@ CREATE TABLE ingest.tmp_geojson_feature (
 ); -- to be feature_asis after GeoJSON ingestion.
 
 CREATE TABLE ingest.feature_asis (
-  file_id int NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
+  --file_id int NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
+  file_id int NOT NULL,
   feature_id int NOT NULL,
   properties jsonb,
   geom geometry NOT NULL CHECK ( st_srid(geom)=4326 ),
@@ -272,7 +255,8 @@ CREATE TABLE ingest.feature_asis (
 );
 
 CREATE TABLE ingest.cadastral_asis (
-  file_id int NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
+  --file_id int NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
+  file_id int NOT NULL,
   cad_id int NOT NULL,
   properties jsonb NOT NULL,
   UNIQUE(file_id,cad_id)
