@@ -260,8 +260,9 @@ load_license_tables: pgio
 	DROP FOREIGN TABLE IF EXISTS tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_donatedPack;"
 
 idnew_test:
-	psql $(pg_uri) -c "DROP TABLE IF EXISTS optim.jurisdiction ; ALTER TABLE optim.jurisdiction ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
+	psql $(pg_uri) -c "DROP TABLE IF EXISTS optim.jurisdiction ;"
 	pg_dump -t optim.jurisdiction $(pg_uri_root)/dl02s_main | psql $(pg_uri)
+	psql $(pg_uri) -c "ALTER TABLE optim.jurisdiction ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
 	psql $(pg_uri) -c "select optim.load_donor_pack('br');"
 	psql $(pg_uri) -c "select optim.insert_donor_pack();"
 
