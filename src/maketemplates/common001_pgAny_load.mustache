@@ -8,7 +8,7 @@
 {{^sql_view}}
 	psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','$(sandbox)/{{orig_filename}}','$(layername)','$(tabname)','$(fullPkID)','$(part{{file}}_file)',array{{{sql_select}}})"
 {{/sql_view}}
-	@echo "Confira os resultados nas tabelas ingest.layer_file e {{#isCadLayer}}ingest.cadastral_asis{{/isCadLayer}}{{^isCadLayer}}ingest.feature_asis{{/isCadLayer}}".
+	@echo "Confira os resultados nas tabelas ingest.donated_packcomponent e {{#isCadLayer}}ingest.cadastral_asis{{/isCadLayer}}{{^isCadLayer}}ingest.feature_asis{{/isCadLayer}}".
 {{/multiple_files}}
 {{#isCsv}}
 	psql $(pg_uri_db) -c "DROP FOREIGN TABLE IF EXISTS $(tabname)"
