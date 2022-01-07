@@ -352,7 +352,7 @@ CREATE VIEW ingest.vw06simple_layer AS
 -- Ingest AS-IS
 
 CREATE or replace FUNCTION ingest.donated_PackComponent_geomtype(
-  p_file_id integer
+  p_file_id bigint
 ) RETURNS text[] AS $f$
   -- ! pendente revisão para o caso shortname multiplingual, aqui usando só 'pt'
   SELECT array[geomtype, ftname, info->>'class_ftname', info->'class_info'->>'shortname_pt']
@@ -368,7 +368,7 @@ COMMENT ON FUNCTION ingest.donated_PackComponent_geomtype(integer)
 ;
 
 CREATE or replace FUNCTION ingest.feature_asis_geohashes(
-    p_file_id integer,  -- ID at ingest.donated_PackComponent
+    p_file_id bigint,  -- ID at ingest.donated_PackComponent
     ghs_size integer DEFAULT 5
 ) RETURNS jsonb AS $f$
   WITH scan AS (
@@ -391,7 +391,7 @@ CREATE or replace FUNCTION ingest.feature_asis_geohashes(
 $f$ LANGUAGE SQL;
 
 CREATE or replace FUNCTION ingest.feature_asis_assign_volume(
-    p_file_id integer,  -- ID at ingest.donated_PackComponent
+    p_file_id bigint,  -- ID at ingest.donated_PackComponent
     p_usemedian boolean DEFAULT false
 ) RETURNS jsonb AS $f$
   WITH get_layer_type AS (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype)
@@ -432,7 +432,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_volume(
 $f$ LANGUAGE SQL;
 
 CREATE or replace FUNCTION ingest.feature_asis_assign(
-    p_file_id integer  -- ID at ingest.donated_PackComponent
+    p_file_id bigint  -- ID at ingest.donated_PackComponent
 ) RETURNS jsonb AS $f$
   SELECT ingest.feature_asis_assign_volume(p_file_id,true)
     || jsonb_build_object(
@@ -445,7 +445,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign(
 $f$ LANGUAGE SQL;
 
 CREATE or replace FUNCTION ingest.feature_asis_assign_format(
-    p_file_id integer,  -- ID at ingest.donated_PackComponent
+    p_file_id bigint,  -- ID at ingest.donated_PackComponent
     p_layer_type text DEFAULT NULL,
     p_layer_name text DEFAULT '',
     p_glink text DEFAULT '' -- ex. http://git.AddressForAll.org/out-BR2021-A4A/blob/main/data/SP/RibeiraoPreto/_pk058/
