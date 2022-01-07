@@ -326,7 +326,7 @@ BEGIN
 
     -- popula optim.donated_PackTpl a partir de tmp_orig.fdw_donatedPack
     INSERT INTO optim.donated_PackTpl (donor_id, user_resp, pk_count, original_tpl, make_conf_tpl)
-    SELECT (SELECT jurisd_base_id*1000000+donor_id FROM optim.jurisdiction WHERE isolabel_ext = split_part(escopo, '-', 1)), user_resp, 1, pg_read_file('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml'), yamlfile_to_jsonb('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml') as make_conf_tpl
+    SELECT (SELECT jurisd_base_id*1000000+donor_id FROM optim.jurisdiction WHERE isolabel_ext = split_part(escopo, '-', 1)), lower(user_resp), 1, pg_read_file('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml'), yamlfile_to_jsonb('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml') as make_conf_tpl
     FROM tmp_orig.fdw_donatedpack
     WHERE file_exists('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml') -- verificar make_conf.yaml ausentes
     ON CONFLICT (donor_id,pk_count)
@@ -337,7 +337,7 @@ BEGIN
     -- falta pack_item_accepted_date
     INSERT INTO optim.donated_PackFileVers (hashedfname, pack_id, pack_item, pack_item_accepted_date, user_resp)
     SELECT j->>'file'::text AS hashedfname, pack_id , (j->>'p')::int AS pack_item, '1970-01-01'::date, user_resp::text
-    FROM (SELECT id AS pack_id, user_resp, jsonb_array_elements(make_conf_tpl->'files')::jsonb AS j FROM optim.donated_packtpl) AS t 
+    FROM (SELECT id AS pack_id, lower(user_resp), jsonb_array_elements(make_conf_tpl->'files')::jsonb AS j FROM optim.donated_packtpl) AS t 
     WHERE j->'file' IS NOT NULL; -- verificar hash null
 
     RETURN (SELECT 'OK, inserted new itens at jurisdiction, donor and donatedPack. ');
