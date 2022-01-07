@@ -176,7 +176,7 @@ ftname text,
 geomtype text,
 need_join boolean,
 description text,
-info jsonb,
+info jsonb
 ) SERVER foreign_server
   OPTIONS (schema_name 'optim', table_name 'feature_type');
 

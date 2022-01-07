@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   jurisd_base_id int NOT NULL,  -- ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans)
   jurisd_local_id int   NOT NULL, -- numeric official ID like IBGE_ID of BR jurisdiction.
   -- for example BR's ACRE is 12 and its cities are {1200013, 1200054,etc}.
-  parent_id bigint references optim.jurisdiction(osm_id), -- null for INT.
+  parent_id bigint REFERENCES optim.jurisdiction(osm_id), -- null for INT.
   admin_level smallint NOT NULL CHECK(admin_level>0 AND admin_level<100), -- 2=country (e.g. BR), at BR: 4=UFs, 8=municipios.
   name    text  NOT NULL CHECK(length(name)<60), -- city name for admin_level=8.
   parent_abbrev   text  NOT NULL, -- state is admin-level2, country level1
