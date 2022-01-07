@@ -318,7 +318,7 @@ CREATE VIEW ingest.vw03full_layer_file AS
 
 DROP VIEW IF EXISTS ingest.vw04simple_layer_file CASCADE;
 CREATE VIEW ingest.vw04simple_layer_file AS
-  SELECT file_id, geomtype, proc_step, ftid, ftname, file_type,
+  SELECT id, geomtype, proc_step, ftid, ftname, file_type,
          round((file_meta->'size')::int/2014^2) file_mb,
          substr(hash_md5,1,7) as md5_prefix
   FROM ingest.vw03full_layer_file
@@ -359,7 +359,7 @@ CREATE or replace FUNCTION ingest.donated_PackComponent_geomtype(
   WHERE ftid = (
     SELECT ftid
     FROM ingest.donated_PackComponent
-    WHERE file_id = p_file_id
+    WHERE id = p_file_id
   )
 $f$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.donated_PackComponent_geomtype(integer)
@@ -472,7 +472,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_format(
    substr(file_meta->>'modification',1,10)
   ) as htmltabline
   FROM ingest.donated_PackComponent, (SELECT ingest.donated_PackComponent_geomtype(p_file_id) as layerinfo) t
-  WHERE file_id=p_file_id
+  WHERE id=p_file_id
 $f$ LANGUAGE SQL;
 
 CREATE or replace FUNCTION ingest.package_layers_summary(
