@@ -198,7 +198,7 @@ CREATE TABLE ingest.donated_PackComponent(
   id bigserial NOT NULL PRIMARY KEY,  -- layerfile_id
   --packvers_id bigint NOT NULL REFERENCES ingest.t_donated_PackFileVers(id),
   --ftid smallint NOT NULL REFERENCES ingest.t_feature_type(ftid),
-  packvers_id bigint NOT,
+  packvers_id bigint NOT NULL,
   ftid smallint NOT NULL,
   is_evidence boolean default false,
   hash_md5 text NOT NULL, -- or "size-md5" as really unique string
