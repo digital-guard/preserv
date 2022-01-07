@@ -466,7 +466,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_format(
    feature_asis_summary->>'bbox_km2',
    CASE WHEN feature_asis_summary?'size' THEN 'Total size: '||(feature_asis_summary->>'size') ||' '|| (feature_asis_summary->>'size_unit') END,
    hcode_distribution_format(feature_asis_summary->'distribution', true, p_glink|| layerinfo[3] ||'_'),
-   pck_fileref_sha256,
+   --pck_fileref_sha256,
    --file_type,
    hash_md5,
    file_meta->>'size',
@@ -642,7 +642,7 @@ CREATE or replace FUNCTION ingest.any_load_debug(
 ) RETURNS JSONb AS $f$
   SELECT to_jsonb(t)
   FROM ( SELECT $1 AS method, $2 AS fileref, $3 AS ftname, $4 AS tabname, $5 AS pck_id,
-                /*$6 pck_fileref_sha256,*/ $7 tabcols, $8 geom_name, $9 to4326
+                $6 pck_fileref_sha256, $7 tabcols, $8 geom_name, $9 to4326
   ) t
 $f$ LANGUAGE SQL;
 
@@ -898,7 +898,7 @@ CREATE or replace FUNCTION ingest.osm_load(
     p_geom_name text DEFAULT 'way', -- 7
     p_to4326 boolean DEFAULT false    -- 8. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.osm_load($1, $2, $3, dg_preserv.packid_to_real($4), /*$5,*/ $6, $7, $8)
+   SELECT ingest.osm_load($1, $2, $3, dg_preserv.packid_to_real($4), $5, $6, $7, $8)
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.osm_load(text,text,text,text,text,text[],text,boolean)
   IS 'Wrap to ingest.osm_load(1,2,3,4=real) using string format DD_DD.'
