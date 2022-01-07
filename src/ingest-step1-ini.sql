@@ -555,17 +555,17 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_ftype text DEFAULT NULL
   -- proc_step = 1
   -- ,p_size_min int DEFAULT 5
-) RETURNS int AS $f$
+) RETURNS bigint AS $f$
 -- with ... check
  WITH filedata AS (
-   SELECT p_pck_id, p_ftid, ftype,
+   SELECT p_pck_id, p_ftid, /*ftype,*/
           CASE
             WHEN (fmeta->'size')::int<5 OR (fmeta->>'hash_md5')='' THEN NULL --guard
             ELSE fmeta->>'hash_md5'
           END AS hash_md5,
           (fmeta - 'hash_md5') AS fmeta
    FROM (
-       SELECT COALESCE( p_ftype, lower(substring(p_file from '[^\.]+$')) ) as ftype,
+       SELECT /*COALESCE( p_ftype, lower(substring(p_file from '[^\.]+$')) ) as ftype,*/
           jsonb_pg_stat_file(p_file,true) as fmeta
    ) t
  ),
@@ -575,7 +575,8 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
     WHERE packvers_id=p_pck_id AND hash_md5=(SELECT hash_md5 FROM filedata)
   ), ins AS (
    INSERT INTO ingest.donated_PackComponent(packvers_id,ftid,/*file_type,*/hash_md5,file_meta/*,pck_fileref_sha256*/)
-      SELECT */*, p_pck_fileref_sha256*/ FROM filedata
+      --SELECT * , p_pck_fileref_sha256 FROM filedata
+      SELECT * FROM filedata
    ON CONFLICT DO NOTHING
    RETURNING id
   )
@@ -594,11 +595,11 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_pck_id real,
   p_pck_fileref_sha256 text,
   p_ftype text DEFAULT NULL -- 5
-) RETURNS int AS $wrap$
+) RETURNS bigint AS $wrap$
     SELECT ingest.getmeta_to_file(
       $1,
       (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower($2)),
-      $3, $4/*, $5*/
+      $3, $4, $5
     );
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,real,text,text)
