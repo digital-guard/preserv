@@ -327,7 +327,7 @@ CREATE VIEW ingest.vw04simple_layer_file AS
 
 DROP VIEW IF EXISTS ingest.vw05test_feature_asis CASCADE;
 CREATE VIEW ingest.vw05test_feature_asis AS
-  SELECT v.pck_id, v.ft_info->>'class_ftname' as class_ftname, t.file_id,
+  SELECT v.packvers_id, v.ft_info->>'class_ftname' as class_ftname, t.file_id,
          v.file_meta->>'file' as file,
          t.n, t.n_feature_ids,
          CASE WHEN t.n=t.n_feature_ids  THEN 'ok' ELSE '!BUG!' END AS is_ok_msg,
@@ -489,7 +489,7 @@ CREATE or replace FUNCTION ingest.package_layers_summary(
   FROM (
     SELECT ingest.feature_asis_assign_format(file_id, null, '', p_glink) AS trinfo
     FROM ingest.donated_PackComponent
-    WHERE pck_id=p_pck_id
+    WHERE packvers_id=p_pck_id
   ) t
 $f$ LANGUAGE SQL;
 -- SELECT volat_file_write( '/tmp/pg_io/pk'||floor(pck_id)::text||'readme_table.txt', ingest.package_layers_summary(pck_id)::text ) FROM (select distinct pck_id from ingest.donated_PackComponent) t;
@@ -572,7 +572,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   file_exists AS (
     SELECT id,proc_step
     FROM ingest.donated_PackComponent
-    WHERE pck_id=p_pck_id AND hash_md5=(SELECT hash_md5 FROM filedata)
+    WHERE packvers_id=p_pck_id AND hash_md5=(SELECT hash_md5 FROM filedata)
   ), ins AS (
    INSERT INTO ingest.donated_PackComponent(pck_id,ftid,/*file_type,*/hash_md5,file_meta,pck_fileref_sha256)
       SELECT *, p_pck_fileref_sha256 FROM filedata
