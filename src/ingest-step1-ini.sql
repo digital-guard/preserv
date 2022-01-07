@@ -487,7 +487,7 @@ CREATE or replace FUNCTION ingest.package_layers_summary(
   	 xmlagg( trinfo::xml ORDER BY trinfo )
   	)
   FROM (
-    SELECT ingest.feature_asis_assign_format(file_id, null, '', p_glink) AS trinfo
+    SELECT ingest.feature_asis_assign_format(id, null, '', p_glink) AS trinfo
     FROM ingest.donated_PackComponent
     WHERE packvers_id=p_pck_id
   ) t
@@ -574,7 +574,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
     FROM ingest.donated_PackComponent
     WHERE packvers_id=p_pck_id AND hash_md5=(SELECT hash_md5 FROM filedata)
   ), ins AS (
-   INSERT INTO ingest.donated_PackComponent(pck_id,ftid,/*file_type,*/hash_md5,file_meta,pck_fileref_sha256)
+   INSERT INTO ingest.donated_PackComponent(packvers_id,ftid,/*file_type,*/hash_md5,file_meta,pck_fileref_sha256)
       SELECT *, p_pck_fileref_sha256 FROM filedata
    ON CONFLICT DO NOTHING
    RETURNING id
