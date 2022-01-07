@@ -511,11 +511,11 @@ CREATE or replace FUNCTION ingest.geojson_load(
     q_ret text;
   BEGIN
 
-  INSERT INTO ingest.donated_PackComponent(p_pck_id,ftid,/*file_type,*/file_meta,pck_fileref_sha256)
+  INSERT INTO ingest.donated_PackComponent(p_pck_id,ftid,/*file_type,*/file_meta/*,pck_fileref_sha256*/)
      SELECT p_pck_id, p_ftid::smallint,
             COALESCE( p_ftype, substring(p_file from '[^\.]+$') ),
-            geojson_readfile_headers(p_file),
-            p_pck_fileref_sha256
+            geojson_readfile_headers(p_file)/*,*/
+            --p_pck_fileref_sha256
      RETURNING file_id INTO q_file_id;
 
   WITH jins AS (
@@ -574,8 +574,8 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
     FROM ingest.donated_PackComponent
     WHERE packvers_id=p_pck_id AND hash_md5=(SELECT hash_md5 FROM filedata)
   ), ins AS (
-   INSERT INTO ingest.donated_PackComponent(packvers_id,ftid,/*file_type,*/hash_md5,file_meta,pck_fileref_sha256)
-      SELECT *, p_pck_fileref_sha256 FROM filedata
+   INSERT INTO ingest.donated_PackComponent(packvers_id,ftid,/*file_type,*/hash_md5,file_meta/*,pck_fileref_sha256*/)
+      SELECT */*, p_pck_fileref_sha256*/ FROM filedata
    ON CONFLICT DO NOTHING
    RETURNING id
   )
@@ -598,7 +598,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
     SELECT ingest.getmeta_to_file(
       $1,
       (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower($2)),
-      $3, $4, $5
+      $3, $4/*, $5*/
     );
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,real,text,text)
@@ -642,7 +642,7 @@ CREATE or replace FUNCTION ingest.any_load_debug(
 ) RETURNS JSONb AS $f$
   SELECT to_jsonb(t)
   FROM ( SELECT $1 AS method, $2 AS fileref, $3 AS ftname, $4 AS tabname, $5 AS pck_id,
-                $6 pck_fileref_sha256, $7 tabcols, $8 geom_name, $9 to4326
+                /*$6 pck_fileref_sha256,*/ $7 tabcols, $8 geom_name, $9 to4326
   ) t
 $f$ LANGUAGE SQL;
 
@@ -769,7 +769,7 @@ CREATE or replace FUNCTION ingest.any_load(
     UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
         feature_asis_summary= ingest.feature_asis_assign(q_file_id)
-    WHERE file_id=q_file_id;
+    WHERE id=q_file_id;
   END IF;
   RETURN msg_ret;
   END;
@@ -882,7 +882,7 @@ CREATE or replace FUNCTION ingest.osm_load(
     UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
         feature_asis_summary= ingest.feature_asis_assign(q_file_id)
-    WHERE file_id=q_file_id;
+    WHERE id=q_file_id;
   END IF;
   RETURN msg_ret;
   END;
@@ -898,7 +898,7 @@ CREATE or replace FUNCTION ingest.osm_load(
     p_geom_name text DEFAULT 'way', -- 7
     p_to4326 boolean DEFAULT false    -- 8. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.osm_load($1, $2, $3, dg_preserv.packid_to_real($4), $5, $6, $7, $8)
+   SELECT ingest.osm_load($1, $2, $3, dg_preserv.packid_to_real($4), /*$5,*/ $6, $7, $8)
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.osm_load(text,text,text,text,text,text[],text,boolean)
   IS 'Wrap to ingest.osm_load(1,2,3,4=real) using string format DD_DD.'
@@ -1038,7 +1038,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p2(
   
   UPDATE ingest.donated_PackComponent
   SET feature_distrib = geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7)
-  WHERE file_id= p_file_id
+  WHERE id= p_file_id
   ;
   SELECT 'p2';
 $f$ language SQL VOLATILE; --fim p2
