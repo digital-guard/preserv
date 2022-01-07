@@ -180,25 +180,74 @@ info jsonb
 ) SERVER foreign_server
   OPTIONS (schema_name 'optim', table_name 'feature_type');
 
+--DROP MATERIALIZED VIEW IF EXISTS ingest.mvw_feature_type;
+--CREATE MATERIALIZED VIEW ingest.mvw_feature_type AS
+--SELECT *
+--FROM ingest.fdw_feature_type;
 
--- DROP TABLE ingest.layer_file;
-CREATE TABLE ingest.layer_file (
-  file_id serial NOT NULL PRIMARY KEY,
-  pck_id real NOT NULL CHECK( dg_preserv.packid_isvalid(pck_id) ), -- package file ID, not controled here. Talvez seja packVers (package and version) ou pck_id com real
-  pck_fileref_sha256 text NOT NULL CHECK( pck_fileref_sha256 ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ),
-  ftid smallint NOT NULL REFERENCES ingest.fdw_feature_type(ftid),
-  file_type text,  -- csv, geojson, shapefile, etc.
-  proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
+
+DROP TABLE IF EXISTS ingest.t_feature_type;
+CREATE TABLE ingest.t_feature_type AS
+SELECT *
+FROM ingest.fdw_feature_type;
+
+DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackFileVers;
+CREATE FOREIGN TABLE ingest.fdw_donated_PackFileVers (
+id bigint,
+hashedfname text,
+pack_id bigint,
+pack_item integer,
+pack_item_accepted_date date,
+kx_pack_item_version integer,
+user_resp text,
+info jsonb
+) SERVER foreign_server
+  OPTIONS (schema_name 'optim', table_name 'donated_packfilevers');
+
+--DROP MATERIALIZED VIEW IF EXISTS ingest.mvw_donated_PackFileVers;
+--CREATE MATERIALIZED VIEW ingest.mvw_donated_PackFileVers AS
+--SELECT *
+--FROM ingest.fdw_donated_PackFileVers;
+
+DROP TABLE VIEW IF EXISTS ingest.t_donated_PackFileVers;
+CREATE TABLE ingest.t_donated_PackFileVers AS
+SELECT *
+FROM ingest.fdw_donated_PackFileVers;
+
+CREATE TABLE ingest.donated_PackComponent(
+  -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
+  id bigserial NOT NULL PRIMARY KEY,  -- layerfile_id
+  packvers_id bigint NOT NULL REFERENCES ingest.t_donated_PackFileVers(id),
+  ftid smallint NOT NULL REFERENCES ingest.t_feature_type(ftid),
+  is_evidence boolean default false,
   hash_md5 text NOT NULL, -- or "size-md5" as really unique string
+  proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
   file_meta jsonb,
   feature_asis_summary jsonb,
   feature_distrib jsonb,
-  UNIQUE(ftid,hash_md5) -- or size-MD5 or (ftid,hash_md5)?  não faz sentido usar duas vezes se existe _full.
+  UNIQUE(ftid,hash_md5),
+  UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
+
+  
+-- DROP TABLE ingest.layer_file;
+--CREATE TABLE ingest.layer_file (
+  --file_id serial NOT NULL PRIMARY KEY,
+  --pck_id real NOT NULL CHECK( dg_preserv.packid_isvalid(pck_id) ), -- package file ID, not controled here. Talvez seja packVers (package and version) ou pck_id com real
+  --pck_fileref_sha256 text NOT NULL CHECK( pck_fileref_sha256 ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ),
+  --ftid smallint NOT NULL REFERENCES ingest.fdw_feature_type(ftid),
+  --file_type text,  -- csv, geojson, shapefile, etc.
+  --proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
+  --hash_md5 text NOT NULL, -- or "size-md5" as really unique string
+  --file_meta jsonb,
+  --feature_asis_summary jsonb,
+  --feature_distrib jsonb,
+  --UNIQUE(ftid,hash_md5) -- or size-MD5 or (ftid,hash_md5)?  não faz sentido usar duas vezes se existe _full.
+--);
 
 /* LIXO
 CREATE TABLE ingest.feature_asis_report (
-  file_id int NOT NULL REFERENCES ingest.layer_file(file_id) ON DELETE CASCADE,
+  file_id int NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   feature_id int NOT NULL,
   info jsonb,
   UNIQUE(file_id,feature_id)
@@ -206,7 +255,7 @@ CREATE TABLE ingest.feature_asis_report (
 */
 
 CREATE TABLE ingest.tmp_geojson_feature (
-  file_id int NOT NULL REFERENCES ingest.layer_file(file_id) ON DELETE CASCADE,
+  file_id int NOT NULL REFERENCES ingest.donated_PackComponent(file_id) ON DELETE CASCADE,
   feature_id int,
   feature_type text,
   properties jsonb,
@@ -215,7 +264,7 @@ CREATE TABLE ingest.tmp_geojson_feature (
 ); -- to be feature_asis after GeoJSON ingestion.
 
 CREATE TABLE ingest.feature_asis (
-  file_id int NOT NULL REFERENCES ingest.layer_file(file_id) ON DELETE CASCADE,
+  file_id int NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   feature_id int NOT NULL,
   properties jsonb,
   geom geometry NOT NULL CHECK ( st_srid(geom)=4326 ),
@@ -223,7 +272,7 @@ CREATE TABLE ingest.feature_asis (
 );
 
 CREATE TABLE ingest.cadastral_asis (
-  file_id int NOT NULL REFERENCES ingest.layer_file(file_id) ON DELETE CASCADE,
+  file_id int NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   cad_id int NOT NULL,
   properties jsonb NOT NULL,
   UNIQUE(file_id,cad_id)
@@ -279,7 +328,7 @@ COMMENT ON VIEW ingest.vw02simple_feature_asis
 DROP VIEW IF EXISTS ingest.vw03full_layer_file CASCADE;
 CREATE VIEW ingest.vw03full_layer_file AS
   SELECT lf.*, ft.ftname, ft.geomtype, ft.need_join, ft.description, ft.info AS ft_info
-  FROM ingest.layer_file lf INNER JOIN ingest.vw01info_feature_type ft
+  FROM ingest.donated_PackComponent lf INNER JOIN ingest.vw01info_feature_type ft
     ON lf.ftid=ft.ftid
 ;
 
@@ -317,7 +366,7 @@ CREATE VIEW ingest.vw06simple_layer AS
 ----------------
 -- Ingest AS-IS
 
-CREATE or replace FUNCTION ingest.layer_file_geomtype(
+CREATE or replace FUNCTION ingest.donated_PackComponent_geomtype(
   p_file_id integer
 ) RETURNS text[] AS $f$
   -- ! pendente revisão para o caso shortname multiplingual, aqui usando só 'pt'
@@ -325,16 +374,16 @@ CREATE or replace FUNCTION ingest.layer_file_geomtype(
   FROM ingest.vw01info_feature_type
   WHERE ftid = (
     SELECT ftid
-    FROM ingest.layer_file
+    FROM ingest.donated_PackComponent
     WHERE file_id = p_file_id
   )
 $f$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.layer_file_geomtype(integer)
+COMMENT ON FUNCTION ingest.donated_PackComponent_geomtype(integer)
   IS '[Geomtype,ftname,class_ftname,shortname_pt] of a layer_file.'
 ;
 
 CREATE or replace FUNCTION ingest.feature_asis_geohashes(
-    p_file_id integer,  -- ID at ingest.layer_file
+    p_file_id integer,  -- ID at ingest.donated_PackComponent
     ghs_size integer DEFAULT 5
 ) RETURNS jsonb AS $f$
   WITH scan AS (
@@ -346,7 +395,7 @@ CREATE or replace FUNCTION ingest.feature_asis_geohashes(
   	    ,ghs_size
   	  ) as ghs
   	FROM ingest.feature_asis,
-  	 (SELECT (ingest.layer_file_geomtype(p_file_id))[1] AS gtype) t1a
+  	 (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype) t1a
   	WHERE file_id=p_file_id
    ) t2
    GROUP BY 1
@@ -357,10 +406,10 @@ CREATE or replace FUNCTION ingest.feature_asis_geohashes(
 $f$ LANGUAGE SQL;
 
 CREATE or replace FUNCTION ingest.feature_asis_assign_volume(
-    p_file_id integer,  -- ID at ingest.layer_file
+    p_file_id integer,  -- ID at ingest.donated_PackComponent
     p_usemedian boolean DEFAULT false
 ) RETURNS jsonb AS $f$
-  WITH get_layer_type AS (SELECT (ingest.layer_file_geomtype(p_file_id))[1] AS gtype)
+  WITH get_layer_type AS (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype)
   SELECT to_jsonb(t3)
   FROM (
       SELECT n, CASE gtype
@@ -398,7 +447,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_volume(
 $f$ LANGUAGE SQL;
 
 CREATE or replace FUNCTION ingest.feature_asis_assign(
-    p_file_id integer  -- ID at ingest.layer_file
+    p_file_id integer  -- ID at ingest.donated_PackComponent
 ) RETURNS jsonb AS $f$
   SELECT ingest.feature_asis_assign_volume(p_file_id,true)
     || jsonb_build_object(
@@ -406,12 +455,12 @@ CREATE or replace FUNCTION ingest.feature_asis_assign(
         hcode_distribution_reduce(ingest.feature_asis_geohashes(p_file_id,ghs_size), 2, 1, 500, 5000, 2)
     )
   FROM (
-    SELECT CASE WHEN (ingest.layer_file_geomtype(p_file_id))[1]='poly' THEN 5 ELSE 6 END AS ghs_size
+    SELECT CASE WHEN (ingest.donated_PackComponent_geomtype(p_file_id))[1]='poly' THEN 5 ELSE 6 END AS ghs_size
   ) t
 $f$ LANGUAGE SQL;
 
 CREATE or replace FUNCTION ingest.feature_asis_assign_format(
-    p_file_id integer,  -- ID at ingest.layer_file
+    p_file_id integer,  -- ID at ingest.donated_PackComponent
     p_layer_type text DEFAULT NULL,
     p_layer_name text DEFAULT '',
     p_glink text DEFAULT '' -- ex. http://git.AddressForAll.org/out-BR2021-A4A/blob/main/data/SP/RibeiraoPreto/_pk058/
@@ -438,7 +487,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_format(
    file_meta->>'size',
    substr(file_meta->>'modification',1,10)
   ) as htmltabline
-  FROM ingest.layer_file, (SELECT ingest.layer_file_geomtype(p_file_id) as layerinfo) t
+  FROM ingest.donated_PackComponent, (SELECT ingest.donated_PackComponent_geomtype(p_file_id) as layerinfo) t
   WHERE file_id=p_file_id
 $f$ LANGUAGE SQL;
 
@@ -454,11 +503,11 @@ CREATE or replace FUNCTION ingest.package_layers_summary(
   	)
   FROM (
     SELECT ingest.feature_asis_assign_format(file_id, null, '', p_glink) AS trinfo
-    FROM ingest.layer_file
+    FROM ingest.donated_PackComponent
     WHERE pck_id=p_pck_id
   ) t
 $f$ LANGUAGE SQL;
--- SELECT volat_file_write( '/tmp/pg_io/pk'||floor(pck_id)::text||'readme_table.txt', ingest.package_layers_summary(pck_id)::text ) FROM (select distinct pck_id from ingest.layer_file) t;
+-- SELECT volat_file_write( '/tmp/pg_io/pk'||floor(pck_id)::text||'readme_table.txt', ingest.package_layers_summary(pck_id)::text ) FROM (select distinct pck_id from ingest.donated_PackComponent) t;
 
 -----
 
@@ -477,7 +526,7 @@ CREATE or replace FUNCTION ingest.geojson_load(
     q_ret text;
   BEGIN
 
-  INSERT INTO ingest.layer_file(p_pck_id,ftid,file_type,file_meta,pck_fileref_sha256)
+  INSERT INTO ingest.donated_PackComponent(p_pck_id,ftid,file_type,file_meta,pck_fileref_sha256)
      SELECT p_pck_id, p_ftid::smallint,
             COALESCE( p_ftype, substring(p_file from '[^\.]+$') ),
             geojson_readfile_headers(p_file),
@@ -537,10 +586,10 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
  ),
   file_exists AS (
     SELECT file_id,proc_step
-    FROM ingest.layer_file
+    FROM ingest.donated_PackComponent
     WHERE pck_id=p_pck_id AND hash_md5=(SELECT hash_md5 FROM filedata)
   ), ins AS (
-   INSERT INTO ingest.layer_file(pck_id,ftid,file_type,hash_md5,file_meta,pck_fileref_sha256)
+   INSERT INTO ingest.donated_PackComponent(pck_id,ftid,file_type,hash_md5,file_meta,pck_fileref_sha256)
       SELECT *, p_pck_fileref_sha256 FROM filedata
    ON CONFLICT DO NOTHING
    RETURNING file_id
@@ -552,7 +601,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   ) t WHERE proc_step=1
 $f$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,real,text,text)
-  IS 'Reads file metadata and inserts it into ingest.layer_file. If proc_step=1 returns valid ID else NULL.'
+  IS 'Reads file metadata and inserts it into ingest.donated_PackComponent. If proc_step=1 returns valid ID else NULL.'
 ;
 CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_file text,   -- 1.
@@ -597,7 +646,7 @@ COMMENT ON FUNCTION ingest.fdw_feature_type_refclass_jsonb(integer)
 
 CREATE or replace FUNCTION ingest.any_load_debug(
   p_method text,   -- 1.; shp/csv/etc.
-  p_fileref text,  -- apenas referencia para ingest.layer_file
+  p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
   p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
   p_tabname text,  -- tabela temporária de ingestáo
   p_pck_id text,   -- 5. id do package da Preservação.
@@ -616,7 +665,7 @@ $f$ LANGUAGE SQL;
 
 CREATE or replace FUNCTION ingest.any_load(
     p_method text,   -- shp/csv/etc.
-    p_fileref text,  -- apenas referencia para ingest.layer_file
+    p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
     p_tabname text,  -- tabela temporária de ingestáo
     p_pck_id real,   -- id do package da Preservação.
@@ -732,7 +781,7 @@ CREATE or replace FUNCTION ingest.any_load(
     q_file_id, p_ftname, num_items
   );
   IF num_items>0 THEN
-    UPDATE ingest.layer_file
+    UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
         feature_asis_summary= ingest.feature_asis_assign(q_file_id)
     WHERE file_id=q_file_id;
@@ -748,7 +797,7 @@ COMMENT ON FUNCTION ingest.any_load(text,text,text,text,real,text,text[],text,bo
 
 CREATE or replace FUNCTION ingest.any_load(
     p_method text,   -- 1.  shp/csv/etc.
-    p_fileref text,  -- 2. apenas referencia para ingest.layer_file
+    p_fileref text,  -- 2. apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- 3. featureType of layer... um file pode ter mais de um layer??
     p_tabname text,  -- 4. tabela temporária de ingestáo
     p_pck_id text,   -- 5. id do package da Preservação no formato "a.b".
@@ -764,7 +813,7 @@ COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],text,bo
 ;
 
 CREATE or replace FUNCTION ingest.osm_load(
-    p_fileref text,  -- apenas referencia para ingest.layer_file
+    p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
     p_tabname text,  -- tabela temporária de ingestáo
     p_pck_id real,   -- id do package da Preservação.
@@ -845,7 +894,7 @@ CREATE or replace FUNCTION ingest.osm_load(
     q_file_id, p_ftname, num_items
   );
   IF num_items>0 THEN
-    UPDATE ingest.layer_file
+    UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
         feature_asis_summary= ingest.feature_asis_assign(q_file_id)
     WHERE file_id=q_file_id;
@@ -855,7 +904,7 @@ CREATE or replace FUNCTION ingest.osm_load(
 $f$ LANGUAGE PLpgSQL;
 
 CREATE or replace FUNCTION ingest.osm_load(
-    p_fileref text,  -- 1. apenas referencia para ingest.layer_file
+    p_fileref text,  -- 1. apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- 2. featureType of layer... um file pode ter mais de um layer??
     p_tabname text,  -- 3. tabela temporária de ingestáo
     p_pck_id text,   -- 4. id do package da Preservação no formato "a.b".
@@ -888,7 +937,7 @@ CREATE or replace FUNCTION ingest.qgis_vwadmin_feature_asis(
       ,file_id
     ), E' \n' )
     INTO q_query
-    FROM ingest.layer_file;
+    FROM ingest.donated_PackComponent;
     EXECUTE q_query;
     RETURN E'\n(check before NO BUGs with SELECT * FROM ingest.vw05test_feature_asis)\n---\nok! all '||p_mode||E'\nCheck on psql by \\dv vw_asis_*';
   END;
@@ -896,16 +945,16 @@ $f$ LANGUAGE PLpgSQL;
 -- select ingest.qgis_vwadmin_feature_asis('create');
 ----
 
-CREATE or replace FUNCTION ingest.layer_file_distribution_prefixes(
+CREATE or replace FUNCTION ingest.donated_PackComponent_distribution_prefixes(
   p_file_id int
 ) RETURNS text[] AS $f$
   SELECT array_agg(p ORDER BY length(p) desc, p) FROM (
     SELECT jsonb_object_keys(feature_asis_summary->'distribution') p
-    FROM ingest.layer_file WHERE file_id=p_file_id
+    FROM ingest.donated_PackComponent WHERE file_id=p_file_id
   ) t
 $f$ LANGUAGE SQL;
 -- for use with geohash_checkprefix()
--- select file_id, ingest.layer_file_distribution_prefixes(file_id)as prefixes FROM ingest.layer_file
+-- select file_id, ingest.donated_PackComponent_distribution_prefixes(file_id)as prefixes FROM ingest.donated_PackComponent
 
 
 ------------------------
@@ -985,7 +1034,7 @@ CREATE TABLE ingest.publicating_geojsons_p2distrib(
 );
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_p1(
-	p_file_id       int,  -- e.g. 1, see ingest.layer_file
+	p_file_id       int,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
 
@@ -998,11 +1047,11 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p1(
 $f$ language SQL VOLATILE; --fim p1
   
 CREATE or replace FUNCTION ingest.publicating_geojsons_p2(
-	p_file_id       int,  -- e.g. 1, see ingest.layer_file
+	p_file_id       int,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
   
-  UPDATE ingest.layer_file
+  UPDATE ingest.donated_PackComponent
   SET feature_distrib = geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7)
   WHERE file_id= p_file_id
   ;
@@ -1010,7 +1059,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p2(
 $f$ language SQL VOLATILE; --fim p2
   
 CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
-	p_file_id       int,  -- e.g. 1, see ingest.layer_file
+	p_file_id       int,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
   
@@ -1022,7 +1071,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
         (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
       ) AS geom
     FROM hcode_distribution_reduce_recursive_raw(
-    	(SELECT feature_distrib FROM ingest.layer_file WHERE file_id= p_file_id),
+    	(SELECT feature_distrib FROM ingest.donated_PackComponent WHERE file_id= p_file_id),
     	1,
     	(SELECT length(st_geohash(geom)) FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
     	750, 8000, 3
@@ -1047,7 +1096,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 $f$ language SQL VOLATILE; --fim p3
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
-	p_file_id       int,  -- e.g. 1, see ingest.layer_file
+	p_file_id       int,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
 
@@ -1067,7 +1116,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
 $f$ language SQL VOLATILE; -- fim p4
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_(
-	p_file_id       int,  -- e.g. 1, see ingest.layer_file
+	p_file_id       int,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
   SELECT ingest.publicating_geojsons_p1($1,$2);
@@ -1634,7 +1683,7 @@ CREATE or replace FUNCTION ingest.join(
         WHERE file_id IN 
             (
             SELECT file_id 
-            FROM ingest.layer_file 
+            FROM ingest.donated_PackComponent 
             WHERE ftid IN 
                 (
                 SELECT ftid::int 
@@ -1653,7 +1702,7 @@ CREATE or replace FUNCTION ingest.join(
             WHERE file_id IN 
             (
                 SELECT file_id 
-                FROM ingest.layer_file 
+                FROM ingest.donated_PackComponent 
                 WHERE ftid IN 
                     (
                     SELECT ftid::int 
@@ -1682,7 +1731,7 @@ CREATE or replace FUNCTION ingest.join(
             AND l.file_id IN 
             (
             SELECT file_id 
-            FROM ingest.layer_file 
+            FROM ingest.donated_PackComponent 
             WHERE ftid IN 
                 (
                 SELECT ftid::int 
