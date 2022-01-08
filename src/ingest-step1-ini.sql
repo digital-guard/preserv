@@ -959,7 +959,7 @@ $f$ LANGUAGE SQL;
 ------------------------
 
 
-CREATE or replace FUNCTION ingest.feature_asis_export(p_file_id int)
+CREATE or replace FUNCTION ingest.feature_asis_export(p_file_id bigint)
 RETURNS TABLE (ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
  SELECT ghs, gid,
     CASE
@@ -1013,7 +1013,7 @@ CREATE TABLE ingest.publicating_geojsons_p2distrib(
 );
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_p1(
-	p_file_id       int,  -- e.g. 1, see ingest.donated_PackComponent
+	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
 
@@ -1026,7 +1026,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p1(
 $f$ language SQL VOLATILE; --fim p1
   
 CREATE or replace FUNCTION ingest.publicating_geojsons_p2(
-	p_file_id       int,  -- e.g. 1, see ingest.donated_PackComponent
+	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
   
@@ -1038,7 +1038,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p2(
 $f$ language SQL VOLATILE; --fim p2
   
 CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
-	p_file_id       int,  -- e.g. 1, see ingest.donated_PackComponent
+	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
   
@@ -1075,7 +1075,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 $f$ language SQL VOLATILE; --fim p3
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
-	p_file_id       int,  -- e.g. 1, see ingest.donated_PackComponent
+	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
 
@@ -1094,8 +1094,8 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
   ;
 $f$ language SQL VOLATILE; -- fim p4
 
-CREATE or replace FUNCTION ingest.publicating_geojsons_(
-	p_file_id       int,  -- e.g. 1, see ingest.donated_PackComponent
+CREATE or replace FUNCTION ingest.publicating_geojsons(
+	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
   SELECT ingest.publicating_geojsons_p1($1,$2);
@@ -1175,6 +1175,7 @@ $f$ LANGUAGE SQL IMMUTABLE;
 -- Armazena arquivos make_conf.yaml
 CREATE TABLE ingest.lix_conf_yaml (
   jurisdiction text NOT NULL, -- jurisdição, por exemplo: BR
+  t text,                     -- versão texto de make_conf.yaml.
   y jsonb                     -- arquivo make_conf.yaml. Pode ser substituído por make_conf_tpl de optim.donated_PackTpl. Tornando essa tabela desnecessária.
 );
 CREATE UNIQUE INDEX ON ingest.lix_conf_yaml (jurisdiction,(y->>'pack_id'));
@@ -1203,6 +1204,7 @@ CREATE or replace FUNCTION ingest.lix_insert(
     yl jsonb;
     conf jsonb;
     t text;
+    aux text;
     p_type text;
     jurisd text;
     BEGIN
@@ -1219,9 +1221,10 @@ CREATE or replace FUNCTION ingest.lix_insert(
 
         CASE p_type
         WHEN 'make_conf.yaml' THEN
-        conf:= yamlfile_to_jsonb(file);
-        INSERT INTO ingest.lix_conf_yaml (jurisdiction,y) VALUES (jurisd,conf)
-        ON CONFLICT (jurisdiction,(y->>'pack_id')) DO UPDATE SET y = conf;
+        aux:= pg_read_file(file);
+        conf:= yaml_to_jsonb(aux);
+        INSERT INTO ingest.lix_conf_yaml (jurisdiction,t,y) VALUES (jurisd,aux,conf)
+        ON CONFLICT (jurisdiction,(y->>'pack_id')) DO UPDATE SET y = conf, t = aux;
 
         WHEN (select (regexp_matches(p_type, 'make_ref[0-9]+[a-z]\.mustache.mk'))[1]) THEN
         t:= pg_read_file(file);
@@ -1257,8 +1260,8 @@ $wrap$ LANGUAGE PLpgSQL;
 --SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/commomLast.mustache.mk');
 --SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/commomFirst.yaml');
 
---SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk018/make_conf.yaml');
---SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk012/make_conf.yaml');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01/make_conf.yaml');
+--SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk0008.01/make_conf.yaml');
 
 
 CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(
