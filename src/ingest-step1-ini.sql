@@ -1685,7 +1685,8 @@ CREATE or replace FUNCTION ingest.join(
                 FROM ingest.fdw_feature_type 
                 WHERE ftname=lower('%s')
                 ) 
-                AND pck_fileref_sha256 = '%s'
+                --AND pck_fileref_sha256 = '%s'
+                AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
             )
       ),
       duplicate_keys AS (
@@ -1704,7 +1705,8 @@ CREATE or replace FUNCTION ingest.join(
                     FROM ingest.fdw_feature_type 
                     WHERE ftname=lower('%s')
                     ) 
-                    AND pck_fileref_sha256 = '%s'
+                    --AND pck_fileref_sha256 = '%s'
+                    AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
             )
         ) AS asis
 
@@ -1733,7 +1735,8 @@ CREATE or replace FUNCTION ingest.join(
                 FROM ingest.fdw_feature_type 
                 WHERE ftname=lower('%s')
                 ) 
-                AND pck_fileref_sha256 = '%s' 
+                --AND pck_fileref_sha256 = '%s' 
+                AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
             )
             AND l.properties->'%s' NOT IN (  SELECT * FROM duplicate_keys  )
             RETURNING 1
