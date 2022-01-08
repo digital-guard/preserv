@@ -1664,7 +1664,7 @@ CREATE or replace FUNCTION ingest.join(
         FROM ingest.cadastral_asis 
         WHERE file_id IN 
             (
-            SELECT file_id 
+            SELECT id 
             FROM ingest.donated_PackComponent 
             WHERE ftid IN 
                 (
@@ -1683,7 +1683,7 @@ CREATE or replace FUNCTION ingest.join(
             FROM ingest.feature_asis 
             WHERE file_id IN 
             (
-                SELECT file_id 
+                SELECT id 
                 FROM ingest.donated_PackComponent 
                 WHERE ftid IN 
                     (
@@ -1712,7 +1712,7 @@ CREATE or replace FUNCTION ingest.join(
       WHERE l.properties->'%s' = c.properties->'%s' 
             AND l.file_id IN 
             (
-            SELECT file_id 
+            SELECT id 
             FROM ingest.donated_PackComponent 
             WHERE ftid IN 
                 (
