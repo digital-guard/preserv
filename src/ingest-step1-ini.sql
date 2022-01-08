@@ -377,7 +377,7 @@ CREATE or replace FUNCTION ingest.donated_PackComponent_geomtype(
     WHERE id = p_file_id
   )
 $f$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.donated_PackComponent_geomtype(integer)
+COMMENT ON FUNCTION ingest.donated_PackComponent_geomtype(bigint)
   IS '[Geomtype,ftname,class_ftname,shortname_pt] of a layer_file.'
 ;
 
