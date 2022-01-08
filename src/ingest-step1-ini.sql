@@ -252,8 +252,7 @@ CREATE TABLE ingest.feature_asis_report (
 */
 
 CREATE TABLE ingest.tmp_geojson_feature (
-  --file_id int NOT NULL REFERENCES ingest.donated_PackComponent(file_id) ON DELETE CASCADE,
-  file_id int NOT NULL,
+  file_id bigint NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   feature_id int,
   feature_type text,
   properties jsonb,
@@ -262,8 +261,7 @@ CREATE TABLE ingest.tmp_geojson_feature (
 ); -- to be feature_asis after GeoJSON ingestion.
 
 CREATE TABLE ingest.feature_asis (
-  --file_id int NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
-  file_id int NOT NULL,
+  file_id bigint NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   feature_id int NOT NULL,
   properties jsonb,
   geom geometry NOT NULL CHECK ( st_srid(geom)=4326 ),
@@ -271,8 +269,7 @@ CREATE TABLE ingest.feature_asis (
 );
 
 CREATE TABLE ingest.cadastral_asis (
-  --file_id int NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
-  file_id int NOT NULL,
+  file_id bigint NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   cad_id int NOT NULL,
   properties jsonb NOT NULL,
   UNIQUE(file_id,cad_id)

@@ -91,8 +91,8 @@ insert_make_conf:
 	psql $(pg_uri_db) -c "SELECT ingest.lix_insert('$(mkme_input)');"
 
 delete_file:
-	@echo "Uso: make delete_file hash=<inicio do hash do arquivo>"
-	@echo "hash: $(hash)"
+	@echo "Uso: make delete_file id=<id de donated_packcomponent>"
+	@echo "id: $(id)"
 	@echo "[ENTER para continuar ou ^C para sair]"
 	@read _tudo_bem_
-	@[ "${hash}" ] && psql $(pg_uri_db) -c "DELETE FROM ingest.layer_file WHERE pck_fileref_sha256 LIKE '$(hash)%'" || ( echo "hash não informado.")
+	@[ "${id}" ] && psql $(pg_uri_db) -c "DELETE FROM ingest.donated_packcomponent WHERE id = $(id)" || ( echo "id não informado.")
