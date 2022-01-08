@@ -1549,29 +1549,40 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
     DECLARE
         q_query text;
         conf_yaml jsonb;
+        conf_yaml_t text;
         f_yaml jsonb;
         output_file text;
-        files_license jsonb;
+        license_evidences jsonb;
+        definition jsonb;
     BEGIN
 
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml;
+    SELECT y, t FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml, conf_yaml_t;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
     
-    SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE tmp_pack_licenses.pack_id = (to_char(substring(conf_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(conf_yaml->>'pack_id','([^\.]*)$')::int,'fm00')) INTO files_license;
+    SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE tmp_pack_licenses.pack_id = (to_char(substring(conf_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(conf_yaml->>'pack_id','([^\.]*)$')::int,'fm00')) INTO definition;
 
-    conf_yaml := jsonb_set( conf_yaml, array['files_license'], files_license);
+    --conf_yaml := jsonb_set( conf_yaml, array['files_license'], files_license);
+    --SELECT jsonb_to_yaml(conf_yaml::text) INTO q_query;
+
+    IF conf_yaml?'license_evidences'
+    THEN
+        license_evidences := conf_yaml->'license_evidences' || jsonb_build_object('definition',definition);
+    ELSE
+        license_evidences := jsonb_build_object('license_evidences',jsonb_build_object('definition',definition));
+        
+        --license_evidences := jsonb_set( '{}'::jsonb, array['license_evidences','definition'], definition );
+    END IF;
     
-    SELECT jsonb_to_yaml(conf_yaml::text) INTO q_query;
+    SELECT conf_yaml_t || jsonb_to_yaml(license_evidences::text)::text INTO q_query;
 
-    SELECT volat_file_write(output_file,q_query) INTO q_query;
+    --SELECT volat_file_write(output_file,q_query) INTO q_query;
 
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_make_conf_with_license('BR','16.1');
--- SELECT ingest.lix_generate_make_conf_with_license('BR','24');
 
 CREATE or replace FUNCTION ingest.lix_generate_makefile(
     jurisd text,
