@@ -89,9 +89,24 @@ CREATE TABLE optim.donated_PackFileVers(
   ,UNIQUE(pack_id,pack_item,pack_item_accepted_date)
   ,UNIQUE(pack_id,pack_item,kx_pack_item_version) -- revisar se precisa.
 );
--------
 
----------
+CREATE TABLE optim.donated_PackComponent(
+  -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
+  id bigserial NOT NULL PRIMARY KEY,  -- layerfile_id
+  packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
+  ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
+  is_evidence boolean default false,
+  hash_md5 text NOT NULL, -- or "size-md5" as really unique string
+  proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
+  file_meta jsonb,
+  feature_asis_summary jsonb,
+  feature_distrib jsonb,
+  UNIQUE(ftid,hash_md5),
+  UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
+);
+
+------------------------
+
 CREATE TABLE optim.feature_type (  -- replacing old optim.origin_content_type
   ftid smallint PRIMARY KEY NOT NULL,
   ftname text NOT NULL CHECK(lower(ftname)=ftname), -- ftlabel
@@ -170,23 +185,7 @@ INSERT INTO optim.housenumber_system_type VALUES
   (2,'block-metric',  '[0-9]+ \- [0-9]+ integer function',     $$First number refers to the urban-block counter, and the second is the distance to the begin of the block in the city's origin order. Sort function is $1*10000 + $2. Example: BR-SP-Bauru housenumbers [30-14, 2-1890].$$)
 ;
 
---------
-CREATE TABLE optim.donated_PackComponent(
-  -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
-  id bigserial NOT NULL PRIMARY KEY,  -- layerfile_id
-  packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
-  ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
-  is_evidence boolean default false,
-  hash_md5 text NOT NULL, -- or "size-md5" as really unique string
-  proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
-  file_meta jsonb,
-  feature_asis_summary jsonb,
-  feature_distrib jsonb,
-  UNIQUE(ftid,hash_md5),
-  UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
-);
-
------
+------------------------
 
 CREATE FUNCTION optim.vat_id_normalize(p_vat_id text) RETURNS text AS $f$
   SELECT lower(regexp_replace($1,'[,\.;/\-\+\*~]+','','g'))
@@ -313,6 +312,13 @@ BEGIN
 END;
 $f$ LANGUAGE PLpgSQL;
 
+CREATE or replace FUNCTION optim.replace_file_and_version(file text) RETURNS text AS $f$
+BEGIN
+    RETURN (SELECT regexp_replace(regexp_replace( file , '(p: *([0-9]{1,})\n *)file: *[0-9a-f]{64,64}\.[a-z0-9]+ *$', '\1file: {{file\2}}','ng'),'(pkversion:) *[0-9]{1,}','\1 {{version}}'));
+END;
+$f$ LANGUAGE PLpgSQL;
+--SELECT optim.replace_file_and_version(pg_read_file('/var/gits/_dg/preserv-BR/data/RS/SantaMaria/_pk0019.01/make_conf.yaml'));
+
 CREATE or replace FUNCTION optim.insert_donor_pack() RETURNS text AS $f$
 BEGIN
     -- popula optim.donor a partir de tmp_orig.fdw_donor
@@ -326,7 +332,7 @@ BEGIN
 
     -- popula optim.donated_PackTpl a partir de tmp_orig.fdw_donatedPack
     INSERT INTO optim.donated_PackTpl (donor_id, user_resp, pk_count, original_tpl, make_conf_tpl)
-    SELECT (SELECT jurisd_base_id*1000000+donor_id FROM optim.jurisdiction WHERE isolabel_ext = split_part(escopo, '-', 1)), lower(user_resp), 1, pg_read_file('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml'), yamlfile_to_jsonb('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml') as make_conf_tpl
+    SELECT (SELECT jurisd_base_id*1000000+donor_id FROM optim.jurisdiction WHERE isolabel_ext = split_part(escopo, '-', 1)), lower(user_resp), 1, optim.replace_file_and_version(pg_read_file('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml')), yamlfile_to_jsonb('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml') as make_conf_tpl
     FROM tmp_orig.fdw_donatedpack
     WHERE file_exists('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml') -- verificar make_conf.yaml ausentes
     ON CONFLICT (donor_id,pk_count)
