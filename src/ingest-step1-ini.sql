@@ -34,7 +34,6 @@ CREATE or replace FUNCTION ingest.fdw_csv_paths(
   FROM COALESCE(p_path,'/tmp/pg_io') t(fpath)
 $f$ language SQL;
 
-
 CREATE or replace FUNCTION ingest.fdw_generate_direct_csv(
   p_file text,  -- path+filename+ext
   p_fdwname text, -- nome da tabela fwd
@@ -112,10 +111,8 @@ CREATE or replace FUNCTION ingest.fdw_generate_getCSV(
   SELECT ingest.fdw_generate(p_name, p_context, 'optim', pg_csv_head(p[2],p_delimiter), true, p_path, p_delimiter)
   FROM ingest.fdw_csv_paths(p_name,p_context,p_path) t(p)
 $f$ language SQL;
-
 -- select ingest.fdw_generate_getCSV('enderecos','br_mg_bho');
 -- creates tmp_orig.fdw_enderecos_br_mg_bho by source: /tmp/pg_io/br_mg_bho-enderecos.csv
-
 
 CREATE or replace FUNCTION ingest.fdw_generate_getclone(
   -- foreign-data wrapper generator
@@ -155,6 +152,7 @@ COMMENT ON TABLE ingest.addr_point
   IS 'Ingested address points of one or more packages, temporary data (not need package-version).'
 ;
 */
+
 CREATE TABLE ingest.via_line(
   pck_id real NOT NULL, -- REFERENCES optim.donatedPack(pck_id),
   vianame text,
@@ -169,27 +167,46 @@ COMMENT ON TABLE ingest.via_line
 
 ---------
 
+DROP FOREIGN TABLE IF EXISTS ingest.fdw_foreign_jurisdiction_geom;
+CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
+ osm_id          bigint,
+ jurisd_base_id  integer,
+ jurisd_local_id integer,
+ name            text,
+ parent_abbrev   text,
+ abbrev          text,
+ wikidata_id     bigint,
+ lexlabel        text,
+ isolabel_ext    text,
+ ddd             integer,
+ info            jsonb,
+ jtags           jsonb,
+ geom            geometry(Geometry,4326)
+) SERVER foreign_server
+  OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
+;
+
 DROP FOREIGN TABLE IF EXISTS ingest.fdw_feature_type;
 CREATE FOREIGN TABLE ingest.fdw_feature_type (
-ftid smallint,
-ftname text,
-geomtype text,
-need_join boolean,
-description text,
-info jsonb
+ ftid smallint,
+ ftname text,
+ geomtype text,
+ need_join boolean,
+ description text,
+ info jsonb
 ) SERVER foreign_server
   OPTIONS (schema_name 'optim', table_name 'feature_type');
 
 DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackFileVers;
 CREATE FOREIGN TABLE ingest.fdw_donated_PackFileVers (
-id bigint,
-hashedfname text,
-pack_id bigint,
-pack_item integer,
-pack_item_accepted_date date,
-kx_pack_item_version integer,
-user_resp text,
-info jsonb
+ id bigint,
+ hashedfname text,
+ pack_id bigint,
+ pack_item integer,
+ pack_item_accepted_date date,
+ kx_pack_item_version integer,
+ user_resp text,
+ info jsonb
 ) SERVER foreign_server
   OPTIONS (schema_name 'optim', table_name 'donated_packfilevers');
 
@@ -210,23 +227,22 @@ CREATE TABLE ingest.donated_PackComponent(
   UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
 
-  
--- DROP TABLE ingest.layer_file;
---CREATE TABLE ingest.layer_file (
-  --file_id serial NOT NULL PRIMARY KEY,
-  --pck_id real NOT NULL CHECK( dg_preserv.packid_isvalid(pck_id) ), -- package file ID, not controled here. Talvez seja packVers (package and version) ou pck_id com real
-  --pck_fileref_sha256 text NOT NULL CHECK( pck_fileref_sha256 ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ),
-  --ftid smallint NOT NULL REFERENCES ingest.fdw_feature_type(ftid),
-  --file_type text,  -- csv, geojson, shapefile, etc.
-  --proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
-  --hash_md5 text NOT NULL, -- or "size-md5" as really unique string
-  --file_meta jsonb,
-  --feature_asis_summary jsonb,
-  --feature_distrib jsonb,
-  --UNIQUE(ftid,hash_md5) -- or size-MD5 or (ftid,hash_md5)?  não faz sentido usar duas vezes se existe _full.
---);
-
 /* LIXO
+DROP TABLE ingest.layer_file;
+CREATE TABLE ingest.layer_file (
+  file_id serial NOT NULL PRIMARY KEY,
+  pck_id real NOT NULL CHECK( dg_preserv.packid_isvalid(pck_id) ), -- package file ID, not controled here. Talvez seja packVers (package and version) ou pck_id com real
+  pck_fileref_sha256 text NOT NULL CHECK( pck_fileref_sha256 ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ),
+  ftid smallint NOT NULL REFERENCES ingest.fdw_feature_type(ftid),
+  file_type text,  -- csv, geojson, shapefile, etc.
+  proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
+  hash_md5 text NOT NULL, -- or "size-md5" as really unique string
+  file_meta jsonb,
+  feature_asis_summary jsonb,
+  feature_distrib jsonb,
+  UNIQUE(ftid,hash_md5) -- or size-MD5 or (ftid,hash_md5)?  não faz sentido usar duas vezes se existe _full.
+);
+
 CREATE TABLE ingest.feature_asis_report (
   file_id int NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   feature_id int NOT NULL,
@@ -340,6 +356,7 @@ CREATE VIEW ingest.vw05test_feature_asis AS
     ON v.id = t.file_id
   ORDER BY 1,2,3
 ;
+
 /*
 DROP VIEW IF EXISTS ingest.vw06simple_layer CASCADE;
 CREATE VIEW ingest.vw06simple_layer AS
@@ -646,8 +663,6 @@ CREATE or replace FUNCTION ingest.any_load_debug(
                 $6 pck_fileref_sha256, $7 tabcols, $8 geom_name, $9 to4326
   ) t
 $f$ LANGUAGE SQL;
-
-
 
 CREATE or replace FUNCTION ingest.any_load(
     p_method text,   -- shp/csv/etc.
@@ -985,25 +1000,6 @@ $f$ LANGUAGE SQL IMMUTABLE;
 
 -- ----------------------------
 
-
-DROP FOREIGN TABLE IF EXISTS ingest.fdw_foreign_jurisdiction_geom;
-CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
- osm_id          bigint,
- jurisd_base_id  integer,
- jurisd_local_id integer,
- name            text,
- parent_abbrev   text,
- abbrev          text,
- wikidata_id     bigint,
- lexlabel        text,
- isolabel_ext    text,
- ddd             integer,
- info            jsonb,
- jtags           jsonb,
- geom            geometry(Geometry,4326)
-) SERVER foreign_server
-  OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
-;
 DROP TABLE IF EXISTS ingest.publicating_geojsons_p3exprefix;
 CREATE TABLE ingest.publicating_geojsons_p3exprefix(
  ghs9   text,

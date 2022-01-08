@@ -263,6 +263,7 @@ idnew_test:
 	psql $(pg_uri) -c "DROP TABLE IF EXISTS optim.jurisdiction ;"
 	pg_dump -t optim.jurisdiction $(pg_uri_root)/dl02s_main | psql $(pg_uri)
 	psql $(pg_uri) -c "ALTER TABLE optim.jurisdiction ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
+	pg_dump -t optim.jurisdiction_geom $(pg_uri_root)/dl02s_main | psql $(pg_uri)
 	psql $(pg_uri) -c "select optim.load_donor_pack('br');"
 	psql $(pg_uri) -c "select optim.insert_donor_pack();"
 
