@@ -31,10 +31,10 @@ info:
 	@printf "readme: gera rascunho de Readme.md para conjunto de dados.\n"
 	@printf "insert_size: Insere tamanho em bytes em files no arquivo make_conf.yaml.\n"
 	@printf "insert_license: Insere detalhes sobre licenças no arquivo make_conf.yaml.\n"
-	@printf "insert_make_conf.yaml: carrega na base de dados o arquivo make_conf.yaml.\n"
+	@printf "insert_make_conf: carrega na base de dados o arquivo make_conf.yaml.\n"
 	@printf "delete_file: deleta arquivo ingestado, a partir do sha256.\n"
 
-me: insert_make_conf.yaml
+me: insert_make_conf
 	@echo "-- Updating this make --"
 	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_makefile('$(country)','$(pack_id)');"
 	sudo chmod 777 $(mkme_output)
@@ -58,7 +58,7 @@ readme:
 	@read _tudo_bem_
 	mv $(readme_output) ./README-draft.md
 
-insert_size: insert_make_conf.yaml
+insert_size: insert_make_conf
 	@echo "-- Updating make_conf with files size --"
 	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_make_conf_with_size('$(country)','$(pack_id)');"
 	sudo chmod 777 $(conf_output)
@@ -70,7 +70,7 @@ insert_size: insert_make_conf.yaml
 	@read _tudo_bem_
 	mv $(conf_output) ./make_conf.yaml
 
-insert_license: insert_make_conf.yaml
+insert_license: insert_make_conf
 	@echo "-- Updating make_conf with files licenses --"
 	psql $(pg_uri_db) -c "SELECT lix_generate_make_conf_with_license('$(country)','$(pack_id)');"
 	sudo chmod 777 $(conf_output)
@@ -84,7 +84,7 @@ insert_license: insert_make_conf.yaml
 
 insert_make_conf:
 	@echo "-- Carrega make_conf.yaml na base de dados. --"
-	@echo "Uso: make insert_make_conf.yaml"
+	@echo "Uso: make insert_make_conf"
 	@echo "pack_id: $(pack_id)"
 	@echo "[ENTER para continuar ou ^C para sair]"
 	@read _tudo_bem_
