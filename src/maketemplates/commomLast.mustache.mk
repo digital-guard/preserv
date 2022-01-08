@@ -82,7 +82,7 @@ insert_license: insert_make_conf.yaml
 	@read _tudo_bem_
 	mv $(conf_output) ./make_conf.yaml
 
-insert_make_conf.yaml:
+insert_make_conf:
 	@echo "-- Carrega make_conf.yaml na base de dados. --"
 	@echo "Uso: make insert_make_conf.yaml"
 	@echo "pack_id: $(pack_id)"
