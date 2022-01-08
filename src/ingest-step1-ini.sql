@@ -1512,7 +1512,7 @@ BEGIN
  RETURN dict;
 END;
 $f$ language PLpgSQL;
---SELECT ingest.insert_bytesize( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01/make_conf.yaml') );
+--SELECT ingest.insert_bytesize( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RS/SantaMaria/_pk0019.01/make_conf.yaml') );
 
 CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
     jurisd text,
@@ -1521,23 +1521,25 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
     DECLARE
         q_query text;
         conf_yaml jsonb;
+        conf_yaml_t text;
         f_yaml jsonb;
         output_file text;
     BEGIN
 
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml;
+    SELECT y, t FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml, conf_yaml_t;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
     
-    SELECT jsonb_to_yaml(ingest.insert_bytesize(conf_yaml)::text) INTO q_query;
+    --SELECT jsonb_to_yaml(ingest.insert_bytesize(conf_yaml)::text) INTO q_query;
+    SELECT regexp_replace( conf_yaml_t , '\nfiles: *(\n(?=\-|\s+)[^\n]*)+', jsonb_to_yaml((ingest.insert_bytesize(conf_yaml)->'files')::text), 'n') INTO q_query;
     
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_generate_make_conf_with_size('BR','16.1');
+-- SELECT ingest.lix_generate_make_conf_with_size('BR','19.1');
 
 
 CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
