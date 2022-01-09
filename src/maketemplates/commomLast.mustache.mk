@@ -72,7 +72,7 @@ insert_size: insert_make_conf
 
 insert_license: insert_make_conf
 	@echo "-- Updating make_conf with files licenses --"
-	psql $(pg_uri_db) -c "SELECT lix_generate_make_conf_with_license('$(country)','$(pack_id)');"
+	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_make_conf_with_license('$(country)','$(pack_id)');"
 	sudo chmod 777 $(conf_output)
 	@echo " Check diff, the '<' lines are the new ones... Something changed?"
 	@diff $(conf_output) ./make_conf.yaml || :
