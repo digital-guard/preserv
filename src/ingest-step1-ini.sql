@@ -1532,7 +1532,7 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
     
     --SELECT jsonb_to_yaml(ingest.insert_bytesize(conf_yaml)::text) INTO q_query;
-    SELECT regexp_replace( conf_yaml_t , '\nfiles: *(\n(?=\-|\s+)[^\n]*)+', jsonb_to_yaml((ingest.insert_bytesize(conf_yaml)->'files')::text), 'n') INTO q_query;
+    SELECT regexp_replace( conf_yaml_t , '\nfiles: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+', jsonb_to_yaml((ingest.insert_bytesize(conf_yaml)->'files')::text), 'n') INTO q_query;
     
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 
