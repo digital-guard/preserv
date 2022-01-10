@@ -1498,16 +1498,16 @@ CREATE or replace FUNCTION ingest.insert_bytesize(
 ) RETURNS jsonb  AS $f$
 DECLARE
  a text;
- sz text;
+ sz bigint;
 BEGIN
     FOR i in 0..(select jsonb_array_length(dict->'files')-1)
     LOOP
         a := format($$ {files,%s,file} $$, i )::text[];
         
-        SELECT size FROM pg_stat_file(concat('/var/www/preserv.addressforall.org/download/',dict#>>a::text[])) INTO sz;
+        SELECT size::bigint FROM pg_stat_file(concat('/var/www/preserv.addressforall.org/download/',dict#>>a::text[])) INTO sz;
         
         a := format($$ {files,%s,size} $$, i );
-        dict := jsonb_set( dict, a::text[],('"' || sz || '"')::jsonb);
+        dict := jsonb_set( dict, a::text[],to_jsonb(sz));
     END LOOP;
  RETURN dict;
 END;
