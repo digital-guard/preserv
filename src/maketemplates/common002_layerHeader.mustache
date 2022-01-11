@@ -4,7 +4,7 @@
 	@echo "-- Incluindo dados do arquivo-{{file}} do package-$(fullPkID) na base $(pg_db) --"
 	@echo " Nome-hash do arquivo-{{file}}: $(part{{file}}_file)"
 	@echo " Tabela do layer: $(tabname)"
-	@echo " Sub-arquivos do arquivo-{{file}} com o conteúdo alvo: {{orig_filename}}.*"
+	@echo " Sub-arquivos do arquivo-{{file}} com o conteúdo alvo: {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}*{{orig_filename}}*{{/orig_filename_string_extract}}"
 	@echo " Tema dos sub-arquivos: $(part{{file}}_name)"
 	@echo "Run with tmux and sudo! (DANGER: seems not idempotent on psql)"
 	@whoami
@@ -20,7 +20,7 @@
 	@tput bold
 	@echo Extracting ....
 	@tput sgr0
-	cd $(sandbox); 7z {{7z_opts}} x -y $(part{{file}}_path) "*{{orig_filename}}*" ; chmod -R a+rx . > /dev/null
+	cd $(sandbox); 7z {{7z_opts}} x -y $(part{{file}}_path) {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}"*{{orig_filename}}*"{{/orig_filename_string_extract}} ; chmod -R a+rx . > /dev/null
 {{/isOsm}}
 {{#isOsm}}
 	@tput bold

@@ -1325,6 +1325,8 @@ BEGIN
        
                 IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
                 THEN
+                   dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
+                   
                    SELECT string_agg('*' || trim(txt::text, $$"$$) || '*', ' ') FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
                    dict := jsonb_set( dict, array['layers',key,'orig_filename_string_extract'], to_jsonb(orig_filename_string) );
 
@@ -1477,7 +1479,12 @@ BEGIN
                    ));
                 END IF;
 	 END LOOP;
-	 dict := dict || jsonb_build_object( 'joins_keys', jsonb_object_keys_asarray(dict->'joins') );
+
+	 IF jsonb_array_length(to_jsonb(jsonb_object_keys_asarray(dict->'joins'))) > 0
+	 THEN
+        dict := dict || jsonb_build_object( 'joins_keys', jsonb_object_keys_asarray(dict->'joins') );
+	 END IF;
+
 	 dict := dict || jsonb_build_object( 'layers_keys', jsonb_object_keys_asarray(dict->'layers') );
 	 dict := jsonb_set( dict, array['pkversion'], to_jsonb(to_char((dict->>'pkversion')::int,'fm000')) );
 	 dict := jsonb_set( dict, '{files,-1,last}','true'::jsonb);
@@ -1490,6 +1497,7 @@ $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk0008.01/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk001/make_conf.yaml');
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/SP/SaoPaulo/_pk0033.01/make_conf.yaml') );
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/PR/Araucaria/_pk0061.01/make_conf.yaml') );
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
 
