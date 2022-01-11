@@ -1327,7 +1327,7 @@ BEGIN
                 THEN
                    dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
                    
-                   SELECT string_agg('*' || trim(txt::text, $$"$$) || '*', ' ') FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
+                   SELECT string_agg($$'*$$ || trim(txt::text, $$"$$) || $$*'$$, ' ') FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
                    dict := jsonb_set( dict, array['layers',key,'orig_filename_string_extract'], to_jsonb(orig_filename_string) );
 
                    SELECT string_agg($$-iname '*$$ || trim(txt::text, $$"$$) || $$*.shp'$$, ' -o ') FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;

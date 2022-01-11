@@ -36,15 +36,18 @@ part{{p}}_path  =$(orig)/$(part{{p}}_file)
 all:
 	@echo "=== Resumo deste makefile de recuperação de dados preservados ==="
 	@printf "Targets para a geração de layers:\n\tall_layers {{#layers_keys}}{{.}} {{/layers_keys}}\n"
+{{#joins}}
 	@printf "Targets para join de layers:\n\tall_joins {{#joins_keys}}{{.}} {{/joins_keys}}\n"
+{{/joins}}
 	@printf "Demais targets implementados:\n\tmakedirs clean clean_sandbox wget_files me readme delete_file\n"
 	@echo "A geração de layers requer os seguintes comandos e versões:\n\t$(need_commands)"
 
 all_layers: {{#layers_keys}}{{.}} {{/layers_keys}}
 	@echo "--ALL LAYERS--"
-
+{{#joins}}
 all_joins: {{#joins_keys}}join-{{.}} {{/joins_keys}}
 	@echo "--ALL JOINS--"
+{{/joins}}
 
 ## ## ## ## ## ## ## ## ##
 ## ## ## ## ## ## ## ## ##
