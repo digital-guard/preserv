@@ -66,7 +66,12 @@ address: makedirs $(part{{file}}_path)
 
 address-clean: tabname = pk$(fullPkID)_p{{file}}_address
 address-clean:
+{{#multiple_files_array}}
+	rm -f "$(sandbox)/*{{name_item}}.*" || true
+{{/multiple_files_array}}
+{{^multiple_files_array}}
 	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+{{/multiple_files_array}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
 {{/address}}
 
@@ -82,7 +87,12 @@ block: makedirs $(part{{file}}_path)
 
 block-clean: tabname = pk$(fullPkID)_p{{file}}_block
 block-clean:
+{{#multiple_files_array}}
+	rm -f "$(sandbox)/*{{name_item}}.*" || true
+{{/multiple_files_array}}
+{{^multiple_files_array}}
 	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+{{/multiple_files_array}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
 {{/block}}
 
@@ -98,7 +108,12 @@ building: makedirs $(part{{file}}_path)
 
 building-clean: tabname = pk$(fullPkID)_p{{file}}_building
 building-clean:
+{{#multiple_files_array}}
+	rm -f "$(sandbox)/*{{name_item}}.*" || true
+{{/multiple_files_array}}
+{{^multiple_files_array}}
 	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+{{/multiple_files_array}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
 {{/building}}
 
@@ -114,7 +129,12 @@ cadparcel: makedirs $(part{{file}}_path)
 
 cadparcel-clean: tabname = pk$(fullPkID)_p{{file}}_cadparcel
 cadparcel-clean:
+{{#multiple_files_array}}
+	rm -f "$(sandbox)/*{{name_item}}.*" || true
+{{/multiple_files_array}}
+{{^multiple_files_array}}
 	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+{{/multiple_files_array}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
 {{/cadparcel}}
 
@@ -130,7 +150,12 @@ cadvia: makedirs $(part{{file}}_path)
 
 cadvia-clean: tabname = pk$(fullPkID)_p{{file}}_cadvia
 cadvia-clean:
+{{#multiple_files_array}}
+	rm -f "$(sandbox)/*{{name_item}}.*" || true
+{{/multiple_files_array}}
+{{^multiple_files_array}}
 	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+{{/multiple_files_array}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
 {{/cadvia}}
 
@@ -146,7 +171,12 @@ genericvia: makedirs $(part{{file}}_path)
 
 genericvia-clean: tabname = pk$(fullPkID)_p{{file}}_genericvia
 genericvia-clean:
+{{#multiple_files_array}}
+	rm -f "$(sandbox)/*{{name_item}}.*" || true
+{{/multiple_files_array}}
+{{^multiple_files_array}}
 	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+{{/multiple_files_array}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE;  DROP VIEW IF EXISTS vw_$(tabname) CASCADE;"
 {{/genericvia}}
 
@@ -165,7 +195,12 @@ geoaddress: makedirs $(part{{file}}_path)
 
 geoaddress-clean: tabname = pk$(fullPkID)_p{{file}}_geoaddress
 geoaddress-clean:
+{{#multiple_files_array}}
+	rm -f "$(sandbox)/*{{name_item}}.*" || true
+{{/multiple_files_array}}
+{{^multiple_files_array}}
 	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+{{/multiple_files_array}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
 {{/geoaddress}}
 
@@ -181,7 +216,12 @@ nsvia: makedirs $(part{{file}}_path)
 
 nsvia-clean: tabname = pk$(fullPkID)_p{{file}}_nsvia
 nsvia-clean:
+{{#multiple_files_array}}
+	rm -f "$(sandbox)/*{{name_item}}.*" || true
+{{/multiple_files_array}}
+{{^multiple_files_array}}
 	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+{{/multiple_files_array}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE;  DROP VIEW IF EXISTS vw_$(tabname) CASCADE;"
 {{/nsvia}}
 
@@ -197,7 +237,12 @@ parcel: makedirs $(part{{file}}_path)
 
 parcel-clean: tabname = pk$(fullPkID)_p{{file}}_parcel
 parcel-clean:
+{{#multiple_files_array}}
+	rm -f "$(sandbox)/*{{name_item}}.*" || true
+{{/multiple_files_array}}
+{{^multiple_files_array}}
 	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+{{/multiple_files_array}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
 {{/parcel}}
 
@@ -216,7 +261,12 @@ via: makedirs $(part{{file}}_path)
 
 via-clean: tabname = pk$(fullPkID)_p{{file}}_via
 via-clean:
+{{#multiple_files_array}}
+	rm -f "$(sandbox)/*{{name_item}}.*" || true
+{{/multiple_files_array}}
+{{^multiple_files_array}}
 	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+{{/multiple_files_array}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
 {{/via}}
 {{/layers}}
@@ -256,7 +306,7 @@ openstreetmap: makedirs $(part{{file}}_path)
 	@echo FIM.
 
 openstreetmap-clean:
-	rm -f "$(sandbox)/{{orig_filename}}.*" || true
+	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
 {{/openstreetmap}}
 
 makedirs: clean_sandbox

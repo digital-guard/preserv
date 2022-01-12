@@ -1285,6 +1285,7 @@ DECLARE
  codec_extension text;
  codec_descr_mime jsonb;
  orig_filename_string text;
+ multiple_files jsonb;
 BEGIN
  CASE p_type -- preparing types
  WHEN 'make_conf', NULL THEN
@@ -1322,11 +1323,15 @@ BEGIN
 		dict := jsonb_set( dict, array['layers',key,'isShp'], IIF(method='shp2sql',bt,bf) );
 		dict := jsonb_set( dict, array['layers',key,'isOsm'], IIF(method='osm2sql',bt,bf) );
        
-       
+                -- Caso de BR-PR-Araucaria/_pk0061.01
                 IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
                 THEN
-                   dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
-                   
+                    SELECT to_jsonb(array_agg(jsonb_build_object('name_item',n, 'sql_select_item',s))) FROM  unnest(ARRAY(SELECT jsonb_array_elements_text(dict->'layers'->key->'orig_filename')),ARRAY(SELECT jsonb_array_elements(dict->'layers'->key->'sql_select'))) t(n,s) INTO multiple_files;
+                    
+                    RAISE NOTICE 'value of multiple_files_array : %', multiple_files;
+                    dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
+                    dict := jsonb_set( dict, array['layers',key,'multiple_files_array'], multiple_files );
+   
                    SELECT string_agg($$'*$$ || trim(txt::text, $$"$$) || $$*'$$, ' ') FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
                    dict := jsonb_set( dict, array['layers',key,'orig_filename_string_extract'], to_jsonb(orig_filename_string) );
 
