@@ -1,7 +1,7 @@
 	@echo
 	@echo "------------------------------------------"
 	@echo "------ Layer tipo $(layername)  ------"
-	@echo "-- Incluindo dados do arquivo-{{file}} do package-$(fullPkID) na base $(pg_db) --"
+	@echo "-- Incluindo dados do arquivo-{{file}} do package-{{fullPkID}} na base $(pg_db) --"
 	@echo " Nome-hash do arquivo-{{file}}: $(part{{file}}_file)"
 	@echo " Tabela do layer: $(tabname)"
 	@echo " Sub-arquivos do arquivo-{{file}} com o conteúdo alvo: {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}*{{orig_filename}}*{{/orig_filename_string_extract}}"

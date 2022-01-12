@@ -13,8 +13,8 @@ sandbox_root={{sandbox}}
 need_commands= 7z v16+; psql v12+; shp2pgsql v3+; {{need_extra_commands}}
 
 pack_id = {{pack_id}}
-fullPkID={{pack_id}}_{{pkversion}}
-sandbox=$(sandbox_root)/_pk$(fullPkID)
+# fullPkID={{pack_id}}_{{pkversion}}
+sandbox=$(sandbox_root)/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 
 ## USER CONFIGS
 pg_db  ={{pg_db}}
@@ -56,7 +56,7 @@ all_joins: {{#joins_keys}}join-{{.}} {{/joins_keys}}
 {{#layers}}
 {{#address}}
 address: layername = address_{{subtype}}
-address: tabname = pk$(fullPkID)_p{{file}}_address
+address: tabname = pk{{fullPkID}}_p{{file}}_address
 address: makedirs $(part{{file}}_path)
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "address" datatype (street axes)
 {{>common002_layerHeader}}
@@ -64,7 +64,7 @@ address: makedirs $(part{{file}}_path)
 {{>common001_pgAny_load}}
 	@echo FIM.
 
-address-clean: tabname = pk$(fullPkID)_p{{file}}_address
+address-clean: tabname = pk{{fullPkID}}_p{{file}}_address
 address-clean:
 {{#multiple_files_array}}
 	rm -f "$(sandbox)/*{{name_item}}.*" || true
@@ -77,7 +77,7 @@ address-clean:
 
 {{#block}}
 block: layername = block_{{subtype}}
-block: tabname = pk$(fullPkID)_p{{file}}_block
+block: tabname = pk{{fullPkID}}_p{{file}}_block
 block: makedirs $(part{{file}}_path)
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "block" datatype (street axes)
 {{>common002_layerHeader}}
@@ -85,7 +85,7 @@ block: makedirs $(part{{file}}_path)
 {{>common001_pgAny_load}}
 	@echo FIM.
 
-block-clean: tabname = pk$(fullPkID)_p{{file}}_block
+block-clean: tabname = pk{{fullPkID}}_p{{file}}_block
 block-clean:
 {{#multiple_files_array}}
 	rm -f "$(sandbox)/*{{name_item}}.*" || true
@@ -98,7 +98,7 @@ block-clean:
 
 {{#building}}
 building: layername = building_{{subtype}}
-building: tabname = pk$(fullPkID)_p{{file}}_building
+building: tabname = pk{{fullPkID}}_p{{file}}_building
 building: makedirs $(part{{file}}_path)
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "building" datatype (point with house_number but no via name)
 {{>common002_layerHeader}}
@@ -106,7 +106,7 @@ building: makedirs $(part{{file}}_path)
 {{>common001_pgAny_load}}
 	@echo FIM.
 
-building-clean: tabname = pk$(fullPkID)_p{{file}}_building
+building-clean: tabname = pk{{fullPkID}}_p{{file}}_building
 building-clean:
 {{#multiple_files_array}}
 	rm -f "$(sandbox)/*{{name_item}}.*" || true
@@ -119,7 +119,7 @@ building-clean:
 
 {{#cadparcel}}
 cadparcel: layername = cadparcel_{{subtype}}
-cadparcel: tabname = pk$(fullPkID)_p{{file}}_cadparcel
+cadparcel: tabname = pk{{fullPkID}}_p{{file}}_cadparcel
 cadparcel: makedirs $(part{{file}}_path)
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "cadparcel" datatype (street axes)
 {{>common002_layerHeader}}
@@ -127,7 +127,7 @@ cadparcel: makedirs $(part{{file}}_path)
 {{>common001_pgAny_load}}
 	@echo FIM.
 
-cadparcel-clean: tabname = pk$(fullPkID)_p{{file}}_cadparcel
+cadparcel-clean: tabname = pk{{fullPkID}}_p{{file}}_cadparcel
 cadparcel-clean:
 {{#multiple_files_array}}
 	rm -f "$(sandbox)/*{{name_item}}.*" || true
@@ -140,7 +140,7 @@ cadparcel-clean:
 
 {{#cadvia}}
 cadvia: layername = cadvia_{{subtype}}
-cadvia: tabname = pk$(fullPkID)_p{{file}}_cadvia
+cadvia: tabname = pk{{fullPkID}}_p{{file}}_cadvia
 cadvia: makedirs $(part{{file}}_path)
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "cadvia" datatype (street axes)
 {{>common002_layerHeader}}
@@ -148,7 +148,7 @@ cadvia: makedirs $(part{{file}}_path)
 {{>common001_pgAny_load}}
 	@echo FIM.
 
-cadvia-clean: tabname = pk$(fullPkID)_p{{file}}_cadvia
+cadvia-clean: tabname = pk{{fullPkID}}_p{{file}}_cadvia
 cadvia-clean:
 {{#multiple_files_array}}
 	rm -f "$(sandbox)/*{{name_item}}.*" || true
@@ -161,7 +161,7 @@ cadvia-clean:
 
 {{#genericvia}}
 genericvia: layername = genericvia_{{subtype}}
-genericvia: tabname = pk$(fullPkID)_p{{file}}_genericvia
+genericvia: tabname = pk{{fullPkID}}_p{{file}}_genericvia
 genericvia: makedirs $(part{{file}}_path)
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "genericvia" datatype (zone with name)
 {{>common002_layerHeader}}
@@ -169,7 +169,7 @@ genericvia: makedirs $(part{{file}}_path)
 {{>common001_pgAny_load}}
 	@echo FIM.
 
-genericvia-clean: tabname = pk$(fullPkID)_p{{file}}_genericvia
+genericvia-clean: tabname = pk{{fullPkID}}_p{{file}}_genericvia
 genericvia-clean:
 {{#multiple_files_array}}
 	rm -f "$(sandbox)/*{{name_item}}.*" || true
@@ -182,7 +182,7 @@ genericvia-clean:
 
 {{#geoaddress}}
 geoaddress: layername = geoaddress_{{subtype}}
-geoaddress: tabname = pk$(fullPkID)_p{{file}}_geoaddress
+geoaddress: tabname = pk{{fullPkID}}_p{{file}}_geoaddress
 geoaddress: makedirs $(part{{file}}_path)
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "geoaddress" datatype (point with house_number but no via name)
 {{>common002_layerHeader}}
@@ -193,7 +193,7 @@ geoaddress: makedirs $(part{{file}}_path)
 {{>common001_pgAny_load}}
 	@echo FIM.
 
-geoaddress-clean: tabname = pk$(fullPkID)_p{{file}}_geoaddress
+geoaddress-clean: tabname = pk{{fullPkID}}_p{{file}}_geoaddress
 geoaddress-clean:
 {{#multiple_files_array}}
 	rm -f "$(sandbox)/*{{name_item}}.*" || true
@@ -206,7 +206,7 @@ geoaddress-clean:
 
 {{#nsvia}}
 nsvia: layername = nsvia_{{subtype}}
-nsvia: tabname = pk$(fullPkID)_p{{file}}_nsvia
+nsvia: tabname = pk{{fullPkID}}_p{{file}}_nsvia
 nsvia: makedirs $(part{{file}}_path)
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "nsvia" datatype (zone with name)
 {{>common002_layerHeader}}
@@ -214,7 +214,7 @@ nsvia: makedirs $(part{{file}}_path)
 {{>common001_pgAny_load}}
 	@echo FIM.
 
-nsvia-clean: tabname = pk$(fullPkID)_p{{file}}_nsvia
+nsvia-clean: tabname = pk{{fullPkID}}_p{{file}}_nsvia
 nsvia-clean:
 {{#multiple_files_array}}
 	rm -f "$(sandbox)/*{{name_item}}.*" || true
@@ -227,7 +227,7 @@ nsvia-clean:
 
 {{#parcel}}
 parcel: layername = parcel_{{subtype}}
-parcel: tabname = pk$(fullPkID)_p{{file}}_parcel
+parcel: tabname = pk{{fullPkID}}_p{{file}}_parcel
 parcel: makedirs $(part{{file}}_path)
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "parcel" datatype (street axes)
 {{>common002_layerHeader}}
@@ -235,7 +235,7 @@ parcel: makedirs $(part{{file}}_path)
 {{>common001_pgAny_load}}
 	@echo FIM.
 
-parcel-clean: tabname = pk$(fullPkID)_p{{file}}_parcel
+parcel-clean: tabname = pk{{fullPkID}}_p{{file}}_parcel
 parcel-clean:
 {{#multiple_files_array}}
 	rm -f "$(sandbox)/*{{name_item}}.*" || true
@@ -248,7 +248,7 @@ parcel-clean:
 
 {{#via}}
 via: layername = via_{{subtype}}
-via: tabname = pk$(fullPkID)_p{{file}}_via
+via: tabname = pk{{fullPkID}}_p{{file}}_via
 via: makedirs $(part{{file}}_path)
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "via" datatype (street axes)
 {{>common002_layerHeader}}
@@ -259,7 +259,7 @@ via: makedirs $(part{{file}}_path)
 {{>common001_pgAny_load}}
 	@echo FIM.
 
-via-clean: tabname = pk$(fullPkID)_p{{file}}_via
+via-clean: tabname = pk{{fullPkID}}_p{{file}}_via
 via-clean:
 {{#multiple_files_array}}
 	rm -f "$(sandbox)/*{{name_item}}.*" || true

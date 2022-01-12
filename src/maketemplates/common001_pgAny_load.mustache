@@ -2,11 +2,11 @@
 {{^multiple_files}}
 {{#sql_view}}
 	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_$(tabname) AS {{{.}}}"
-	psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','$(sandbox)/{{orig_filename}}','$(layername)','vw{{file}}_$(tabname)','$(fullPkID)','$(part{{file}}_file)',array[]::text[])"
+	psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','$(sandbox)/{{orig_filename}}','$(layername)','vw{{file}}_$(tabname)','{{fullPkID}}','$(part{{file}}_file)',array[]::text[])"
 	psql $(pg_uri_db) -c "DROP VIEW vw{{file}}_$(tabname)"
 {{/sql_view}}
 {{^sql_view}}
-	psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','$(sandbox)/{{orig_filename}}','$(layername)','$(tabname)','$(fullPkID)','$(part{{file}}_file)',array{{{sql_select}}})"
+	psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','$(sandbox)/{{orig_filename}}','$(layername)','$(tabname)','{{fullPkID}}','$(part{{file}}_file)',array{{{sql_select}}})"
 {{/sql_view}}
 	@echo "Confira os resultados nas tabelas ingest.donated_packcomponent e {{#isCadLayer}}ingest.cadastral_asis{{/isCadLayer}}{{^isCadLayer}}ingest.feature_asis{{/isCadLayer}}".
 {{/multiple_files}}
@@ -15,6 +15,6 @@
 {{/isCsv}}
 {{/isOsm}}
 {{#isOsm}}
-	psql $(pg_uri_db) -c "SELECT ingest.osm_load('$(sandbox)/{{orig_filename}}.pbf','$(layername)','vw{{file}}_$(tabname)','$(fullPkID)','$(part{{file}}_file)',array[]::text[])"
+	psql $(pg_uri_db) -c "SELECT ingest.osm_load('$(sandbox)/{{orig_filename}}.pbf','$(layername)','vw{{file}}_$(tabname)','{{fullPkID}}','$(part{{file}}_file)',array[]::text[])"
 	psql $(pg_uri_db) -c "DROP VIEW vw{{file}}_$(tabname)"
 {{/isOsm}}

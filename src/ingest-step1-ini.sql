@@ -564,7 +564,7 @@ $f$ LANGUAGE PLpgSQL;
 CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_file text,
   p_ftid int,
-  p_pck_id real,
+  p_pck_id bigint,
   p_pck_fileref_sha256 text,
   p_ftype text DEFAULT NULL
   -- proc_step = 1
@@ -600,13 +600,13 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
       SELECT id, proc_step      FROM file_exists
   ) t WHERE proc_step=1
 $f$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,real,text,text)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,text,text)
   IS 'Reads file metadata and inserts it into ingest.donated_PackComponent. If proc_step=1 returns valid ID else NULL.'
 ;
 CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_file text,   -- 1.
   p_ftname text, -- 2. define o layer... um file pode ter mais de um layer??
-  p_pck_id real,
+  p_pck_id bigint,
   p_pck_fileref_sha256 text,
   p_ftype text DEFAULT NULL -- 5
 ) RETURNS bigint AS $wrap$
@@ -616,7 +616,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
       $3, $4, $5
     );
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,real,text,text)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,text,text)
   IS 'Wrap para ingest.getmeta_to_file() usando ftName ao invés de ftID.'
 ;
 -- ex. select ingest.getmeta_to_file('/tmp/a.csv',3,555);
@@ -666,7 +666,7 @@ CREATE or replace FUNCTION ingest.any_load(
     p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
     p_tabname text,  -- tabela temporária de ingestáo
-    p_pck_id real,   -- id do package da Preservação.
+    p_pck_id bigint,   -- id do package da Preservação.
     p_pck_fileref_sha256 text,
     p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
     p_geom_name text DEFAULT 'geom',
@@ -787,7 +787,7 @@ CREATE or replace FUNCTION ingest.any_load(
   RETURN msg_ret;
   END;
 $f$ LANGUAGE PLpgSQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,real,text,text[],text,boolean)
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],text,boolean)
   IS 'Load (into ingest.feature_asis) shapefile or any other non-GeoJSON, of a separated table.'
 ;
 -- posto ipiranga logo abaixo..  sorvetorua.
@@ -804,7 +804,7 @@ CREATE or replace FUNCTION ingest.any_load(
     p_geom_name text DEFAULT 'geom', -- 8
     p_to4326 boolean DEFAULT true    -- 9. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.any_load($1, $2, $3, $4, dg_preserv.packid_to_real($5), $6, $7, $8, $9)
+   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9)
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],text,boolean)
   IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
@@ -814,7 +814,7 @@ CREATE or replace FUNCTION ingest.osm_load(
     p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
     p_tabname text,  -- tabela temporária de ingestáo
-    p_pck_id real,   -- id do package da Preservação.
+    p_pck_id bigint,   -- id do package da Preservação.
     p_pck_fileref_sha256 text,
     p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
     p_geom_name text DEFAULT 'way',
@@ -911,7 +911,7 @@ CREATE or replace FUNCTION ingest.osm_load(
     p_geom_name text DEFAULT 'way', -- 7
     p_to4326 boolean DEFAULT false    -- 8. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.osm_load($1, $2, $3, dg_preserv.packid_to_real($4), $5, $6, $7, $8)
+   SELECT ingest.osm_load($1, $2, $3, to_bigint($4), $5, $6, $7, $8)
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.osm_load(text,text,text,text,text,text[],text,boolean)
   IS 'Wrap to ingest.osm_load(1,2,3,4=real) using string format DD_DD.'
@@ -1286,6 +1286,7 @@ DECLARE
  codec_descr_mime jsonb;
  orig_filename_string text;
  multiple_files jsonb;
+ packvers_id bigint;
 BEGIN
  CASE p_type -- preparing types
  WHEN 'make_conf', NULL THEN
@@ -1322,7 +1323,13 @@ BEGIN
 		dict := jsonb_set( dict, array['layers',key,'isOgrWithShp'], IIF(method='ogrWshp',bt,bf) );
 		dict := jsonb_set( dict, array['layers',key,'isShp'], IIF(method='shp2sql',bt,bf) );
 		dict := jsonb_set( dict, array['layers',key,'isOsm'], IIF(method='osm2sql',bt,bf) );
-       
+
+                dict := jsonb_set( dict, array['layers',key,'sha256file'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'));
+                
+                SELECT id FROM ingest.fdw_donated_packfilevers WHERE hashedfname = dict->'layers'->key->>'sha256file' INTO packvers_id;
+
+                dict := jsonb_set( dict, array['layers',key,'fullPkID'] , to_jsonb(packvers_id));
+                
                 -- Caso de BR-PR-Araucaria/_pk0061.01
                 IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
                 THEN
@@ -1616,6 +1623,8 @@ CREATE or replace FUNCTION ingest.lix_generate_makefile(
     SELECT tpl_last FROM ingest.lix_jurisd_tpl WHERE jurisdiction = 'INT' INTO mkme_srcTplLast;
     
     SELECT f_yaml->>'pg_io' || '/makeme_' || jurisd || pack_id INTO output_file;
+    
+    conf_yaml := jsonb_set( conf_yaml, array['jurisdiction'], to_jsonb(jurisd) );
     
     SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, f_yaml || ingest.jsonb_mustache_prepare(conf_yaml)),E'\u130C9',$$\"$$) INTO q_query;
     
