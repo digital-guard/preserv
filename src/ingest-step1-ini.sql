@@ -186,16 +186,34 @@ CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
   OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
 ;
 
-DROP FOREIGN TABLE IF EXISTS ingest.fdw_feature_type;
-CREATE FOREIGN TABLE ingest.fdw_feature_type (
- ftid smallint,
- ftname text,
- geomtype text,
- need_join boolean,
- description text,
+DROP FOREIGN TABLE IF EXISTS ingest.fdw_donor;
+CREATE FOREIGN TABLE ingest.fdw_donor (
+ id integer,
+ country_id integer,
+ local_serial integer,
+ scope text,
+ shortname text,
+ vat_id text,
+ legalname text,
+ wikidata_id bigint,
+ url text,
+ info jsonb,
+ kx_vat_id text
+) SERVER foreign_server
+  OPTIONS (schema_name 'optim', table_name 'donor');
+
+DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackTpl;
+CREATE FOREIGN TABLE ingest.fdW_donated_PackTpl (
+ id bigint,
+ donor_id integer,
+ user_resp text,
+ pk_count integer,
+ original_tpl text,
+ make_conf_tpl jsonb,
+ kx_num_files integer,
  info jsonb
 ) SERVER foreign_server
-  OPTIONS (schema_name 'optim', table_name 'feature_type');
+  OPTIONS (schema_name 'optim', table_name 'donated_packtpl');
 
 DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackFileVers;
 CREATE FOREIGN TABLE ingest.fdw_donated_PackFileVers (
@@ -209,6 +227,17 @@ CREATE FOREIGN TABLE ingest.fdw_donated_PackFileVers (
  info jsonb
 ) SERVER foreign_server
   OPTIONS (schema_name 'optim', table_name 'donated_packfilevers');
+
+DROP FOREIGN TABLE IF EXISTS ingest.fdw_feature_type;
+CREATE FOREIGN TABLE ingest.fdw_feature_type (
+ ftid smallint,
+ ftname text,
+ geomtype text,
+ need_join boolean,
+ description text,
+ info jsonb
+) SERVER foreign_server
+  OPTIONS (schema_name 'optim', table_name 'feature_type');
 
 CREATE TABLE ingest.donated_PackComponent(
   -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
@@ -226,6 +255,19 @@ CREATE TABLE ingest.donated_PackComponent(
   UNIQUE(packvers_id,ftid,hash_md5)
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
+
+DROP VIEW IF EXISTS ingest.vwall CASCADE;
+CREATE VIEW ingest.vwall AS
+  SELECT pc.id, dn.scope
+  FROM ingest.donated_PackComponent pc
+  LEFT JOIN ingest.fdw_donated_packfilevers pf
+    ON pc.packvers_id=pf.id
+  LEFT JOIN ingest.fdw_donated_PackTpl pt
+    ON pf.pack_id=pt.id
+  LEFT JOIN ingest.fdw_donor dn
+    ON pt.donor_id=dn.id
+;
+
 
 /* LIXO
 DROP TABLE ingest.layer_file;
@@ -1039,7 +1081,8 @@ $f$ language SQL VOLATILE; --fim p2
   
 CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
-	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+	p_fileref text        -- 
 ) RETURNS text  AS $f$
   
   DELETE FROM ingest.publicating_geojsons_p2distrib;
@@ -1056,7 +1099,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
     	750, 8000, 3
     ) t
   ;
-  SELECT pg_catalog.pg_file_unlink('/tmp/pg_io/pts_*.geojson');
+  SELECT pg_catalog.pg_file_unlink(p_fileref || '/pts_*.geojson');
 
   UPDATE ingest.publicating_geojsons_p3exprefix
   SET prefix=t4.prefix
@@ -1076,13 +1119,14 @@ $f$ language SQL VOLATILE; --fim p3
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
-	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+	p_fileref text
 ) RETURNS text  AS $f$
 
   WITH prefs AS ( SELECT DISTINCT prefix FROM ingest.publicating_geojsons_p3exprefix ORDER BY 1 )
    SELECT write_geojsonb_Features(
     format('SELECT * FROM ingest.publicating_geojsons_p3exprefix WHERE prefix=%L ORDER BY gid',prefix),
-    format('/tmp/pg_io/pts_%s.geojson',prefix),
+    format('%s/pts_%s.geojson',p_fileref,prefix),
     't1.geom',
     'info::jsonb',
     NULL,  -- p_cols_orderby
@@ -1090,21 +1134,25 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
     2
   ) FROM prefs;
   DELETE FROM ingest.publicating_geojsons_p3exprefix;  -- limpa
-  SELECT 'Arquivos de file_id='||p_file_id::text|| ' publicados em /tmp/pg_io/pts_*.geojson'
+  SELECT 'Arquivos de file_id='|| p_file_id::text || ' publicados em ' || p_file_id::text || '/pts_*.geojson'
   ;
 $f$ language SQL VOLATILE; -- fim p4
 
 CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
-	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+	p_fileref text
 ) RETURNS text  AS $f$
   SELECT ingest.publicating_geojsons_p1($1,$2);
   SELECT ingest.publicating_geojsons_p2($1,$2);
-  SELECT ingest.publicating_geojsons_p3($1,$2);
-  SELECT ingest.publicating_geojsons_p4($1,$2);
+  SELECT ingest.publicating_geojsons_p3($1,$2,$3);
+  SELECT ingest.publicating_geojsons_p4($1,$2,$3);
   SELECT 'fim';
 $f$ language SQL VOLATILE; -- need be a sequential PLpgSQL to neatly COMMIT?
-
+-- Ver id em ingest.donated_PackComponent
+-- SELECT ingest.publicating_geojsons(1,'BR-RS-SantaMaria','/tmp/pg_io');
+-- SELECT ingest.publicating_geojsons(2,'BR-MG-BeloHorizonte','/tmp/pg_io');
+-- SELECT ingest.publicating_geojsons(Z,'BR-RJ-Niteroi','/tmp/pg_io');
 
 --------------------
 --------------------
