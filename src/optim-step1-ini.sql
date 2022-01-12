@@ -90,21 +90,6 @@ CREATE TABLE optim.donated_PackFileVers(
   ,UNIQUE(pack_id,pack_item,kx_pack_item_version) -- revisar se precisa.
 );
 
-CREATE TABLE optim.donated_PackComponent(
-  -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
-  id bigserial NOT NULL PRIMARY KEY,  -- layerfile_id
-  packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
-  ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
-  is_evidence boolean default false,
-  hash_md5 text NOT NULL, -- or "size-md5" as really unique string
-  proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
-  file_meta jsonb,
-  feature_asis_summary jsonb,
-  feature_distrib jsonb,
-  UNIQUE(packvers_id,ftid,hash_md5)
-  --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
-);
-
 ------------------------
 
 CREATE TABLE optim.feature_type (  -- replacing old optim.origin_content_type
@@ -171,6 +156,21 @@ INSERT INTO optim.feature_type VALUES
 -- Para gerar backup CSV:
 -- copy ( select lpad(ftid::text,2,'0') ftid, ftname, description, info->>'description_pt' as description_pt, array_to_string(jsonb_array_totext(info->'synonymous_pt'),'; ') as synonymous_pt from optim.feature_type where geomtype='class' ) to '/tmp/pg_io/featur_type_classes.csv' CSV HEADER;
 -- copy ( select lpad(ftid::text,2,'0') ftid, ftname,geomtype, iif(need_join,'yes'::text,'no') as need_join, description  from optim.feature_type where geomtype!='class' ) to '/tmp/pg_io/featur_types.csv' CSV HEADER;
+
+CREATE TABLE optim.donated_PackComponent(
+  -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
+  id bigserial NOT NULL PRIMARY KEY,  -- layerfile_id
+  packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
+  ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
+  is_evidence boolean default false,
+  hash_md5 text NOT NULL, -- or "size-md5" as really unique string
+  proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
+  file_meta jsonb,
+  feature_asis_summary jsonb,
+  feature_distrib jsonb,
+  UNIQUE(packvers_id,ftid,hash_md5)
+  --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
+);
 
 CREATE TABLE optim.housenumber_system_type (
   hstid smallint PRIMARY KEY NOT NULL,
