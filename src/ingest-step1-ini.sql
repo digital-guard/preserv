@@ -223,7 +223,7 @@ CREATE TABLE ingest.donated_PackComponent(
   file_meta jsonb,
   feature_asis_summary jsonb,
   feature_distrib jsonb,
-  UNIQUE(packvers_id,ftid,hash_md5),
+  UNIQUE(packvers_id,ftid,hash_md5)
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
 
