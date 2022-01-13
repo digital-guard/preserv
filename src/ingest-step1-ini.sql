@@ -1374,10 +1374,20 @@ BEGIN
 
                 dict := jsonb_set( dict, array['layers',key,'sha256file'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'));
                 
+                dict := jsonb_set( dict, array['layers',key,'sha256file_name'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'name'));
+                
                 SELECT id FROM ingest.fdw_donated_packfilevers WHERE hashedfname = dict->'layers'->key->>'sha256file' INTO packvers_id;
 
                 dict := jsonb_set( dict, array['layers',key,'fullPkID'] , to_jsonb(packvers_id));
+                dict := jsonb_set( dict, array['layers',key,'layername_root'] , to_jsonb(key));
+                dict := jsonb_set( dict, array['layers',key,'layername'] , to_jsonb(key || '_' || (dict->'layers'->key->>'subtype') ));
+                dict := jsonb_set( dict, array['layers',key,'tabname'] , to_jsonb('pk' || (dict->'layers'->key->>'fullPkID') || '_p' || (dict->'layers'->key->>'file') || '_' || key));
                 
+                IF dict?'orig'
+                THEN
+                    dict := jsonb_set( dict, array['layers',key,'sha256file_path'] , to_jsonb((dict->>'orig') || '/' || (dict->'layers'->key->>'sha256file') ));
+                END IF;
+
                 -- Caso de BR-PR-Araucaria/_pk0061.01
                 IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
                 THEN
@@ -1674,7 +1684,7 @@ CREATE or replace FUNCTION ingest.lix_generate_makefile(
     
     conf_yaml := jsonb_set( conf_yaml, array['jurisdiction'], to_jsonb(jurisd) );
     
-    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, f_yaml || ingest.jsonb_mustache_prepare(conf_yaml)),E'\u130C9',$$\"$$) INTO q_query;
+    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, ingest.jsonb_mustache_prepare(f_yaml || conf_yaml)),E'\u130C9',$$\"$$) INTO q_query;
     
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 

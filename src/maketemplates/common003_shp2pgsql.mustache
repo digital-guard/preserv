@@ -12,16 +12,16 @@
 	@echo Executando shp2pgsql ...
 {{#multiple_files}}
 {{#multiple_files_array}}
-	cd $(sandbox); find $(sandbox) -iname "*{{name_item}}*.shp" -exec sh -c "psql $(pg_uri_db) -c 'DROP TABLE IF EXISTS $(tabname)'; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' $(tabname) | psql -q $(pg_uri_db); {{#sql_view_item}}psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_$(tabname) AS {{{.}}}" | psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','{}','$(layername)','vw{{file}}_$(tabname)','{{fullPkID}}','$(part{{file}}_file)',array[]::text[])" | psql $(pg_uri_db) -c "DROP VIEW vw{{file}}_$(tabname)"{{/sql_view_item}}{{^sql_view_item}}psql $(pg_uri_db) -c \"SELECT ingest.any_load('{{method}}','{}','$(layername)','$(tabname)','{{fullPkID}}','$(part{{file}}_file)',array{{{sql_select_item}}})\"{{/sql_view_item}}; chmod -R a+rx . 2> /dev/null" \;
+	cd $(sandbox); find $(sandbox) -iname "*{{name_item}}*.shp" -exec sh -c "psql $(pg_uri_db) -c 'DROP TABLE IF EXISTS {{tabname}}'; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' {{tabname}} | psql -q $(pg_uri_db); {{#sql_view_item}}psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}" | psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','{}','{{layername}}','vw{{file}}_{{tabname}}','{{fullPkID}}','{{sha256file}}',array[]::text[])" | psql $(pg_uri_db) -c "DROP VIEW vw{{file}}_{{tabname}}"{{/sql_view_item}}{{^sql_view_item}}psql $(pg_uri_db) -c \"SELECT ingest.any_load('{{method}}','{}','{{layername}}','{{tabname}}','{{fullPkID}}','{{sha256file}}',array{{{sql_select_item}}})\"{{/sql_view_item}}; chmod -R a+rx . 2> /dev/null" \;
 	@echo "Confira os resultados nas tabelas ingest.donated_packcomponent e ingest.feature_asis".
 {{/multiple_files_array}}
 {{^multiple_files_array}}
-	cd $(sandbox); find $(sandbox) -iname "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" -exec sh -c "psql $(pg_uri_db) -c 'DROP TABLE IF EXISTS $(tabname)'; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' $(tabname) | psql -q $(pg_uri_db); {{#sql_view}}psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_$(tabname) AS {{{.}}}" | psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','{}','$(layername)','vw{{file}}_$(tabname)','{{fullPkID}}','$(part{{file}}_file)',array[]::text[])" | psql $(pg_uri_db) -c "DROP VIEW vw{{file}}_$(tabname)"{{/sql_view}}{{^sql_view}}psql $(pg_uri_db) -c \"SELECT ingest.any_load('{{method}}','{}','$(layername)','$(tabname)','{{fullPkID}}','$(part{{file}}_file)',array{{{sql_select}}})\"{{/sql_view}}; chmod -R a+rx . 2> /dev/null" \;
+	cd $(sandbox); find $(sandbox) -iname "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" -exec sh -c "psql $(pg_uri_db) -c 'DROP TABLE IF EXISTS {{tabname}}'; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' {{tabname}} | psql -q $(pg_uri_db); {{#sql_view}}psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}" | psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','{}','{{layername}}','vw{{file}}_{{tabname}}','{{fullPkID}}','{{sha256file}}',array[]::text[])" | psql $(pg_uri_db) -c "DROP VIEW vw{{file}}_{{tabname}}"{{/sql_view}}{{^sql_view}}psql $(pg_uri_db) -c \"SELECT ingest.any_load('{{method}}','{}','{{layername}}','{{tabname}}','{{fullPkID}}','{{sha256file}}',array{{{sql_select}}})\"{{/sql_view}}; chmod -R a+rx . 2> /dev/null" \;
 	@echo "Confira os resultados nas tabelas ingest.donated_packcomponent e ingest.feature_asis".
 {{/multiple_files_array}}
 {{/multiple_files}}
 {{^multiple_files}}
-	cd $(sandbox); shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} "{{orig_filename}}.shp" $(tabname) | psql -q $(pg_uri_db) 2> /dev/null
+	cd $(sandbox); shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} "{{orig_filename}}.shp" {{tabname}} | psql -q $(pg_uri_db) 2> /dev/null
 {{/multiple_files}}
 {{/isShp}}
 {{#isCsv}}
@@ -36,20 +36,20 @@
 {{/charset}}
 	@echo Executando csv2sql ...
 {{#charset}}
-	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.unix_utf8.csv', '$(tabname)'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.unix_utf8.csv', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
 {{/charset}}
 {{/isXlsx}}
 {{^charset}}
-	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.csv', '$(tabname)'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.csv', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
 {{/charset}}
 {{/isCsv}}
 {{#isOgr}}
 	@echo Executando ogr2ogr ...
-	docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " "/tmp/{{orig_filename}}{{orig_ext}}" {{{orig_tabname}}} -nln $(tabname)
+	docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " "/tmp/{{orig_filename}}{{orig_ext}}" {{{orig_tabname}}} -nln {{tabname}}
 {{/isOgr}}
 {{#isOgrWithShp}}
 	@echo Executando ogr2ogr ...
-	docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " /tmp/{{{orig_tabname}}} {{{orig_tabname}}} -nln $(tabname)
+	docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " /tmp/{{{orig_tabname}}} {{{orig_tabname}}} -nln {{tabname}}
 {{/isOgrWithShp}}
 {{#isOsm}}
 	@echo Executando osm2sql ...

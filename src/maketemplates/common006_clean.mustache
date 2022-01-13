@@ -1,0 +1,9 @@
+{{#multiple_files_array}}
+	rm -f "$(sandbox)/*{{name_item}}.*" || true
+{{/multiple_files_array}}
+{{^multiple_files_array}}
+	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
+{{/multiple_files_array}}
+{{^isOsm}}
+	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS {{tabname}} CASCADE"
+{{/isOsm}}

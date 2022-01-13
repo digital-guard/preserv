@@ -9,28 +9,17 @@ srid   ={{srid}}
 pg_io  ={{pg_io}}
 orig   ={{orig}}
 pg_uri ={{pg_uri}}
+pg_db  ={{pg_db}}
 sandbox_root={{sandbox}}
 need_commands= 7z v16+; psql v12+; shp2pgsql v3+; {{need_extra_commands}}
 
 pack_id = {{pack_id}}
-# fullPkID={{pack_id}}_{{pkversion}}
 sandbox=$(sandbox_root)/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
-
-## USER CONFIGS
-pg_db  ={{pg_db}}
-
-## ## ## ## ## ## ##
-## THIS_MAKE, _pk{{pack_id}}
-
-{{#files}}
-part{{p}}_file  ={{file}}
-part{{p}}_name  ={{name}}
-{{/files}}
 
 ## COMPOSED VARS
 pg_uri_db   =$(pg_uri)/$(pg_db)
 {{#files}}
-part{{p}}_path  =$(orig)/$(part{{p}}_file)
+part{{p}}_path  =$(orig)/{{file}}
 {{/files}}
 
 all:
@@ -55,221 +44,144 @@ all_joins: {{#joins_keys}}join-{{.}} {{/joins_keys}}
 ## Sponsored by Project AddressForAll
 {{#layers}}
 {{#address}}
-address: layername = address_{{subtype}}
-address: tabname = pk{{fullPkID}}_p{{file}}_address
+address: tabname = {{tabname}}
 address: makedirs $(part{{file}}_path)
-	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "address" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
-	@echo FIM.
+{{>common007_layerFooter}}
 
-address-clean: tabname = pk{{fullPkID}}_p{{file}}_address
 address-clean:
-{{#multiple_files_array}}
-	rm -f "$(sandbox)/*{{name_item}}.*" || true
-{{/multiple_files_array}}
-{{^multiple_files_array}}
-	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
-{{/multiple_files_array}}
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
+{{>common006_clean}}
 {{/address}}
 
 {{#block}}
-block: layername = block_{{subtype}}
-block: tabname = pk{{fullPkID}}_p{{file}}_block
+block: tabname = {{tabname}}
 block: makedirs $(part{{file}}_path)
-	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "block" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
-	@echo FIM.
+{{>common007_layerFooter}}
 
-block-clean: tabname = pk{{fullPkID}}_p{{file}}_block
 block-clean:
-{{#multiple_files_array}}
-	rm -f "$(sandbox)/*{{name_item}}.*" || true
-{{/multiple_files_array}}
-{{^multiple_files_array}}
-	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
-{{/multiple_files_array}}
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
+{{>common006_clean}}
 {{/block}}
 
 {{#building}}
-building: layername = building_{{subtype}}
-building: tabname = pk{{fullPkID}}_p{{file}}_building
+building: tabname = {{tabname}}
 building: makedirs $(part{{file}}_path)
-	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "building" datatype (point with house_number but no via name)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
-	@echo FIM.
+{{>common007_layerFooter}}
 
-building-clean: tabname = pk{{fullPkID}}_p{{file}}_building
 building-clean:
-{{#multiple_files_array}}
-	rm -f "$(sandbox)/*{{name_item}}.*" || true
-{{/multiple_files_array}}
-{{^multiple_files_array}}
-	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
-{{/multiple_files_array}}
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
+{{>common006_clean}}
 {{/building}}
 
 {{#cadparcel}}
-cadparcel: layername = cadparcel_{{subtype}}
-cadparcel: tabname = pk{{fullPkID}}_p{{file}}_cadparcel
+cadparcel: tabname = {{tabname}}
 cadparcel: makedirs $(part{{file}}_path)
-	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "cadparcel" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
-	@echo FIM.
+{{>common007_layerFooter}}
 
-cadparcel-clean: tabname = pk{{fullPkID}}_p{{file}}_cadparcel
 cadparcel-clean:
-{{#multiple_files_array}}
-	rm -f "$(sandbox)/*{{name_item}}.*" || true
-{{/multiple_files_array}}
-{{^multiple_files_array}}
-	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
-{{/multiple_files_array}}
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
+{{>common006_clean}}
 {{/cadparcel}}
 
 {{#cadvia}}
-cadvia: layername = cadvia_{{subtype}}
-cadvia: tabname = pk{{fullPkID}}_p{{file}}_cadvia
+cadvia: tabname = {{tabname}}
 cadvia: makedirs $(part{{file}}_path)
-	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "cadvia" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
-	@echo FIM.
+{{>common007_layerFooter}}
 
-cadvia-clean: tabname = pk{{fullPkID}}_p{{file}}_cadvia
 cadvia-clean:
-{{#multiple_files_array}}
-	rm -f "$(sandbox)/*{{name_item}}.*" || true
-{{/multiple_files_array}}
-{{^multiple_files_array}}
-	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
-{{/multiple_files_array}}
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
+{{>common006_clean}}
 {{/cadvia}}
 
 {{#genericvia}}
-genericvia: layername = genericvia_{{subtype}}
-genericvia: tabname = pk{{fullPkID}}_p{{file}}_genericvia
+genericvia: tabname = {{tabname}}
 genericvia: makedirs $(part{{file}}_path)
-	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "genericvia" datatype (zone with name)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
-	@echo FIM.
+{{>common007_layerFooter}}
 
-genericvia-clean: tabname = pk{{fullPkID}}_p{{file}}_genericvia
 genericvia-clean:
-{{#multiple_files_array}}
-	rm -f "$(sandbox)/*{{name_item}}.*" || true
-{{/multiple_files_array}}
-{{^multiple_files_array}}
-	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
-{{/multiple_files_array}}
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE;  DROP VIEW IF EXISTS vw_$(tabname) CASCADE;"
+{{>common006_clean}}
 {{/genericvia}}
 
 {{#geoaddress}}
-geoaddress: layername = geoaddress_{{subtype}}
-geoaddress: tabname = pk{{fullPkID}}_p{{file}}_geoaddress
+geoaddress: tabname = {{tabname}}
 geoaddress: makedirs $(part{{file}}_path)
-	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "geoaddress" datatype (point with house_number but no via name)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
-	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_$(tabname) AS SELECT way, tags - ARRAY['addr:housenumber','addr:street'] || jsonb_objslice(ARRAY['addr:housenumber','addr:street'], tags, ARRAY['house_number','via_name']) AS tags FROM jplanet_osm_point WHERE tags ?| ARRAY['addr:housenumber','addr:street'] "
+	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, tags - ARRAY['addr:housenumber','addr:street'] || jsonb_objslice(ARRAY['addr:housenumber','addr:street'], tags, ARRAY['house_number','via_name']) AS tags FROM jplanet_osm_point WHERE tags ?| ARRAY['addr:housenumber','addr:street'] "
 {{/isOsm}}
 {{>common001_pgAny_load}}
-	@echo FIM.
+{{>common007_layerFooter}}
 
-geoaddress-clean: tabname = pk{{fullPkID}}_p{{file}}_geoaddress
 geoaddress-clean:
-{{#multiple_files_array}}
-	rm -f "$(sandbox)/*{{name_item}}.*" || true
-{{/multiple_files_array}}
-{{^multiple_files_array}}
-	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
-{{/multiple_files_array}}
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
+{{>common006_clean}}
 {{/geoaddress}}
 
 {{#nsvia}}
-nsvia: layername = nsvia_{{subtype}}
-nsvia: tabname = pk{{fullPkID}}_p{{file}}_nsvia
+nsvia: tabname = {{tabname}}
 nsvia: makedirs $(part{{file}}_path)
-	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "nsvia" datatype (zone with name)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
-	@echo FIM.
+{{>common007_layerFooter}}
 
-nsvia-clean: tabname = pk{{fullPkID}}_p{{file}}_nsvia
 nsvia-clean:
-{{#multiple_files_array}}
-	rm -f "$(sandbox)/*{{name_item}}.*" || true
-{{/multiple_files_array}}
-{{^multiple_files_array}}
-	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
-{{/multiple_files_array}}
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE;  DROP VIEW IF EXISTS vw_$(tabname) CASCADE;"
+{{>common006_clean}}
 {{/nsvia}}
 
 {{#parcel}}
-parcel: layername = parcel_{{subtype}}
-parcel: tabname = pk{{fullPkID}}_p{{file}}_parcel
+parcel: tabname = {{tabname}}
 parcel: makedirs $(part{{file}}_path)
-	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "parcel" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
-	@echo FIM.
+{{>common007_layerFooter}}
 
-parcel-clean: tabname = pk{{fullPkID}}_p{{file}}_parcel
 parcel-clean:
-{{#multiple_files_array}}
-	rm -f "$(sandbox)/*{{name_item}}.*" || true
-{{/multiple_files_array}}
-{{^multiple_files_array}}
-	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
-{{/multiple_files_array}}
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
+{{>common006_clean}}
 {{/parcel}}
 
 {{#via}}
-via: layername = via_{{subtype}}
-via: tabname = pk{{fullPkID}}_p{{file}}_via
+via: tabname = {{tabname}}
 via: makedirs $(part{{file}}_path)
-	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "via" datatype (street axes)
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
-	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_$(tabname) AS SELECT way, tags FROM jplanet_osm_roads WHERE tags->>'highway' IN ('residential','unclassified','tertiary','secondary','primary','trunk','motorway') "
+	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, tags FROM jplanet_osm_roads WHERE tags->>'highway' IN ('residential','unclassified','tertiary','secondary','primary','trunk','motorway') "
 {{/isOsm}}
 {{>common001_pgAny_load}}
-	@echo FIM.
+{{>common007_layerFooter}}
 
-via-clean: tabname = pk{{fullPkID}}_p{{file}}_via
 via-clean:
-{{#multiple_files_array}}
-	rm -f "$(sandbox)/*{{name_item}}.*" || true
-{{/multiple_files_array}}
-{{^multiple_files_array}}
-	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
-{{/multiple_files_array}}
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS $(tabname) CASCADE"
+{{>common006_clean}}
 {{/via}}
 {{/layers}}
+
+{{#openstreetmap}}
+openstreetmap: makedirs $(part{{file}}_path)
+	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "openstreetmap" data
+	cd $(sandbox);  cp  $(part{{file}}_path) . ; chmod -R a+rx . > /dev/null
+	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/{{sha256file}}
+	@echo "Convertendo hstore para jsonb"
+	psql $(pg_uri_db) < /var/gits/_dg/preserv/src/osm_hstore2jsonb.sql
+{{>common007_layerFooter}}
+
+openstreetmap-clean:
+{{>common006_clean}}
+{{/openstreetmap}}
 
 ## ## ## ## ## ## ## ## ##
 ## ## ## ## ## ## ## ## ##
@@ -296,18 +208,6 @@ join-parcel:
 {{/parcel}}
 {{/joins}}
 
-{{#openstreetmap}}
-openstreetmap: makedirs $(part{{file}}_path)
-	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "openstreetmap" data
-	cd $(sandbox);  cp  $(part{{file}}_path) . ; chmod -R a+rx . > /dev/null
-	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/$(part{{file}}_file)
-	@echo "Convertendo hstore para jsonb"
-	psql $(pg_uri_db) < /var/gits/_dg/preserv/src/osm_hstore2jsonb.sql
-	@echo FIM.
-
-openstreetmap-clean:
-	rm -f "$(sandbox)/*{{orig_filename}}.*" || true
-{{/openstreetmap}}
 
 makedirs: clean_sandbox
 	@mkdir -m 777 -p $(sandbox_root)
