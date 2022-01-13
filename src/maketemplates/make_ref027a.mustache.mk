@@ -11,16 +11,12 @@ orig   ={{orig}}
 pg_uri ={{pg_uri}}
 pg_db  ={{pg_db}}
 sandbox_root={{sandbox}}
-need_commands= 7z v16+; psql v12+; shp2pgsql v3+; {{need_extra_commands}}
-
-pack_id = {{pack_id}}
 sandbox=$(sandbox_root)/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+need_commands= 7z v16+; psql v12+; shp2pgsql v3+; {{need_extra_commands}}
 
 ## COMPOSED VARS
 pg_uri_db   =$(pg_uri)/$(pg_db)
-{{#files}}
-part{{p}}_path  =$(orig)/{{file}}
-{{/files}}
+
 
 all:
 	@echo "=== Resumo deste makefile de recuperação de dados preservados ==="
@@ -39,13 +35,12 @@ all_joins: {{#joins_keys}}join-{{.}} {{/joins_keys}}
 {{/joins}}
 
 ## ## ## ## ## ## ## ## ##
-## ## ## ## ## ## ## ## ##
 ## Make targets of the Project Digital Preservation
 ## Sponsored by Project AddressForAll
 {{#layers}}
 {{#address}}
 address: tabname = {{tabname}}
-address: makedirs $(part{{file}}_path)
+address: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -57,7 +52,7 @@ address-clean:
 
 {{#block}}
 block: tabname = {{tabname}}
-block: makedirs $(part{{file}}_path)
+block: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -69,7 +64,7 @@ block-clean:
 
 {{#building}}
 building: tabname = {{tabname}}
-building: makedirs $(part{{file}}_path)
+building: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -81,7 +76,7 @@ building-clean:
 
 {{#cadparcel}}
 cadparcel: tabname = {{tabname}}
-cadparcel: makedirs $(part{{file}}_path)
+cadparcel: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -93,7 +88,7 @@ cadparcel-clean:
 
 {{#cadvia}}
 cadvia: tabname = {{tabname}}
-cadvia: makedirs $(part{{file}}_path)
+cadvia: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -105,7 +100,7 @@ cadvia-clean:
 
 {{#genericvia}}
 genericvia: tabname = {{tabname}}
-genericvia: makedirs $(part{{file}}_path)
+genericvia: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -117,7 +112,7 @@ genericvia-clean:
 
 {{#geoaddress}}
 geoaddress: tabname = {{tabname}}
-geoaddress: makedirs $(part{{file}}_path)
+geoaddress: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
@@ -132,7 +127,7 @@ geoaddress-clean:
 
 {{#nsvia}}
 nsvia: tabname = {{tabname}}
-nsvia: makedirs $(part{{file}}_path)
+nsvia: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -144,7 +139,7 @@ nsvia-clean:
 
 {{#parcel}}
 parcel: tabname = {{tabname}}
-parcel: makedirs $(part{{file}}_path)
+parcel: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -156,7 +151,7 @@ parcel-clean:
 
 {{#via}}
 via: tabname = {{tabname}}
-via: makedirs $(part{{file}}_path)
+via: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
@@ -171,9 +166,9 @@ via-clean:
 {{/layers}}
 
 {{#openstreetmap}}
-openstreetmap: makedirs $(part{{file}}_path)
+openstreetmap: makedirs $(orig)/{{sha256file}}
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "openstreetmap" data
-	cd $(sandbox);  cp  $(part{{file}}_path) . ; chmod -R a+rx . > /dev/null
+	cd $(sandbox);  cp  $(orig)/{{sha256file}} . ; chmod -R a+rx . > /dev/null
 	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/{{sha256file}}
 	@echo "Convertendo hstore para jsonb"
 	psql $(pg_uri_db) < /var/gits/_dg/preserv/src/osm_hstore2jsonb.sql
@@ -182,9 +177,6 @@ openstreetmap: makedirs $(part{{file}}_path)
 openstreetmap-clean:
 {{>common006_clean}}
 {{/openstreetmap}}
-
-## ## ## ## ## ## ## ## ##
-## ## ## ## ## ## ## ## ##
 
 {{#joins}}
 {{#genericvia}}
@@ -209,6 +201,8 @@ join-parcel:
 {{/joins}}
 
 
+## ## ## ## ## ## ## ## ##
+
 makedirs: clean_sandbox
 	@mkdir -m 777 -p $(sandbox_root)
 	@mkdir -m 777 -p $(sandbox)
@@ -224,7 +218,7 @@ wget_files:
 {{/files}}
 	@echo "Please, if orig not default, run 'make _target_ orig=$(orig)'"
 
-## ## ## ##
+## ## ## ## ## ## ## ## ##
 
 clean_sandbox:
 	@rm -rf $(sandbox) || true
