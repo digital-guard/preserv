@@ -1066,7 +1066,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p1(
   ;
   SELECT 'p1';
 $f$ language SQL VOLATILE; --fim p1
-  
+
 CREATE or replace FUNCTION ingest.publicating_geojsons_p2(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
@@ -1078,7 +1078,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p2(
   ;
   SELECT 'p2';
 $f$ language SQL VOLATILE; --fim p2
-  
+
 CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
@@ -1113,6 +1113,12 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
   ) t4
   WHERE t4.gid = publicating_geojsons_p3exprefix.gid
   ;
+  
+  UPDATE ingest.donated_PackComponent
+  SET feature_distrib = (SELECT jsonb_object_agg(hcode, n_items) FROM ingest.publicating_geojsons_p2distrib)
+  WHERE id= p_file_id
+  ;
+
   DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
   SELECT 'p3';
 $f$ language SQL VOLATILE; --fim p3
@@ -1150,9 +1156,8 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
   SELECT 'fim';
 $f$ language SQL VOLATILE; -- need be a sequential PLpgSQL to neatly COMMIT?
 -- Ver id em ingest.donated_PackComponent
--- SELECT ingest.publicating_geojsons(1,'BR-RS-SantaMaria','/tmp/pg_io');
--- SELECT ingest.publicating_geojsons(2,'BR-MG-BeloHorizonte','/tmp/pg_io');
--- SELECT ingest.publicating_geojsons(Z,'BR-RJ-Niteroi','/tmp/pg_io');
+-- SELECT ingest.publicating_geojsons(X,'BR-MG-BeloHorizonte','/tmp/pg_io');
+
 
 --------------------
 --------------------
