@@ -111,7 +111,7 @@ publicating_geojsons: #id=id isolabel=isolabel_ext nmfolder=folder nmview=name
 	mkdir -m777 -p $(pg_io)/$(nmfolder)
 	psql $(pg_uringest) -c "DROP VIEW IF EXISTS $(nmview); SELECT ingest.publicating_geojsons($(id),'$(isolabel)','$(pg_io)/$(nmfolder)');"
 	psql $(pg_uringest) -c "CREATE VIEW $(nmview) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT feature_distrib from ingest.donated_packcomponent WHERE id=$(id)), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
-	psql $(pg_uringest) -c "SELECT write_geojsonb_features('$(nmview)','$(pg_io)/$(nmfolder)/geohahes.geojson', 't1.geom', 'ghs,info', NULL, NULL, 2, 5);"
+	psql $(pg_uringest) -c "SELECT write_geojsonb_features('$(nmview)','$(pg_io)/$(nmfolder)/geohahes.geojson', 't1.geom', 'ghs,info->>''val'' AS val, info->>''lghs'' AS lghs, info->>''val_density_km2'' AS val_density_km2', NULL, NULL, 2, 5);"
 
 
 ## ## ## ## ##
