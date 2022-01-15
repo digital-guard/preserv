@@ -90,7 +90,7 @@ CREATE TABLE optim.donated_PackFileVers(
   ,UNIQUE(pack_id,pack_item,pack_item_accepted_date)
   ,UNIQUE(pack_id,pack_item,kx_pack_item_version) -- revisar se precisa.
 );
-9223372036854775807
+
 ------------------------
 
 CREATE TABLE optim.feature_type (  -- replacing old optim.origin_content_type
