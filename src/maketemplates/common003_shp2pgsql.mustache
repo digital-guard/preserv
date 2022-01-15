@@ -45,7 +45,7 @@
 {{/isCsv}}
 {{#isOgr}}
 	@echo Executando ogr2ogr ...
-	docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " "/tmp/{{orig_filename}}{{orig_ext}}" {{{orig_tabname}}} -nln {{tabname}}
+	docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " "/tmp/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}" {{{orig_tabname}}} -nln {{tabname}}
 {{/isOgr}}
 {{#isOgrWithShp}}
 	@echo Executando ogr2ogr ...
