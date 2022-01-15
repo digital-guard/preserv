@@ -1,38 +1,38 @@
-CREATE SCHEMA    IF NOT EXISTS optim;
-CREATE SCHEMA    IF NOT EXISTS tmp_orig;
+--CREATE SCHEMA    IF NOT EXISTS optim;
+--CREATE SCHEMA    IF NOT EXISTS tmp_orig;
 
-CREATE EXTENSION IF NOT EXISTS file_fdw;
-CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;
+--CREATE EXTENSION IF NOT EXISTS file_fdw;
+--CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;
 
 ------------------------
 
-CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
-  -- need a view vw01current_jurisdiction to avoid the lost of non-current.
-  -- https://schema.org/AdministrativeArea or https://schema.org/jurisdiction ?
-  -- OSM use AdminLevel, etc. but LexML uses Jurisdiction.
-  osm_id bigint PRIMARY KEY,    -- official or adapted geometry. AdministrativeArea.
-  jurisd_base_id int NOT NULL,  -- ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans)
-  jurisd_local_id int   NOT NULL, -- numeric official ID like IBGE_ID of BR jurisdiction.
-  -- for example BR's ACRE is 12 and its cities are {1200013, 1200054,etc}.
-  parent_id bigint REFERENCES optim.jurisdiction(osm_id), -- null for INT.
-  admin_level smallint NOT NULL CHECK(admin_level>0 AND admin_level<100), -- 2=country (e.g. BR), at BR: 4=UFs, 8=municipios.
-  name    text  NOT NULL CHECK(length(name)<60), -- city name for admin_level=8.
-  parent_abbrev   text  NOT NULL, -- state is admin-level2, country level1
-  abbrev text  CHECK(length(abbrev)>=2 AND length(abbrev)<=5), -- ISO and other abbreviations
-  wikidata_id  bigint,  --  from '^Q\d+'
-  lexlabel     text NOT NULL,  -- cache from name; e.g. 'sao.paulo'.
-  isolabel_ext text NOT NULL,  -- cache from parent_abbrev (ISO) and name (camel case); e.g. 'BR-SP-SaoPaulo'.
-  ddd          integer, -- Direct distance dialing
-  housenumber_system_type text, -- housenumber system
-  lex_urn text, -- housenumber system law
-  info JSONb -- creation, extinction, postalCode_ranges, notes, etc.
-  ,UNIQUE(isolabel_ext)
-  ,UNIQUE(wikidata_id)
-  ,UNIQUE(jurisd_base_id,jurisd_local_id)
-  ,UNIQUE(jurisd_base_id,parent_abbrev,name) -- parent-abbrev é null ou cumulativo
-  ,UNIQUE(jurisd_base_id,parent_abbrev,lexlabel)
-  ,UNIQUE(jurisd_base_id,parent_abbrev,abbrev)
-);
+--CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
+  ---- need a view vw01current_jurisdiction to avoid the lost of non-current.
+  ---- https://schema.org/AdministrativeArea or https://schema.org/jurisdiction ?
+  ---- OSM use AdminLevel, etc. but LexML uses Jurisdiction.
+  --osm_id bigint PRIMARY KEY,    -- official or adapted geometry. AdministrativeArea.
+  --jurisd_base_id int NOT NULL,  -- ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans)
+  --jurisd_local_id int   NOT NULL, -- numeric official ID like IBGE_ID of BR jurisdiction.
+  ---- for example BR's ACRE is 12 and its cities are {1200013, 1200054,etc}.
+  --parent_id bigint REFERENCES optim.jurisdiction(osm_id), -- null for INT.
+  --admin_level smallint NOT NULL CHECK(admin_level>0 AND admin_level<100), -- 2=country (e.g. BR), at BR: 4=UFs, 8=municipios.
+  --name    text  NOT NULL CHECK(length(name)<60), -- city name for admin_level=8.
+  --parent_abbrev   text  NOT NULL, -- state is admin-level2, country level1
+  --abbrev text  CHECK(length(abbrev)>=2 AND length(abbrev)<=5), -- ISO and other abbreviations
+  --wikidata_id  bigint,  --  from '^Q\d+'
+  --lexlabel     text NOT NULL,  -- cache from name; e.g. 'sao.paulo'.
+  --isolabel_ext text NOT NULL,  -- cache from parent_abbrev (ISO) and name (camel case); e.g. 'BR-SP-SaoPaulo'.
+  --ddd          integer, -- Direct distance dialing
+  --housenumber_system_type text, -- housenumber system
+  --lex_urn text, -- housenumber system law
+  --info JSONb -- creation, extinction, postalCode_ranges, notes, etc.
+  --,UNIQUE(isolabel_ext)
+  --,UNIQUE(wikidata_id)
+  --,UNIQUE(jurisd_base_id,jurisd_local_id)
+  --,UNIQUE(jurisd_base_id,parent_abbrev,name) -- parent-abbrev é null ou cumulativo
+  --,UNIQUE(jurisd_base_id,parent_abbrev,lexlabel)
+  --,UNIQUE(jurisd_base_id,parent_abbrev,abbrev)
+--);
 
 CREATE TABLE optim.auth_user (
   -- authorized users to be a datapack responsible and eclusa-FTP manager
@@ -45,7 +45,8 @@ CREATE TABLE optim.donor (
   id integer NOT NULL PRIMARY KEY CHECK (id = country_id*1000000+local_serial),  -- by trigger!
   country_id int NOT NULL CHECK(country_id>0), -- ISO
   local_serial  int NOT NULL CHECK(local_serial>0), -- byu contry
-  scope text, -- city code or country code
+  scope_osm_id bigint NOT NULL REFERENCES optim.jurisdiction(osm_id),
+  kx_scope_label text, -- city code or country code
   shortname text, -- abreviation or acronym (local)
   vat_id text,    -- in the Brazilian case is "CNPJ:number"
   legalName text NOT NULL, -- in the Brazilian case is Razao Social
@@ -56,7 +57,7 @@ CREATE TABLE optim.donor (
   UNIQUE(country_id,local_serial),
   UNIQUE(country_id,kx_vat_id),
   UNIQUE(country_id,legalName),
-  UNIQUE(country_id,scope,shortname)
+  UNIQUE(country_id,kx_scope_label,shortname)
 );
 
 CREATE TABLE optim.donated_PackTpl(
@@ -74,7 +75,7 @@ CREATE TABLE optim.donated_PackTpl(
 
 CREATE TABLE optim.donated_PackFileVers(
   -- armazena histórico de versões, requer VIEW contendo apenas registros de MAX(pack_item_accepted_date).
-  id bigint NOT NULL PRIMARY KEY  CHECK(id=pack_id*1000000000+pack_item*100+kx_pack_item_version),  -- by trigger!
+  id bigint NOT NULL PRIMARY KEY  CHECK(id=pack_id*1000+pack_item*100+kx_pack_item_version),  -- by trigger!
   hashedfname text NOT NULL  CHECK( hashedfname ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
   pack_id bigint NOT NULL REFERENCES optim.donated_PackTpl(id),
   pack_item int NOT NULL DEFAULT 1, --  um dos make_conf_tpl->files->file de pack_id
@@ -89,7 +90,7 @@ CREATE TABLE optim.donated_PackFileVers(
   ,UNIQUE(pack_id,pack_item,pack_item_accepted_date)
   ,UNIQUE(pack_id,pack_item,kx_pack_item_version) -- revisar se precisa.
 );
-
+9223372036854775807
 ------------------------
 
 CREATE TABLE optim.feature_type (  -- replacing old optim.origin_content_type
@@ -220,7 +221,7 @@ DECLARE
 BEGIN
   p_kx_pack_item_version := (SELECT MAX(kx_pack_item_version)+1 FROM optim.donated_PackFileVers WHERE pack_id = NEW.pack_id AND pack_item = NEW.pack_item);
   NEW.kx_pack_item_version = CASE WHEN p_kx_pack_item_version IS NULL THEN 1 ELSE p_kx_pack_item_version END; 
-  NEW.id = NEW.pack_id*1000000000 + NEW.pack_item*100 + NEW.kx_pack_item_version;
+  NEW.id = NEW.pack_id*1000 + NEW.pack_item*100 + NEW.kx_pack_item_version;
 	RETURN NEW;
 END;
 $f$ LANGUAGE PLpgSQL;
@@ -244,7 +245,7 @@ CREATE TRIGGER check_kx_num_files
 -- funções fdw_generate2 e fdw_generate_getclone2 não inserem aspas duplas quando p_addtxtype=false
 CREATE or replace FUNCTION optim.fdw_generate2(
   p_name text,  -- table name and CSV input filename
-  p_context text DEFAULT 'br',  -- or null
+  p_jurisdiction text DEFAULT 'br',  -- or null
   p_schemaname text DEFAULT 'optim',
   p_columns text[] DEFAULT NULL, -- mais importante! nao poderia ser null
   p_addtxtype boolean DEFAULT false,  -- add " text"
@@ -254,18 +255,12 @@ CREATE or replace FUNCTION optim.fdw_generate2(
 ) RETURNS text  AS $f$
 DECLARE
  fdwname text;
- fpath text;
  f text;
  sepcols text;
 BEGIN
-  -- usar ingest.fdw_csv_paths!
- fpath := COALESCE(p_path,'/tmp/pg_io'); -- /tmp/pg_io/digital-preservation-XX
- f := concat(fpath,'/', iIF(p_context IS NULL,''::text,p_context||'-'), p_name, '.csv');
- p_context := iIF(p_context IS NULL, ''::text, '_'|| p_context);
- fdwname := 'tmp_orig.fdw_'|| iIF(p_schemaname='optim', ''::text, p_schemaname||'_') || p_name || p_context;
- -- poderia otimizar por chamada (alter table option filename), porém não é paralelizável.
+ f := concat( COALESCE(p_path,'/var/gits/_dg'), '/preserv', iIF(p_jurisdiction='INT', '', '-' || UPPER(p_jurisdiction)), '/data/', p_name, '.csv');
+ fdwname := 'tmp_orig.fdw_'|| iIF(p_schemaname='optim', ''::text, p_schemaname || '_') || p_name || p_jurisdiction;
  sepcols := iIF(p_addtxtype, '" text,"'::text, ','::text);
- -- if delimiter = tab, format = tsv
  EXECUTE
     format(
       'DROP FOREIGN TABLE IF EXISTS %s; CREATE FOREIGN TABLE %s    (%s%s%s)',
@@ -284,7 +279,7 @@ COMMENT ON FUNCTION optim.fdw_generate2
 CREATE or replace FUNCTION optim.fdw_generate_getclone2(
   -- foreign-data wrapper generator
   p_tablename text,  -- cloned-table name
-  p_context text DEFAULT 'br',  -- or null
+  p_jurisdiction text DEFAULT 'br',  -- or null
   p_schemaname text DEFAULT 'optim',
   p_ignore text[] DEFAULT NULL, -- colunms to be ignored.
   p_add text[] DEFAULT NULL, -- colunms to be added.
@@ -304,11 +299,8 @@ COMMENT ON FUNCTION optim.fdw_generate_getclone2
 CREATE or replace FUNCTION optim.load_donor_pack(
     jurisdiction text
 ) RETURNS text AS $f$
-DECLARE
-  p_path text;
 BEGIN
-  p_path := '/var/gits/_dg/preserv' || iIF(jurisdiction='INT', '', '-' || UPPER(jurisdiction)) || '/data';
-  RETURN (SELECT optim.fdw_generate_getclone2('donor', null, 'optim', array['id','country_id', 'info', 'kx_vat_id'], null, p_path)) || (SELECT optim.fdw_generate2('donatedPack', null, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'donor_label text', 'user_resp text', 'accepted_date date', 'escopo text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,p_path));
+  RETURN (SELECT optim.fdw_generate_getclone2('donor', jurisdiction, 'optim', array['id','country_id', 'info', 'kx_vat_id'], null, null)) || (SELECT optim.fdw_generate2('donatedPack', jurisdiction, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'donor_label text', 'user_resp text', 'accepted_date date', 'escopo text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,null));
 END;
 $f$ LANGUAGE PLpgSQL;
 
@@ -319,72 +311,50 @@ END;
 $f$ LANGUAGE PLpgSQL;
 --SELECT optim.replace_file_and_version(pg_read_file('/var/gits/_dg/preserv-BR/data/RS/SantaMaria/_pk0019.01/make_conf.yaml'));
 
-CREATE or replace FUNCTION optim.insert_donor_pack() RETURNS text AS $f$
+CREATE or replace FUNCTION optim.insert_donor_pack(
+    jurisdiction text
+) RETURNS text AS $f$
+DECLARE
+  q text;
+  ret text;
 BEGIN
+  q := $$
     -- popula optim.donor a partir de tmp_orig.fdw_donor
-    INSERT INTO optim.donor (country_id,local_serial, scope, shortname, vat_id, legalname, wikidata_id, url)
-    SELECT (SELECT jurisd_base_id FROM optim.jurisdiction WHERE isolabel_ext = split_part(scope,'-', 1)) AS country_id, tmp_orig.fdw_donor.*
-    FROM tmp_orig.fdw_donor
-    WHERE scope <> 'INT' -- verificar escopo INT
+    INSERT INTO optim.donor (country_id, local_serial, scope_osm_id, kx_scope_label, shortname, vat_id, legalname, wikidata_id, url)
+    SELECT (SELECT jurisd_base_id FROM optim.jurisdiction WHERE osm_id = scope_osm_id) AS country_id, tmp_orig.fdw_donor%s.*
+    FROM tmp_orig.fdw_donor%s
+    WHERE kx_scope_label <> 'INT' -- verificar escopo INT
     ON CONFLICT (country_id,local_serial)
     DO UPDATE 
-    SET scope=EXCLUDED.scope, shortName=EXCLUDED.shortName, vat_id=EXCLUDED.vat_id, legalName=EXCLUDED.legalName, wikidata_id=EXCLUDED.wikidata_id, url=EXCLUDED.url;
+    SET scope_osm_id=EXCLUDED.scope_osm_id, kx_scope_label=EXCLUDED.kx_scope_label, shortName=EXCLUDED.shortName, vat_id=EXCLUDED.vat_id, legalName=EXCLUDED.legalName, wikidata_id=EXCLUDED.wikidata_id, url=EXCLUDED.url;
+  $$;
+ 
+  EXECUTE format( q, jurisdiction, jurisdiction) ;
 
+  q := $$
     -- popula optim.donated_PackTpl a partir de tmp_orig.fdw_donatedPack
     INSERT INTO optim.donated_PackTpl (donor_id, user_resp, pk_count, original_tpl, make_conf_tpl)
-    SELECT (SELECT jurisd_base_id*1000000+donor_id FROM optim.jurisdiction WHERE isolabel_ext = split_part(escopo, '-', 1)), lower(user_resp), 1, optim.replace_file_and_version(pg_read_file('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml')), yamlfile_to_jsonb('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml') as make_conf_tpl
-    FROM tmp_orig.fdw_donatedpack
-    WHERE file_exists('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-',$$/$$) || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml') -- verificar make_conf.yaml ausentes
+    SELECT (SELECT jurisd_base_id*1000000+donor_id FROM optim.jurisdiction WHERE osm_id = (SELECT scope_osm_id FROM optim.donor WHERE donor_id = local_serial AND country_id = (SELECT jurisd_base_id FROM optim.jurisdiction WHERE admin_level = 2 AND lower(abbrev) = lower('%s'))) ), lower(user_resp), 1, optim.replace_file_and_version(pg_read_file('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-','/') || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml')), yamlfile_to_jsonb('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-','/') || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml') as make_conf_tpl
+    FROM tmp_orig.fdw_donatedpack%s
+    WHERE file_exists('/var/gits/_dg/preserv-'|| replace(regexp_replace(escopo, '-', '/data/'),'-','/') || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml') -- verificar make_conf.yaml ausentes
     ON CONFLICT (donor_id,pk_count)
     DO UPDATE 
     SET original_tpl=EXCLUDED.original_tpl, make_conf_tpl=EXCLUDED.make_conf_tpl, kx_num_files=EXCLUDED.kx_num_files;
+  $$;
 
+  EXECUTE format( q, jurisdiction, jurisdiction) ;
+
+  q := $$
     -- popula optim.donated_PackFileVers a partir de optim.donated_PackTpl
     -- falta pack_item_accepted_date
     INSERT INTO optim.donated_PackFileVers (hashedfname, pack_id, pack_item, pack_item_accepted_date, user_resp)
     SELECT j->>'file'::text AS hashedfname, pack_id , (j->>'p')::int AS pack_item, '1970-01-01'::date, lower(user_resp::text)
-    FROM (SELECT id AS pack_id, user_resp, jsonb_array_elements(make_conf_tpl->'files')::jsonb AS j FROM optim.donated_packtpl) AS t 
+    FROM (SELECT id AS pack_id, user_resp, jsonb_array_elements(make_conf_tpl->'files')::jsonb AS j FROM optim.donated_packtpl WHERE donor_id IN (SELECT id FROM optim.donor WHERE country_id = (SELECT jurisd_base_id FROM optim.jurisdiction WHERE admin_level = 2 AND lower(abbrev) = lower('%s'))) ) AS t 
     WHERE j->'file' IS NOT NULL; -- verificar hash null
+  $$;
+  
+  EXECUTE format( q, jurisdiction ) ;
 
-    RETURN (SELECT 'OK, inserted new itens at jurisdiction, donor and donatedPack. ');
+  RETURN (SELECT 'OK, inserted new itens at jurisdiction, donor and donatedPack. ');
 END;
 $f$ LANGUAGE PLpgSQL;
-
---- LIXO: adaptar para o novo esquema de ID
-/* mudou
-CREATE FUNCTION dg_preserv.donatedPack_trigf() RETURNS trigger AS $f$
-DECLARE
-  p_pack_id int;
-BEGIN
-  p_pack_id := floor(new.pkv_id);
-  RETURN CASE
-          WHEN dg_preserv.packid_isvalid(new.pkv_id)
-            AND EXISTS( SELECT true FROM dg_preserv.donatedPack_commom WHERE pack_id=p_pack_id )
-            THEN new
-          ELSE NULL
-        END;
-END
-$f$ LANGUAGE PLpgSQL;
-CREATE TRIGGER tbefore BEFORE INSERT OR UPDATE ON dg_preserv.donatedPack
-  FOR EACH ROW EXECUTE PROCEDURE dg_preserv.donatedPack_trigf()
-;
-*/
-
----
-
-/* OLD LIXO:
-CREATE FUNCTION lixo optim.donor_id_build_trig() RETURNS trigger AS $f$
-DECLARE
-  p_pack_id int;
-BEGIN
-  id = country_id*1000000+local_serial
-  p_pack_id := floor(new.pkv_id);
-  RETURN CASE
-          WHEN dg_preserv.packid_isvalid(new.pkv_id)
-            AND EXISTS( SELECT true FROM dg_preserv.donatedPack_commom WHERE pack_id=p_pack_id )
-            THEN new
-          ELSE NULL
-        END;
-END
-$f$ LANGUAGE PLpgSQL;
-*/
