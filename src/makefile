@@ -79,8 +79,8 @@ ini_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	@echo "--- Running SQL pubLib ---"
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_db)
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_dbingest)
-	@echo "Creating optim schema at $(pg_db) database"
-	psql $(pg_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
+	#@echo "Creating optim schema at $(pg_db) database"
+	#psql $(pg_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	@echo "--- Running API SQL templates ---"
 	@echo "!nao fazendo ainda, futuro"
 	#psql $(pg_uri) < step00-iniApi.sql
@@ -275,6 +275,8 @@ idnew_test:
 	pg_dump -t optim.jurisdiction $(pg_uri_root)/dl02s_main | psql $(pg_uri)
 	psql $(pg_uri) -c "ALTER TABLE optim.jurisdiction ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
 	pg_dump -t optim.jurisdiction_geom $(pg_uri_root)/dl02s_main | psql $(pg_uri)
+	@echo "Creating optim schema at $(pg_db) database"
+	psql $(pg_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_uri) -c "select optim.load_donor_pack('br');"
 	psql $(pg_uri) -c "select optim.insert_donor_pack('br');"
 # 	psql $(pg_uri) -c "select optim.load_donor_pack('co');" # donor.csv está incompleta. exemplo: falta irformar user_resp

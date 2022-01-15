@@ -723,12 +723,12 @@ CREATE or replace FUNCTION ingest.any_load(
     msg_ret text;
     num_items bigint;
   BEGIN
-  IF p_method='csv2sql' THEN
-    p_fileref := p_fileref || '.csv';
-    -- other checks
-  ELSE
-    p_fileref := regexp_replace(p_fileref,'\.shp$', '') || '.shp';
-  END IF;
+  --IF p_method='csv2sql' THEN
+    --p_fileref := p_fileref || '.csv';
+    ---- other checks
+  --ELSE
+    --p_fileref := regexp_replace(p_fileref,'\.shp$', '') || '.shp';
+  --END IF;
   q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256); -- not null when proc_step=1. Ideal retornar array.
   IF q_file_id IS NULL THEN
     RETURN format('ERROR: file-read problem or data ingested before, see %s.',p_fileref);
@@ -1427,10 +1427,10 @@ BEGIN
                     orig_filename_ext := regexp_matches(dict->'layers'->key->>'orig_filename','\.(\w+)$');
                 END IF;
                 
-                
                 IF orig_filename_ext IS NOT NULL
                 THEN
                     SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (array[extension] = orig_filename_ext) INTO codec_extension, codec_descr_mime, codec_desc_default;
+                    dict := jsonb_set( dict, array['layers',key,'orig_filename_with_extension'], 'true'::jsonb );
                     RAISE NOTICE 'ext orig_filename_ext : %', orig_filename_ext;                    
                     RAISE NOTICE 'ext codec_desc_default : %', codec_desc_default;
                 END IF;
@@ -1502,6 +1502,11 @@ BEGIN
                 THEN
                     dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb(codec_extension) );
                     RAISE NOTICE 'codec_extension : %', codec_extension;
+                ELSE
+                    CASE method
+                    WHEN 'csv2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('csv'::text) );
+                    WHEN 'shp2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('shp'::text) );
+                    END CASE;
                 END IF;
 
                 IF codec_descr_mime IS NOT NULL
