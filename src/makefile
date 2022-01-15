@@ -277,8 +277,8 @@ idnew_test:
 	pg_dump -t optim.jurisdiction_geom $(pg_uri_root)/dl02s_main | psql $(pg_uri)
 	psql $(pg_uri) -c "select optim.load_donor_pack('br');"
 	psql $(pg_uri) -c "select optim.insert_donor_pack('br');"
-	psql $(pg_uri) -c "select optim.load_donor_pack('co');"
-	psql $(pg_uri) -c "select optim.insert_donor_pack('co');"
+# 	psql $(pg_uri) -c "select optim.load_donor_pack('co');" # donor.csv está incompleta. exemplo: falta irformar user_resp
+# 	psql $(pg_uri) -c "select optim.insert_donor_pack('co');"
 # 	psql $(pg_uri) -c "select optim.load_donor_pack('pe');" # Falta donor.csv
 # 	psql $(pg_uri) -c "select optim.insert_donor_pack('pe');"
 
