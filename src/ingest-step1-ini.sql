@@ -8,23 +8,31 @@ CREATE EXTENSION IF NOT EXISTS adminpack;
 CREATE EXTENSION IF NOT EXISTS file_fdw;
 CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;
 
-CREATE SCHEMA    IF NOT EXISTS ingest;
-CREATE SCHEMA    IF NOT EXISTS tmp_orig;
+-- old CREATE SCHEMA    IF NOT EXISTS ingest;
+DROP SCHEMA    IF EXISTS ingest CASCADE; -- important to clean!
+CREATE SCHEMA  ingest;
 
+CREATE SCHEMA    IF NOT EXISTS tmp_orig;
 CREATE SCHEMA    IF NOT EXISTS api;
 CREATE SCHEMA    IF NOT EXISTS download;
 
-CREATE EXTENSION postgres_fdw;
-CREATE SERVER foreign_server
-        FOREIGN DATA WRAPPER postgres_fdw
-        OPTIONS (dbname 'dl03t_main')
+
+
+CREATE EXTENSION IF NOT EXISTS file_fdw;
+CREATE SERVER    IF NOT EXISTS files
+        FOREIGN DATA WRAPPER file_fdw
 ;
-CREATE USER MAPPING FOR PUBLIC SERVER foreign_server;
+CREATE EXTENSION IF NOT EXISTS postgres_fdw;
+CREATE SERVER    IF NOT EXISTS foreign_server_dl03
+         FOREIGN DATA WRAPPER postgres_fdw
+         OPTIONS (dbname 'dl03t_main')
+;
+CREATE USER MAPPING FOR PUBLIC SERVER foreign_server_dl03;
 
 -- -- --
 -- SQL and bash generators (optim-ingest submodule)
 
-CREATE or replace FUNCTION ingest.fdw_csv_paths(
+CREATE FUNCTION ingest.fdw_csv_paths(
   p_name text, p_context text DEFAULT 'br', p_path text DEFAULT NULL
 ) RETURNS text[] AS $f$
   SELECT  array[
@@ -34,7 +42,7 @@ CREATE or replace FUNCTION ingest.fdw_csv_paths(
   FROM COALESCE(p_path,'/tmp/pg_io') t(fpath)
 $f$ language SQL;
 
-CREATE or replace FUNCTION ingest.fdw_generate_direct_csv(
+CREATE FUNCTION ingest.fdw_generate_direct_csv(
   p_file text,  -- path+filename+ext
   p_fdwname text, -- nome da tabela fwd
   p_delimiter text DEFAULT ',',
@@ -63,7 +71,7 @@ COMMENT ON FUNCTION ingest.fdw_generate_direct_csv
   IS 'Generates a FOREIGN TABLE for simples and direct CSV ingestion.'
 ;
 
-CREATE or replace FUNCTION ingest.fdw_generate(
+CREATE FUNCTION ingest.fdw_generate(
   p_name text,  -- table name and CSV input filename
   p_context text DEFAULT 'br',  -- or null
   p_schemaname text DEFAULT 'optim',
@@ -102,7 +110,7 @@ COMMENT ON FUNCTION ingest.fdw_generate
   IS 'Generates a structure FOREIGN TABLE for ingestion.'
 ;
 
-CREATE or replace FUNCTION ingest.fdw_generate_getCSV(
+CREATE FUNCTION ingest.fdw_generate_getCSV(
   p_name text,  -- table name and CSV input filename
   p_context text DEFAULT 'br',  -- or null
   p_path text DEFAULT NULL,     -- default based on ids
@@ -114,7 +122,7 @@ $f$ language SQL;
 -- select ingest.fdw_generate_getCSV('enderecos','br_mg_bho');
 -- creates tmp_orig.fdw_enderecos_br_mg_bho by source: /tmp/pg_io/br_mg_bho-enderecos.csv
 
-CREATE or replace FUNCTION ingest.fdw_generate_getclone(
+CREATE FUNCTION ingest.fdw_generate_getclone(
   -- foreign-data wrapper generator
   p_tablename text,  -- cloned-table name
   p_context text DEFAULT 'br',  -- or null
@@ -182,7 +190,7 @@ CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
  info            jsonb,
  jtags           jsonb,
  geom            geometry(Geometry,4326)
-) SERVER foreign_server
+) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
 ;
 
@@ -199,7 +207,7 @@ CREATE FOREIGN TABLE ingest.fdw_donor (
  url text,
  info jsonb,
  kx_vat_id text
-) SERVER foreign_server
+) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'donor');
 
 DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackTpl;
@@ -212,7 +220,7 @@ CREATE FOREIGN TABLE ingest.fdW_donated_PackTpl (
  make_conf_tpl jsonb,
  kx_num_files integer,
  info jsonb
-) SERVER foreign_server
+) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'donated_packtpl');
 
 DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackFileVers;
@@ -225,7 +233,7 @@ CREATE FOREIGN TABLE ingest.fdw_donated_PackFileVers (
  kx_pack_item_version integer,
  user_resp text,
  info jsonb
-) SERVER foreign_server
+) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'donated_packfilevers');
 
 DROP FOREIGN TABLE IF EXISTS ingest.fdw_feature_type;
@@ -236,7 +244,7 @@ CREATE FOREIGN TABLE ingest.fdw_feature_type (
  need_join boolean,
  description text,
  info jsonb
-) SERVER foreign_server
+) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'feature_type');
 
 CREATE TABLE ingest.donated_PackComponent(
@@ -374,7 +382,7 @@ CREATE VIEW ingest.vw03full_layer_file AS
 DROP VIEW IF EXISTS ingest.vw04simple_layer_file CASCADE;
 CREATE VIEW ingest.vw04simple_layer_file AS
   --SELECT id, geomtype, proc_step, ftid, ftname, file_type,
-  SELECT id, geomtype, proc_step, ftid, ftname, 
+  SELECT id, geomtype, proc_step, ftid, ftname,
          round((file_meta->'size')::int/2014^2) file_mb,
          substr(hash_md5,1,7) as md5_prefix
   FROM ingest.vw03full_layer_file
@@ -407,7 +415,7 @@ CREATE VIEW ingest.vw06simple_layer AS
 ----------------
 -- Ingest AS-IS
 
-CREATE or replace FUNCTION ingest.donated_PackComponent_geomtype(
+CREATE FUNCTION ingest.donated_PackComponent_geomtype(
   p_file_id bigint
 ) RETURNS text[] AS $f$
   -- ! pendente revisão para o caso shortname multiplingual, aqui usando só 'pt'
@@ -423,7 +431,7 @@ COMMENT ON FUNCTION ingest.donated_PackComponent_geomtype(bigint)
   IS '[Geomtype,ftname,class_ftname,shortname_pt] of a layer_file.'
 ;
 
-CREATE or replace FUNCTION ingest.feature_asis_geohashes(
+CREATE FUNCTION ingest.feature_asis_geohashes(
     p_file_id bigint,  -- ID at ingest.donated_PackComponent
     ghs_size integer DEFAULT 5
 ) RETURNS jsonb AS $f$
@@ -446,7 +454,7 @@ CREATE or replace FUNCTION ingest.feature_asis_geohashes(
    FROM scan
 $f$ LANGUAGE SQL;
 
-CREATE or replace FUNCTION ingest.feature_asis_assign_volume(
+CREATE FUNCTION ingest.feature_asis_assign_volume(
     p_file_id bigint,  -- ID at ingest.donated_PackComponent
     p_usemedian boolean DEFAULT false
 ) RETURNS jsonb AS $f$
@@ -487,7 +495,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_volume(
   ) t3
 $f$ LANGUAGE SQL;
 
-CREATE or replace FUNCTION ingest.feature_asis_assign(
+CREATE FUNCTION ingest.feature_asis_assign(
     p_file_id bigint  -- ID at ingest.donated_PackComponent
 ) RETURNS jsonb AS $f$
   SELECT ingest.feature_asis_assign_volume(p_file_id,true)
@@ -500,7 +508,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign(
   ) t
 $f$ LANGUAGE SQL;
 
-CREATE or replace FUNCTION ingest.feature_asis_assign_format(
+CREATE FUNCTION ingest.feature_asis_assign_format(
     p_file_id bigint,  -- ID at ingest.donated_PackComponent
     p_layer_type text DEFAULT NULL,
     p_layer_name text DEFAULT '',
@@ -532,7 +540,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_format(
   WHERE id=p_file_id
 $f$ LANGUAGE SQL;
 
-CREATE or replace FUNCTION ingest.package_layers_summary(
+CREATE FUNCTION ingest.package_layers_summary(
   p_pck_id real,
   p_caption text DEFAULT 'Package XX version YY, jurisdiction ZZ',
   p_glink text DEFAULT '' -- ex. http://git.AddressForAll.org/out-BR2021-A4A/blob/main/data/SP/RibeiraoPreto/_pk058/
@@ -552,7 +560,7 @@ $f$ LANGUAGE SQL;
 
 -----
 
-CREATE or replace FUNCTION ingest.geojson_load(
+CREATE FUNCTION ingest.geojson_load(
   p_file text, -- absolute path and filename, test with '/tmp/pg_io/EXEMPLO3.geojson'
   p_ftid int,  -- REFERENCES ingest.fdw_feature_type(ftid)
   p_pck_id real,
@@ -603,7 +611,7 @@ CREATE or replace FUNCTION ingest.geojson_load(
  END;
 $f$ LANGUAGE PLpgSQL;
 
-CREATE or replace FUNCTION ingest.getmeta_to_file(
+CREATE FUNCTION ingest.getmeta_to_file(
   p_file text,
   p_ftid int,
   p_pck_id bigint,
@@ -645,7 +653,7 @@ $f$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,text,text)
   IS 'Reads file metadata and inserts it into ingest.donated_PackComponent. If proc_step=1 returns valid ID else NULL.'
 ;
-CREATE or replace FUNCTION ingest.getmeta_to_file(
+CREATE FUNCTION ingest.getmeta_to_file(
   p_file text,   -- 1.
   p_ftname text, -- 2. define o layer... um file pode ter mais de um layer??
   p_pck_id bigint,
@@ -665,7 +673,7 @@ COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,text,text)
 -- ex. select ingest.getmeta_to_file('/tmp/b.shp','geoaddress_full',555);
 
 /* ver VIEW
-CREATE or replace FUNCTION ingest.fdw_feature_type_refclass_tab(
+CREATE FUNCTION ingest.fdw_feature_type_refclass_tab(
   p_ftid integer
 ) RETURNS TABLE (like ingest.fdw_feature_type) AS $f$
   SELECT *
@@ -675,7 +683,7 @@ $f$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.fdw_feature_type_refclass_tab(integer)
   IS 'Feature class of a feature_type, returing it as table.'
 ;
-CREATE or replace FUNCTION ingest.fdw_feature_type_refclass_jsonb(
+CREATE FUNCTION ingest.fdw_feature_type_refclass_jsonb(
   p_ftid integer
 ) RETURNS JSONB AS $wrap$
   SELECT to_jsonb(t)
@@ -686,7 +694,7 @@ COMMENT ON FUNCTION ingest.fdw_feature_type_refclass_jsonb(integer)
 ;
 */
 
-CREATE or replace FUNCTION ingest.any_load_debug(
+CREATE FUNCTION ingest.any_load_debug(
   p_method text,   -- 1.; shp/csv/etc.
   p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
   p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
@@ -703,7 +711,7 @@ CREATE or replace FUNCTION ingest.any_load_debug(
   ) t
 $f$ LANGUAGE SQL;
 
-CREATE or replace FUNCTION ingest.any_load(
+CREATE FUNCTION ingest.any_load(
     p_method text,   -- shp/csv/etc.
     p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
@@ -835,7 +843,7 @@ COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],text,
 -- posto ipiranga logo abaixo..  sorvetorua.
 -- ex. SELECT ingest.any_load('/tmp/pg_io/NRO_IMOVEL.shp','geoaddress_none','pk027_geoaddress1',27,array['gid','textstring']);
 
-CREATE or replace FUNCTION ingest.any_load(
+CREATE FUNCTION ingest.any_load(
     p_method text,   -- 1.  shp/csv/etc.
     p_fileref text,  -- 2. apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- 3. featureType of layer... um file pode ter mais de um layer??
@@ -852,7 +860,7 @@ COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],text,bo
   IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
 ;
 
-CREATE or replace FUNCTION ingest.osm_load(
+CREATE FUNCTION ingest.osm_load(
     p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
     p_tabname text,  -- tabela temporária de ingestáo
@@ -925,9 +933,9 @@ CREATE or replace FUNCTION ingest.osm_load(
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text )
   );
-  
+
   RAISE NOTICE E'\n===q_query:\n %\n===END q_query\n',  q_query;
-  
+
   EXECUTE q_query INTO num_items;
   msg_ret := format(
     E'From file_id=%s inserted type=%s\nin feature_asis %s items.',
@@ -943,7 +951,7 @@ CREATE or replace FUNCTION ingest.osm_load(
   END;
 $f$ LANGUAGE PLpgSQL;
 
-CREATE or replace FUNCTION ingest.osm_load(
+CREATE FUNCTION ingest.osm_load(
     p_fileref text,  -- 1. apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- 2. featureType of layer... um file pode ter mais de um layer??
     p_tabname text,  -- 3. tabela temporária de ingestáo
@@ -960,7 +968,7 @@ COMMENT ON FUNCTION ingest.osm_load(text,text,text,text,text,text[],text,boolean
 ;
 
 -----
-CREATE or replace FUNCTION ingest.qgis_vwadmin_feature_asis(
+CREATE FUNCTION ingest.qgis_vwadmin_feature_asis(
   p_mode text -- 'create' or 'drop'
 ) RETURNS text AS $f$
   DECLARE
@@ -985,7 +993,7 @@ $f$ LANGUAGE PLpgSQL;
 -- select ingest.qgis_vwadmin_feature_asis('create');
 ----
 
-CREATE or replace FUNCTION ingest.donated_PackComponent_distribution_prefixes(
+CREATE FUNCTION ingest.donated_PackComponent_distribution_prefixes(
   p_file_id int
 ) RETURNS text[] AS $f$
   SELECT array_agg(p ORDER BY length(p) desc, p) FROM (
@@ -1001,7 +1009,7 @@ $f$ LANGUAGE SQL;
 ------------------------
 
 
-CREATE or replace FUNCTION ingest.feature_asis_export(p_file_id bigint)
+CREATE FUNCTION ingest.feature_asis_export(p_file_id bigint)
 RETURNS TABLE (ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
  SELECT ghs, gid,
     CASE
@@ -1054,7 +1062,7 @@ CREATE TABLE ingest.publicating_geojsons_p2distrib(
  geom     geometry
 );
 
-CREATE or replace FUNCTION ingest.publicating_geojsons_p1(
+CREATE FUNCTION ingest.publicating_geojsons_p1(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
@@ -1067,11 +1075,11 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p1(
   SELECT 'p1';
 $f$ language SQL VOLATILE; --fim p1
 
-CREATE or replace FUNCTION ingest.publicating_geojsons_p2(
+CREATE FUNCTION ingest.publicating_geojsons_p2(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
-  
+
   UPDATE ingest.donated_PackComponent
   SET feature_distrib = geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7)
   WHERE id= p_file_id
@@ -1079,12 +1087,12 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p2(
   SELECT 'p2';
 $f$ language SQL VOLATILE; --fim p2
 
-CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
+CREATE FUNCTION ingest.publicating_geojsons_p3(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
-	p_fileref text        -- 
+	p_fileref text        --
 ) RETURNS text  AS $f$
-  
+
   DELETE FROM ingest.publicating_geojsons_p2distrib;
   INSERT INTO ingest.publicating_geojsons_p2distrib
     SELECT t.hcode, t.n_items,  -- length(t.hcode) AS len,
@@ -1113,7 +1121,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
   ) t4
   WHERE t4.gid = publicating_geojsons_p3exprefix.gid
   ;
-  
+
   UPDATE ingest.donated_PackComponent
   SET feature_distrib = (SELECT jsonb_object_agg(hcode, n_items) FROM ingest.publicating_geojsons_p2distrib)
   WHERE id= p_file_id
@@ -1123,7 +1131,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
   SELECT 'p3';
 $f$ language SQL VOLATILE; --fim p3
 
-CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
+CREATE FUNCTION ingest.publicating_geojsons_p4(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text
@@ -1144,7 +1152,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
   ;
 $f$ language SQL VOLATILE; -- fim p4
 
-CREATE or replace FUNCTION ingest.publicating_geojsons(
+CREATE FUNCTION ingest.publicating_geojsons(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text
@@ -1163,10 +1171,11 @@ $f$ language SQL VOLATILE; -- need be a sequential PLpgSQL to neatly COMMIT?
 --------------------
 -- OSM lib
 
+-- only for ingest OSM
+CREATE EXTENSION IF NOT EXISTS hstore;     -- to make osm
 
-create extension IF NOT EXISTS hstore;     -- to make osm
-create extension IF NOT EXISTS unaccent;   -- to normalize
-create schema    IF NOT EXISTS lib;  -- lib geral, que não é public mas pode fazer drop/create sem medo.
+CREATE EXTENSION IF NOT EXISTS unaccent;   -- to normalize
+CREATE SCHEMA    IF NOT EXISTS lib;  -- lib geral, que não é public mas pode fazer drop/create sem medo.
 
 CREATE or replace FUNCTION lib.osm_to_jsonb_remove() RETURNS text[] AS $f$
    SELECT array['osm_uid','osm_user','osm_version','osm_changeset','osm_timestamp'];
@@ -1250,7 +1259,7 @@ CREATE TABLE ingest.lix_jurisd_tpl (
   UNIQUE(jurisdiction)
 );
 
-CREATE or replace FUNCTION ingest.lix_insert(
+CREATE FUNCTION ingest.lix_insert(
     file text
     ) RETURNS void AS $wrap$
     DECLARE
@@ -1268,7 +1277,7 @@ CREATE or replace FUNCTION ingest.lix_insert(
         THEN
             jurisd := 'INT';
         END IF;
-        
+
         RAISE NOTICE 'ext orig_filename_ext : %', p_type;
         RAISE NOTICE 'ext orig_filename_ext : %', jurisd;
 
@@ -1299,7 +1308,7 @@ CREATE or replace FUNCTION ingest.lix_insert(
         INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, readme_mk) VALUES (jurisd,t)
         ON CONFLICT (jurisdiction) DO UPDATE SET readme_mk = t;
 
-        END CASE;    
+        END CASE;
     END;
 $wrap$ LANGUAGE PLpgSQL;
 
@@ -1317,7 +1326,7 @@ $wrap$ LANGUAGE PLpgSQL;
 --SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk0008.01/make_conf.yaml');
 
 
-CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(
+CREATE FUNCTION ingest.jsonb_mustache_prepare(
   dict jsonb,  -- input
   p_type text DEFAULT 'make_conf'
 ) RETURNS jsonb  AS $f$
@@ -1347,13 +1356,13 @@ BEGIN
     IF dict?'codec:descr_encode'
     THEN
         codec_desc_global := jsonb_object(regexp_split_to_array ( dict->>'codec:descr_encode','(;|=)'));
-        
+
         -- Compatibilidade com sql_view de BR-MG-BeloHorizonte/_pk0008.01
         dict := dict || codec_desc_global;
-        
+
         RAISE NOTICE 'value of codec_desc_global : %', codec_desc_global;
     END IF;
-    
+
     IF dict?'openstreetmap'
     THEN
         IF codec_desc_global IS NOT NULL
@@ -1378,16 +1387,16 @@ BEGIN
 		dict := jsonb_set( dict, array['layers',key,'isOsm'], IIF(method='osm2sql',bt,bf) );
 
                 dict := jsonb_set( dict, array['layers',key,'sha256file'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'));
-                
+
                 dict := jsonb_set( dict, array['layers',key,'sha256file_name'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'name'));
-                
+
                 SELECT id FROM ingest.fdw_donated_packfilevers WHERE hashedfname = dict->'layers'->key->>'sha256file' INTO packvers_id;
 
                 dict := jsonb_set( dict, array['layers',key,'fullPkID'] , to_jsonb(packvers_id));
                 dict := jsonb_set( dict, array['layers',key,'layername_root'] , to_jsonb(key));
                 dict := jsonb_set( dict, array['layers',key,'layername'] , to_jsonb(key || '_' || (dict->'layers'->key->>'subtype') ));
                 dict := jsonb_set( dict, array['layers',key,'tabname'] , to_jsonb('pk' || (dict->'layers'->key->>'fullPkID') || '_p' || (dict->'layers'->key->>'file') || '_' || key));
-                
+
                 IF dict?'orig'
                 THEN
                     dict := jsonb_set( dict, array['layers',key,'sha256file_path'] , to_jsonb((dict->>'orig') || '/' || (dict->'layers'->key->>'sha256file') ));
@@ -1397,11 +1406,11 @@ BEGIN
                 IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
                 THEN
                     SELECT to_jsonb(array_agg(jsonb_build_object('name_item',n, 'sql_select_item',s))) FROM  unnest(ARRAY(SELECT jsonb_array_elements_text(dict->'layers'->key->'orig_filename')),ARRAY(SELECT jsonb_array_elements(dict->'layers'->key->'sql_select'))) t(n,s) INTO multiple_files;
-                    
+
                     RAISE NOTICE 'value of multiple_files_array : %', multiple_files;
                     dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
                     dict := jsonb_set( dict, array['layers',key,'multiple_files_array'], multiple_files );
-   
+
                    SELECT string_agg($$'*$$ || trim(txt::text, $$"$$) || $$*'$$, ' ') FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
                    dict := jsonb_set( dict, array['layers',key,'orig_filename_string_extract'], to_jsonb(orig_filename_string) );
 
@@ -1426,12 +1435,12 @@ BEGIN
                 THEN
                     orig_filename_ext := regexp_matches(dict->'layers'->key->>'orig_filename','\.(\w+)$');
                 END IF;
-                
+
                 IF orig_filename_ext IS NOT NULL
                 THEN
                     SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (array[extension] = orig_filename_ext) INTO codec_extension, codec_descr_mime, codec_desc_default;
                     dict := jsonb_set( dict, array['layers',key,'orig_filename_with_extension'], 'true'::jsonb );
-                    RAISE NOTICE 'ext orig_filename_ext : %', orig_filename_ext;                    
+                    RAISE NOTICE 'ext orig_filename_ext : %', orig_filename_ext;
                     RAISE NOTICE 'ext codec_desc_default : %', codec_desc_default;
                 END IF;
 
@@ -1441,9 +1450,9 @@ BEGIN
                     IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~(.*);(.*)$'))
                     THEN
                          SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', '~', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
-                        
+
                         codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',3),'(;|=)'));
-                        
+
                         RAISE NOTICE '1. codec_desc_default : %', codec_desc_default;
                         RAISE NOTICE '1. codec_desc_sobre : %', codec_desc_sobre;
                     END IF;
@@ -1452,9 +1461,9 @@ BEGIN
                     IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^;~]*);(.*)$'))
                     THEN
                         SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', ';', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
-                        
+
                         codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',2),'(;|=)'));
-                        
+
                         RAISE NOTICE '2. codec_desc_default : %', codec_desc_default;
                         RAISE NOTICE '2. codec_desc_sobre : %', codec_desc_sobre;
                     END IF;
@@ -1463,7 +1472,7 @@ BEGIN
                     IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~([^;]*)$')) OR EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^~;]*)$'))
                     THEN
                         codec_value := regexp_split_to_array( dict->'layers'->key->>'codec' ,'(~)');
-                        
+
                         SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (array[upper(extension), variant] = codec_value AND cardinality(codec_value) = 2) OR (array[upper(extension)] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
 
                         RAISE NOTICE '3. codec_desc_default : %', codec_desc_default;
@@ -1477,7 +1486,7 @@ BEGIN
                 IF codec_desc_default IS NOT NULL
                 THEN
                     codec_desc := codec_desc_default;
-                
+
                     IF codec_desc_global IS NOT NULL
                     THEN
                         codec_desc := codec_desc || codec_desc_global;
@@ -1525,12 +1534,12 @@ BEGIN
                    dict := jsonb_set( dict, array['layers',key,'isCadLayer'], 'true'::jsonb );
                 END IF;
 
-                IF dict->'layers'?key AND dict->'layers'?('cad'||key) 
+                IF dict->'layers'?key AND dict->'layers'?('cad'||key)
                    AND dict->'layers'->key->>'subtype' = 'ext'
                    AND dict->'layers'->('cad'||key)->>'subtype' = 'cmpl'
-                   AND dict->'layers'->key?'join_column' AND dict->'layers'->('cad'||key)?'join_column'      
+                   AND dict->'layers'->key?'join_column' AND dict->'layers'->('cad'||key)?'join_column'
                 THEN
-                   dict := jsonb_set( dict, '{joins}', '{}'::jsonb ); 
+                   dict := jsonb_set( dict, '{joins}', '{}'::jsonb );
                    dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
                        'layer',           key || '_ext'
                       ,'cadLayer',        'cad' || key || '_cmpl'
@@ -1548,7 +1557,7 @@ BEGIN
 	           AND dict->'layers'->key?'join_column'
                    AND dict->'layers'->'address'?'join_column'
                 THEN
-                   dict := jsonb_set( dict, '{joins}', '{}'::jsonb );                 
+                   dict := jsonb_set( dict, '{joins}', '{}'::jsonb );
                    dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
                        'layer',           key || '_ext'
                       ,'cadLayer',        'address_cmpl'
@@ -1581,7 +1590,7 @@ $f$ language PLpgSQL;
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
 
-CREATE or replace FUNCTION ingest.insert_bytesize(
+CREATE FUNCTION ingest.insert_bytesize(
   dict jsonb  -- input
 ) RETURNS jsonb  AS $f$
 DECLARE
@@ -1591,9 +1600,9 @@ BEGIN
     FOR i in 0..(select jsonb_array_length(dict->'files')-1)
     LOOP
         a := format($$ {files,%s,file} $$, i )::text[];
-        
+
         SELECT size::bigint FROM pg_stat_file(concat('/var/www/preserv.addressforall.org/download/',dict#>>a::text[])) INTO sz;
-        
+
         a := format($$ {files,%s,size} $$, i );
         dict := jsonb_set( dict, a::text[],to_jsonb(sz));
     END LOOP;
@@ -1602,7 +1611,7 @@ END;
 $f$ language PLpgSQL;
 --SELECT ingest.insert_bytesize( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RS/SantaMaria/_pk0019.01/make_conf.yaml') );
 
-CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
+CREATE FUNCTION ingest.lix_generate_make_conf_with_size(
     jurisd text,
     pack_id text
 ) RETURNS text AS $f$
@@ -1616,12 +1625,12 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
 
     SELECT y, t FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml, conf_yaml_t;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
-    
+
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
-    
+
     --SELECT jsonb_to_yaml(ingest.insert_bytesize(conf_yaml)::text) INTO q_query;
     SELECT regexp_replace( conf_yaml_t , '\nfiles: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+', jsonb_to_yaml((ingest.insert_bytesize(conf_yaml)->'files')::text), 'n') INTO q_query;
-    
+
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 
     RETURN q_query;
@@ -1630,7 +1639,7 @@ $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_make_conf_with_size('BR','19.1');
 
 
-CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
+CREATE FUNCTION ingest.lix_generate_make_conf_with_license(
     jurisd text,
     pack_id text
 ) RETURNS text AS $f$
@@ -1646,9 +1655,9 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
 
     SELECT y, t FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml, conf_yaml_t;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
-    
+
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
-    
+
     SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE tmp_pack_licenses.pack_id = (to_char(substring(conf_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(conf_yaml->>'pack_id','([^\.]*)$')::int,'fm00')) INTO definition;
 
     --conf_yaml := jsonb_set( conf_yaml, array['files_license'], files_license);
@@ -1659,10 +1668,10 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
         license_evidences := conf_yaml->'license_evidences' || jsonb_build_object('definition',definition);
     ELSE
         license_evidences := jsonb_build_object('license_evidences',jsonb_build_object('definition',definition));
-        
+
         --license_evidences := jsonb_set( '{}'::jsonb, array['license_evidences','definition'], definition );
     END IF;
-    
+
     SELECT conf_yaml_t || jsonb_to_yaml(license_evidences::text)::text INTO q_query;
 
     --SELECT volat_file_write(output_file,q_query) INTO q_query;
@@ -1672,7 +1681,7 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
 $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_make_conf_with_license('BR','16.1');
 
-CREATE or replace FUNCTION ingest.lix_generate_makefile(
+CREATE FUNCTION ingest.lix_generate_makefile(
     jurisd text,
     pack_id text
 ) RETURNS text AS $f$
@@ -1689,13 +1698,13 @@ CREATE or replace FUNCTION ingest.lix_generate_makefile(
     SELECT y FROM ingest.lix_mkme_srcTpl WHERE tplInputSchema_id = conf_yaml->>'schemaId_template' INTO mkme_srcTpl;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     SELECT tpl_last FROM ingest.lix_jurisd_tpl WHERE jurisdiction = 'INT' INTO mkme_srcTplLast;
-    
+
     SELECT f_yaml->>'pg_io' || '/makeme_' || jurisd || pack_id INTO output_file;
-    
+
     conf_yaml := jsonb_set( conf_yaml, array['jurisdiction'], to_jsonb(jurisd) );
-    
-    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, ingest.jsonb_mustache_prepare(f_yaml || conf_yaml)),E'\u130C9',$$\"$$) INTO q_query;
-    
+
+    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, ingest.jsonb_mustache_prepare(f_yaml || conf_yaml)),E'\u130C9',$$\"$$) INTO q_query; -- "
+
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 
     RETURN q_query;
@@ -1704,7 +1713,7 @@ $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_makefile('BR','16.1');
 -- SELECT ingest.lix_generate_makefile('PE','1');
 
-CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
+CREATE FUNCTION ingest.lix_generate_readme(
     jurisd text,
     pack_id text
 ) RETURNS text AS $f$
@@ -1718,13 +1727,13 @@ CREATE OR REPLACE FUNCTION ingest.lix_generate_readme(
     SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml;
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     SELECT readme_mk FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO readme;
-    
+
     SELECT f_yaml->>'pg_io' || '/README-draft_' || jurisd || pack_id INTO output_file;
-    
+
     SELECT jsonb_mustache_render(readme, conf_yaml) INTO q_query;
 
     SELECT volat_file_write(output_file,q_query) INTO q_query;
-    
+
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
@@ -1745,7 +1754,7 @@ CREATE or replace VIEW api.redirects AS SELECT * FROM download.redirects;
 
 
 
-CREATE or replace FUNCTION ingest.join(
+CREATE FUNCTION ingest.join(
     p_ftname_layer text,
     p_join_col_layer text,
     p_fileref_layer_sha256 text,
@@ -1761,20 +1770,20 @@ CREATE or replace FUNCTION ingest.join(
   q_query := format(
       $$
       WITH
-      cadis AS 
+      cadis AS
       (
         SELECT *
-        FROM ingest.cadastral_asis 
-        WHERE file_id IN 
+        FROM ingest.cadastral_asis
+        WHERE file_id IN
             (
-            SELECT id 
-            FROM ingest.donated_PackComponent 
-            WHERE ftid IN 
+            SELECT id
+            FROM ingest.donated_PackComponent
+            WHERE ftid IN
                 (
-                SELECT ftid::int 
-                FROM ingest.fdw_feature_type 
+                SELECT ftid::int
+                FROM ingest.fdw_feature_type
                 WHERE ftname=lower('%s')
-                ) 
+                )
                 --AND pck_fileref_sha256 = '%s'
                 AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
             )
@@ -1782,19 +1791,19 @@ CREATE or replace FUNCTION ingest.join(
       duplicate_keys AS (
         SELECT asis.properties->'%s'
         FROM
-        (    
+        (
             SELECT  *
-            FROM ingest.feature_asis 
-            WHERE file_id IN 
+            FROM ingest.feature_asis
+            WHERE file_id IN
             (
-                SELECT id 
-                FROM ingest.donated_PackComponent 
-                WHERE ftid IN 
+                SELECT id
+                FROM ingest.donated_PackComponent
+                WHERE ftid IN
                     (
-                    SELECT ftid::int 
-                    FROM ingest.fdw_feature_type 
+                    SELECT ftid::int
+                    FROM ingest.fdw_feature_type
                     WHERE ftname=lower('%s')
-                    ) 
+                    )
                     --AND pck_fileref_sha256 = '%s'
                     AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
             )
@@ -1814,18 +1823,18 @@ CREATE or replace FUNCTION ingest.join(
       UPDATE ingest.feature_asis l
       SET properties =  l.properties || c.properties-'%s'
       FROM cadis AS c
-      WHERE l.properties->'%s' = c.properties->'%s' 
-            AND l.file_id IN 
+      WHERE l.properties->'%s' = c.properties->'%s'
+            AND l.file_id IN
             (
-            SELECT id 
-            FROM ingest.donated_PackComponent 
-            WHERE ftid IN 
+            SELECT id
+            FROM ingest.donated_PackComponent
+            WHERE ftid IN
                 (
-                SELECT ftid::int 
-                FROM ingest.fdw_feature_type 
+                SELECT ftid::int
+                FROM ingest.fdw_feature_type
                 WHERE ftname=lower('%s')
-                ) 
-                --AND pck_fileref_sha256 = '%s' 
+                )
+                --AND pck_fileref_sha256 = '%s'
                 AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
             )
             AND l.properties->'%s' NOT IN (  SELECT * FROM duplicate_keys  )
@@ -1872,7 +1881,7 @@ CREATE TABLE ingest.codec_type (
   UNIQUE(extension,variant)
 );
 
-CREATE or replace FUNCTION ingest.load_codec_type(
+CREATE FUNCTION ingest.load_codec_type(
   p_file text,  -- path+filename+ext
   p_delimiter text DEFAULT ',',
   p_fdwname text DEFAULT 'tmp_codec_type' -- nome da tabela fwd
