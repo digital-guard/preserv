@@ -279,9 +279,9 @@ idnew_test:
 	psql $(pg_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_uri) -c "select optim.load_donor_pack('br');"
 	psql $(pg_uri) -c "select optim.insert_donor_pack('br');"
-# 	psql $(pg_uri) -c "select optim.load_donor_pack('co');" # donor.csv está incompleta. exemplo: falta irformar user_resp
-# 	psql $(pg_uri) -c "select optim.insert_donor_pack('co');"
-# 	psql $(pg_uri) -c "select optim.load_donor_pack('pe');" # Falta donor.csv
+	psql $(pg_uri) -c "select optim.load_donor_pack('co');"
+	psql $(pg_uri) -c "select optim.insert_donor_pack('co');"
+# 	psql $(pg_uri) -c "select optim.load_donor_pack('pe');" # Falta donor.csv e donatedPack.csv
 # 	psql $(pg_uri) -c "select optim.insert_donor_pack('pe');"
 
 ## ## ## ##
