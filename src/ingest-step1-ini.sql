@@ -1259,7 +1259,7 @@ CREATE TABLE ingest.lix_jurisd_tpl (
   UNIQUE(jurisdiction)
 );
 
-CREATE FUNCTION ingest.lix_insert(
+CREATE or replace FUNCTION ingest.lix_insert(
     file text
     ) RETURNS void AS $wrap$
     DECLARE
@@ -1326,7 +1326,7 @@ $wrap$ LANGUAGE PLpgSQL;
 --SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk0008.01/make_conf.yaml');
 
 
-CREATE FUNCTION ingest.jsonb_mustache_prepare(
+CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(
   dict jsonb,  -- input
   p_type text DEFAULT 'make_conf'
 ) RETURNS jsonb  AS $f$
@@ -1590,7 +1590,7 @@ $f$ language PLpgSQL;
 -- new ingest.make_conf_yaml2jsonb() = ? read file
 
 
-CREATE FUNCTION ingest.insert_bytesize(
+CREATE or replace FUNCTION ingest.insert_bytesize(
   dict jsonb  -- input
 ) RETURNS jsonb  AS $f$
 DECLARE
@@ -1611,7 +1611,7 @@ END;
 $f$ language PLpgSQL;
 --SELECT ingest.insert_bytesize( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RS/SantaMaria/_pk0019.01/make_conf.yaml') );
 
-CREATE FUNCTION ingest.lix_generate_make_conf_with_size(
+CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
     jurisd text,
     pack_id text
 ) RETURNS text AS $f$
@@ -1629,8 +1629,8 @@ CREATE FUNCTION ingest.lix_generate_make_conf_with_size(
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
 
     --SELECT jsonb_to_yaml(ingest.insert_bytesize(conf_yaml)::text) INTO q_query;
-    SELECT regexp_replace( conf_yaml_t , '\nfiles: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+', jsonb_to_yaml((ingest.insert_bytesize(conf_yaml)->'files')::text), 'n') INTO q_query;
-
+    SELECT regexp_replace( conf_yaml_t , '\n*files: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || jsonb_to_yaml((jsonb_build_object('files',ingest.insert_bytesize(conf_yaml)->'files'))::text) || E'\n', 'n') INTO q_query;
+    
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 
     RETURN q_query;
@@ -1639,7 +1639,7 @@ $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_make_conf_with_size('BR','19.1');
 
 
-CREATE FUNCTION ingest.lix_generate_make_conf_with_license(
+CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
     jurisd text,
     pack_id text
 ) RETURNS text AS $f$
