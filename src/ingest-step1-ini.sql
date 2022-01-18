@@ -1518,6 +1518,11 @@ BEGIN
             THEN
                 codec_desc := codec_desc_global;
             END IF;
+
+            IF codec_desc_sobre IS NOT NULL
+            THEN
+                codec_desc := codec_desc || codec_desc_sobre;
+            END IF;
         END IF;
 
         IF codec_desc IS NOT NULL
