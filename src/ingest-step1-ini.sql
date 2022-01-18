@@ -1401,6 +1401,7 @@ BEGIN
         dict := jsonb_set( dict, array['layers',key,'isOgrWithShp'], IIF(method='ogrWshp',bt,bf) );
         dict := jsonb_set( dict, array['layers',key,'isShp'], IIF(method='shp2sql',bt,bf) );
         dict := jsonb_set( dict, array['layers',key,'isOsm'], IIF(method='osm2sql',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isGdb'], IIF(method='gdb2sql',bt,bf) );
 
         dict := jsonb_set( dict, array['layers',key,'sha256file'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'));
 

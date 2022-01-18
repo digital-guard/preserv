@@ -14,3 +14,4 @@ SHP,,x-gis/x-shapefile,charset=UTF-8;srid=4326
 SHP,Latin1,x-gis/x-shapefile,charset=ISO-8859-1;srid=4326
 TSV,,text/csv,charset=UTF-8;delimiter=%09;srid=4326
 XLSX,,,
+GDB,,,
