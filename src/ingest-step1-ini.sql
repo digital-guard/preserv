@@ -1331,27 +1331,40 @@ CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(
   p_type text DEFAULT 'make_conf'
 ) RETURNS jsonb  AS $f$
 DECLARE
+ packvers_id bigint;
  key text;
  method text;
  sql_select text;
  sql_view text;
  bt jsonb := 'true'::jsonb;
  bf jsonb := 'false'::jsonb;
-
  codec_value text[];
- codec_desc jsonb;
- orig_filename_ext text[];
- codec_desc_default jsonb;
+ orig_filename_ext text[]; 
+ orig_filename_string text;
+ multiple_files jsonb; 
  codec_desc_global jsonb;
+
+ codec_desc0 jsonb DEFAULT NULL;
+ codec_desc_default0 jsonb DEFAULT NULL;
+ codec_desc_sobre0 jsonb DEFAULT NULL;
+ codec_extension0 text DEFAULT NULL;
+ codec_descr_mime0 jsonb DEFAULT NULL;
+
+ codec_desc jsonb;
+ codec_desc_default jsonb;
  codec_desc_sobre jsonb;
  codec_extension text;
  codec_descr_mime jsonb;
- orig_filename_string text;
- multiple_files jsonb;
- packvers_id bigint;
 BEGIN
  CASE p_type -- preparing types
  WHEN 'make_conf', NULL THEN
+
+    IF dict?'pack_id'
+    THEN
+        dict := jsonb_set( dict, array['pack_id'], replace(dict->>'pack_id','.','')::jsonb);
+        
+        RAISE NOTICE 'pack_id : %', dict->>'pack_id';
+    END IF;
 
     IF dict?'codec:descr_encode'
     THEN
@@ -1360,7 +1373,7 @@ BEGIN
         -- Compatibilidade com sql_view de BR-MG-BeloHorizonte/_pk0008.01
         dict := dict || codec_desc_global;
 
-        RAISE NOTICE 'value of codec_desc_global : %', codec_desc_global;
+        RAISE NOTICE 'codec_desc_global : %', codec_desc_global;
     END IF;
 
     IF dict?'openstreetmap'
@@ -1371,202 +1384,210 @@ BEGIN
         END IF;
     END IF;
 
-    IF dict?'pack_id'
-    THEN
-        dict := jsonb_set( dict, array['pack_id'], replace(dict->>'pack_id','.','')::jsonb);
-    END IF;
+    FOREACH key IN ARRAY jsonb_object_keys_asarray(dict->'layers')
+    LOOP
+        method := dict->'layers'->key->>'method';
+        
+        RAISE NOTICE 'layer : %, method: %', key, method;
 
-	 FOREACH key IN ARRAY jsonb_object_keys_asarray(dict->'layers')
-	 LOOP
-        RAISE NOTICE 'layer : %', key;
-	        method := dict->'layers'->key->>'method';
-		dict := jsonb_set( dict, array['layers',key,'isCsv'], IIF(method='csv2sql',bt,bf) );
-		dict := jsonb_set( dict, array['layers',key,'isOgr'], IIF(method='ogr2ogr',bt,bf) );
-		dict := jsonb_set( dict, array['layers',key,'isOgrWithShp'], IIF(method='ogrWshp',bt,bf) );
-		dict := jsonb_set( dict, array['layers',key,'isShp'], IIF(method='shp2sql',bt,bf) );
-		dict := jsonb_set( dict, array['layers',key,'isOsm'], IIF(method='osm2sql',bt,bf) );
+        codec_desc := codec_desc0;
+        codec_desc_default := codec_desc_default0;
+        codec_desc_sobre := codec_desc_sobre0;
+        codec_extension := codec_extension0;
+        codec_descr_mime := codec_descr_mime0;
 
-                dict := jsonb_set( dict, array['layers',key,'sha256file'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'));
+        dict := jsonb_set( dict, array['layers',key,'isCsv'], IIF(method='csv2sql',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isOgr'], IIF(method='ogr2ogr',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isOgrWithShp'], IIF(method='ogrWshp',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isShp'], IIF(method='shp2sql',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isOsm'], IIF(method='osm2sql',bt,bf) );
 
-                dict := jsonb_set( dict, array['layers',key,'sha256file_name'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'name'));
+        dict := jsonb_set( dict, array['layers',key,'sha256file'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'));
 
-                SELECT id FROM ingest.fdw_donated_packfilevers WHERE hashedfname = dict->'layers'->key->>'sha256file' INTO packvers_id;
+        dict := jsonb_set( dict, array['layers',key,'sha256file_name'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'name'));
 
-                dict := jsonb_set( dict, array['layers',key,'fullPkID'] , to_jsonb(packvers_id));
-                dict := jsonb_set( dict, array['layers',key,'layername_root'] , to_jsonb(key));
-                dict := jsonb_set( dict, array['layers',key,'layername'] , to_jsonb(key || '_' || (dict->'layers'->key->>'subtype') ));
-                dict := jsonb_set( dict, array['layers',key,'tabname'] , to_jsonb('pk' || (dict->'layers'->key->>'fullPkID') || '_p' || (dict->'layers'->key->>'file') || '_' || key));
+        SELECT id FROM ingest.fdw_donated_packfilevers WHERE hashedfname = dict->'layers'->key->>'sha256file' INTO packvers_id;
 
-                IF dict?'orig'
-                THEN
-                    dict := jsonb_set( dict, array['layers',key,'sha256file_path'] , to_jsonb((dict->>'orig') || '/' || (dict->'layers'->key->>'sha256file') ));
-                END IF;
+        dict := jsonb_set( dict, array['layers',key,'fullPkID'] , to_jsonb(packvers_id));
+        dict := jsonb_set( dict, array['layers',key,'layername_root'] , to_jsonb(key));
+        dict := jsonb_set( dict, array['layers',key,'layername'] , to_jsonb(key || '_' || (dict->'layers'->key->>'subtype') ));
+        dict := jsonb_set( dict, array['layers',key,'tabname'] , to_jsonb('pk' || (dict->'layers'->key->>'fullPkID') || '_p' || (dict->'layers'->key->>'file') || '_' || key));
 
-                -- Caso de BR-PR-Araucaria/_pk0061.01
-                IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
-                THEN
-                    SELECT to_jsonb(array_agg(jsonb_build_object('name_item',n, 'sql_select_item',s))) FROM  unnest(ARRAY(SELECT jsonb_array_elements_text(dict->'layers'->key->'orig_filename')),ARRAY(SELECT jsonb_array_elements(dict->'layers'->key->'sql_select'))) t(n,s) INTO multiple_files;
+        IF dict?'orig'
+        THEN
+            dict := jsonb_set( dict, array['layers',key,'sha256file_path'] , to_jsonb((dict->>'orig') || '/' || (dict->'layers'->key->>'sha256file') ));
+        END IF;
 
-                    RAISE NOTICE 'value of multiple_files_array : %', multiple_files;
-                    dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
-                    dict := jsonb_set( dict, array['layers',key,'multiple_files_array'], multiple_files );
+        -- Caso de BR-PR-Araucaria/_pk0061.01
+        IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
+        THEN
+            SELECT to_jsonb(array_agg(jsonb_build_object('name_item',n, 'sql_select_item',s))) FROM  unnest(ARRAY(SELECT jsonb_array_elements_text(dict->'layers'->key->'orig_filename')),ARRAY(SELECT jsonb_array_elements(dict->'layers'->key->'sql_select'))) t(n,s) INTO multiple_files;
 
-                   SELECT string_agg($$'*$$ || trim(txt::text, $$"$$) || $$*'$$, ' ') FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
-                   dict := jsonb_set( dict, array['layers',key,'orig_filename_string_extract'], to_jsonb(orig_filename_string) );
+            RAISE NOTICE 'multiple_files_array : %', multiple_files;
+            dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
+            dict := jsonb_set( dict, array['layers',key,'multiple_files_array'], multiple_files );
 
-                   SELECT $$\( $$ || string_agg($$-iname '*$$ || trim(txt::text, $$"$$) || $$*.shp'$$, ' -o ') || $$ \)$$ FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
-                   dict := jsonb_set( dict, array['layers',key,'orig_filename_string_find'], to_jsonb(orig_filename_string) );
-                END IF;
+            SELECT string_agg($$'*$$ || trim(txt::text, $$"$$) || $$*'$$, ' ') FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
+            dict := jsonb_set( dict, array['layers',key,'orig_filename_string_extract'], to_jsonb(orig_filename_string) );
 
-                IF dict->'layers'->key?'sql_select'
-                THEN
-                    sql_select :=  replace(dict->'layers'->key->>'sql_select',$$\"$$,E'\u130C9');
-                   dict := jsonb_set( dict, array['layers',key,'sql_select'], sql_select::jsonb );
-                END IF;
+            SELECT $$\( $$ || string_agg($$-iname '*$$ || trim(txt::text, $$"$$) || $$*.shp'$$, ' -o ') || $$ \)$$ FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
+            dict := jsonb_set( dict, array['layers',key,'orig_filename_string_find'], to_jsonb(orig_filename_string) );
+        END IF;
 
-                IF dict->'layers'->key?'sql_view'
-                THEN
-                    sql_view := replace(dict->'layers'->key->>'sql_view',$$"$$,E'\u130C9');
-                   dict := jsonb_set( dict, array['layers',key,'sql_view'], to_jsonb(sql_view) );
-                END IF;
+        IF dict->'layers'->key?'sql_select'
+        THEN
+            sql_select :=  replace(dict->'layers'->key->>'sql_select',$$\"$$,E'\u130C9');
+            dict := jsonb_set( dict, array['layers',key,'sql_select'], sql_select::jsonb );
+        END IF;
 
-                -- obtem codec a partir da extensão do arquivo
-                IF jsonb_typeof(dict->'layers'->key->'orig_filename') <> 'array'
-                THEN
-                    orig_filename_ext := regexp_matches(dict->'layers'->key->>'orig_filename','\.(\w+)$');
-                END IF;
+        IF dict->'layers'->key?'sql_view'
+        THEN
+            sql_view := replace(dict->'layers'->key->>'sql_view',$$"$$,E'\u130C9');
+            dict := jsonb_set( dict, array['layers',key,'sql_view'], to_jsonb(sql_view) );
+        END IF;
 
-                IF orig_filename_ext IS NOT NULL
-                THEN
-                    SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (array[extension] = orig_filename_ext) INTO codec_extension, codec_descr_mime, codec_desc_default;
-                    dict := jsonb_set( dict, array['layers',key,'orig_filename_with_extension'], 'true'::jsonb );
-                    RAISE NOTICE 'ext orig_filename_ext : %', orig_filename_ext;
-                    RAISE NOTICE 'ext codec_desc_default : %', codec_desc_default;
-                END IF;
+        -- obtem codec a partir da extensão do arquivo
+        IF jsonb_typeof(dict->'layers'->key->'orig_filename') <> 'array'
+        THEN
+            orig_filename_ext := regexp_matches(dict->'layers'->key->>'orig_filename','\.(\w+)$');
+            
+            IF orig_filename_ext IS NOT NULL
+            THEN
+                SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (array[extension] = orig_filename_ext) INTO codec_extension, codec_descr_mime, codec_desc_default;
+                dict := jsonb_set( dict, array['layers',key,'orig_filename_with_extension'], 'true'::jsonb );
+                RAISE NOTICE 'orig_filename_ext : %', orig_filename_ext;
+                RAISE NOTICE 'codec_desc_default from extension: %', codec_desc_default;
+            END IF;
+        END IF;
 
-                IF dict->'layers'->key?'codec'
-                THEN
-                    -- 1. Extensão, variação e sobrescrição. Descarta a variação.
-                    IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~(.*);(.*)$'))
-                    THEN
-                         SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', '~', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
+        IF dict->'layers'->key?'codec'
+        THEN
+            -- 1. Extensão, variação e sobrescrição. Descarta a variação.
+            IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~(.*);(.*)$'))
+            THEN
+                    SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', '~', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
 
-                        codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',3),'(;|=)'));
+                codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',3),'(;|=)'));
 
-                        RAISE NOTICE '1. codec_desc_default : %', codec_desc_default;
-                        RAISE NOTICE '1. codec_desc_sobre : %', codec_desc_sobre;
-                    END IF;
+                RAISE NOTICE '1. codec_desc_default : %', codec_desc_default;
+                RAISE NOTICE '1. codec_desc_sobre : %', codec_desc_sobre;
+            END IF;
 
-                    -- 2. Extensão e sobrescrição, sem variação
-                    IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^;~]*);(.*)$'))
-                    THEN
-                        SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', ';', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
+            -- 2. Extensão e sobrescrição, sem variação
+            IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^;~]*);(.*)$'))
+            THEN
+                SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', ';', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
 
-                        codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',2),'(;|=)'));
+                codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',2),'(;|=)'));
 
-                        RAISE NOTICE '2. codec_desc_default : %', codec_desc_default;
-                        RAISE NOTICE '2. codec_desc_sobre : %', codec_desc_sobre;
-                    END IF;
+                RAISE NOTICE '2. codec_desc_default : %', codec_desc_default;
+                RAISE NOTICE '2. codec_desc_sobre : %', codec_desc_sobre;
+            END IF;
 
-                    -- 3. Extensão e variação ou apenas extensão, sem sobrescrição
-                    IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~([^;]*)$')) OR EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^~;]*)$'))
-                    THEN
-                        codec_value := regexp_split_to_array( dict->'layers'->key->>'codec' ,'(~)');
+            -- 3. Extensão e variação ou apenas extensão, sem sobrescrição
+            IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~([^;]*)$')) OR EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^~;]*)$'))
+            THEN
+                codec_value := regexp_split_to_array( dict->'layers'->key->>'codec' ,'(~)');
 
-                        SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (array[upper(extension), variant] = codec_value AND cardinality(codec_value) = 2) OR (array[upper(extension)] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
+                SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (array[upper(extension), variant] = codec_value AND cardinality(codec_value) = 2) OR (array[upper(extension)] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
 
-                        RAISE NOTICE '3. codec_desc_default : %', codec_desc_default;
-                    END IF;
+                RAISE NOTICE '3. codec_desc_default : %', codec_desc_default;
+            END IF;
 
-                    dict := jsonb_set( dict, array['layers',key,'isXlsx'], IIF(lower(codec_extension) = 'xlsx',bt,bf) );
-                END IF;
+            dict := jsonb_set( dict, array['layers',key,'isXlsx'], IIF(lower(codec_extension) = 'xlsx',bt,bf) );
+        END IF;
 
-                -- codec resultante
-                -- global sobrescreve default e é sobrescrito por sobre
-                IF codec_desc_default IS NOT NULL
-                THEN
-                    codec_desc := codec_desc_default;
+        -- codec resultante
+        -- global sobrescreve default e é sobrescrito por sobre
+        IF codec_desc_default IS NOT NULL
+        THEN
+            codec_desc := codec_desc_default;
 
-                    IF codec_desc_global IS NOT NULL
-                    THEN
-                        codec_desc := codec_desc || codec_desc_global;
-                    END IF;
+            IF codec_desc_global IS NOT NULL
+            THEN
+                codec_desc := codec_desc || codec_desc_global;
+            END IF;
 
-                    IF codec_desc_sobre IS NOT NULL
-                    THEN
-                        codec_desc := codec_desc || codec_desc_sobre;
-                    END IF;
-                ELSE
-                    codec_desc := codec_desc_global;
-                END IF;
+            IF codec_desc_sobre IS NOT NULL
+            THEN
+                codec_desc := codec_desc || codec_desc_sobre;
+            END IF;
+        ELSE
+            IF codec_desc_global IS NOT NULL
+            THEN
+                codec_desc := codec_desc_global;
+            END IF;
+        END IF;
 
-                RAISE NOTICE 'codec resultante : %', codec_desc;
+        IF codec_desc IS NOT NULL
+        THEN
+            dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_desc::jsonb );
+            
+            RAISE NOTICE 'codec resultante : %', codec_desc;
+        END IF;
 
-                IF codec_desc IS NOT NULL
-                THEN
-                    dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_desc::jsonb );
-                END IF;
+        IF codec_extension IS NOT NULL
+        THEN
+            dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb(codec_extension) );
+            RAISE NOTICE 'codec_extension : %', codec_extension;
+        ELSE
+            CASE method
+            WHEN 'csv2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('csv'::text) );
+            WHEN 'shp2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('shp'::text) );
+            END CASE;
+            
+            RAISE NOTICE 'codec_extension from method: %', dict->'layers'->key->'extension';
+        END IF;
+                
+        IF codec_descr_mime IS NOT NULL
+        THEN
+            dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_descr_mime::jsonb );
+        END IF;
 
-                IF codec_extension IS NOT NULL
-                THEN
-                    dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb(codec_extension) );
-                    RAISE NOTICE 'codec_extension : %', codec_extension;
-                ELSE
-                    CASE method
-                    WHEN 'csv2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('csv'::text) );
-                    WHEN 'shp2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('shp'::text) );
-                    END CASE;
-                END IF;
+        IF codec_descr_mime?'mime' AND codec_descr_mime->>'mime' = 'application/zip' OR codec_descr_mime->>'mime' = 'application/gzip'
+        THEN
+            dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
+            dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb((regexp_matches(codec_extension,'(.*)\.\w+$'))[1]) );
+        END IF;
 
-                IF codec_descr_mime IS NOT NULL
-                THEN
-                    dict := jsonb_set( dict, array['layers',key], (dict->'layers'->>key)::jsonb || codec_descr_mime::jsonb );
-                END IF;
+        IF key='address' OR key='cadparcel' OR key='cadvia'
+        THEN
+            dict := jsonb_set( dict, array['layers',key,'isCadLayer'], 'true'::jsonb );
+        END IF;
 
-                IF codec_descr_mime?'mime' AND codec_descr_mime->>'mime' = 'application/zip' OR codec_descr_mime->>'mime' = 'application/gzip'
-                THEN
-                    dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
-                    dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb((regexp_matches(codec_extension,'(.*)\.\w+$'))[1]) );
-                END IF;
+        IF dict->'layers'?key AND dict->'layers'?('cad'||key)
+            AND dict->'layers'->key->>'subtype' = 'ext'
+            AND dict->'layers'->('cad'||key)->>'subtype' = 'cmpl'
+            AND dict->'layers'->key?'join_column' AND dict->'layers'->('cad'||key)?'join_column'
+        THEN
+            dict := jsonb_set( dict, '{joins}', '{}'::jsonb );
+            dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
+                'layer',           key || '_ext'
+                ,'cadLayer',        'cad' || key || '_cmpl'
+                ,'layerColumn',     dict->'layers'->key->'join_column'
+                ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_column'
+                ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
+                ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)')::jsonpath  )->0->>'file'
+                -- check by dict @? ('$.files[*].p ? (@ == $.layers.'|| key ||'.file)')
+            ));
+        END IF;
 
-                IF key='address' OR key='cadparcel' OR key='cadvia'
-                THEN
-                   dict := jsonb_set( dict, array['layers',key,'isCadLayer'], 'true'::jsonb );
-                END IF;
-
-                IF dict->'layers'?key AND dict->'layers'?('cad'||key)
-                   AND dict->'layers'->key->>'subtype' = 'ext'
-                   AND dict->'layers'->('cad'||key)->>'subtype' = 'cmpl'
-                   AND dict->'layers'->key?'join_column' AND dict->'layers'->('cad'||key)?'join_column'
-                THEN
-                   dict := jsonb_set( dict, '{joins}', '{}'::jsonb );
-                   dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
-                       'layer',           key || '_ext'
-                      ,'cadLayer',        'cad' || key || '_cmpl'
-                      ,'layerColumn',     dict->'layers'->key->'join_column'
-                      ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_column'
-                      ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
-                      ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)')::jsonpath  )->0->>'file'
-                      -- check by dict @? ('$.files[*].p ? (@ == $.layers.'|| key ||'.file)')
-                   ));
-                END IF;
-
-                IF key='geoaddress' AND dict->'layers'?'address'
-                   AND dict->'layers'->key->>'subtype' = 'ext'
-                   AND dict->'layers'->'address'->>'subtype' = 'cmpl'
-	           AND dict->'layers'->key?'join_column'
-                   AND dict->'layers'->'address'?'join_column'
-                THEN
-                   dict := jsonb_set( dict, '{joins}', '{}'::jsonb );
-                   dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
-                       'layer',           key || '_ext'
-                      ,'cadLayer',        'address_cmpl'
-                      ,'layerColumn',     dict->'layers'->key->'join_column'
-                      ,'cadLayerColumn',  dict->'layers'->'address'->'join_column'
-                      ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
-                      ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.address.file)')::jsonpath  )->0->>'file'
-                   ));
-                END IF;
+        IF key='geoaddress' AND dict->'layers'?'address'
+            AND dict->'layers'->key->>'subtype' = 'ext'
+            AND dict->'layers'->'address'->>'subtype' = 'cmpl'
+        AND dict->'layers'->key?'join_column'
+            AND dict->'layers'->'address'?'join_column'
+        THEN
+            dict := jsonb_set( dict, '{joins}', '{}'::jsonb );
+            dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
+                'layer',           key || '_ext'
+                ,'cadLayer',        'address_cmpl'
+                ,'layerColumn',     dict->'layers'->key->'join_column'
+                ,'cadLayerColumn',  dict->'layers'->'address'->'join_column'
+                ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
+                ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.address.file)')::jsonpath  )->0->>'file'
+            ));
+        END IF;
 	 END LOOP;
 
 	 IF jsonb_array_length(to_jsonb(jsonb_object_keys_asarray(dict->'joins'))) > 0
