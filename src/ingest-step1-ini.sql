@@ -1534,6 +1534,8 @@ BEGIN
             CASE method
             WHEN 'csv2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('csv'::text) );
             WHEN 'shp2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('shp'::text) );
+            ELSE
+                --  do nothing
             END CASE;
             
             RAISE NOTICE 'codec_extension from method: %', dict->'layers'->key->'extension';
