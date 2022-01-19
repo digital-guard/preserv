@@ -275,6 +275,7 @@ idnew_test:
 	pg_dump -t optim.jurisdiction $(pg_uri_root)/dl02s_main | psql $(pg_uri)
 	psql $(pg_uri) -c "ALTER TABLE optim.jurisdiction ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
 	pg_dump -t optim.jurisdiction_geom $(pg_uri_root)/dl02s_main | psql $(pg_uri)
+	psql $(pg_uri) -c "ALTER TABLE optim.jurisdiction_geom ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
 	@echo "Creating optim schema at $(pg_db) database"
 	psql $(pg_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_uri) -c "select optim.load_donor_pack('br');"

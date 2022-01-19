@@ -175,7 +175,7 @@ COMMENT ON TABLE ingest.via_line
 
 ---------
 
-DROP FOREIGN TABLE IF EXISTS ingest.fdw_foreign_jurisdiction_geom;
+DROP FOREIGN TABLE IF EXISTS ingest.fdw_foreign_jurisdiction_geom cascade;
 CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
  osm_id          bigint,
  jurisd_base_id  integer,
@@ -189,17 +189,39 @@ CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
  ddd             integer,
  info            jsonb,
  jtags           jsonb,
+ housenumber_system_type text,
+ lex_urn         text,
  geom            geometry(Geometry,4326)
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
 ;
+
+CREATE TABLE optim.donor (
+  id integer NOT NULL PRIMARY KEY CHECK (id = country_id*1000000+local_serial),  -- by trigger!
+  country_id int NOT NULL CHECK(country_id>0), -- ISO
+  local_serial  int NOT NULL CHECK(local_serial>0), -- byu contry
+  scope_osm_id bigint NOT NULL REFERENCES optim.jurisdiction(osm_id),
+  kx_scope_label text, -- city code or country code
+  shortname text, -- abreviation or acronym (local)
+  vat_id text,    -- in the Brazilian case is "CNPJ:number"
+  legalName text NOT NULL, -- in the Brazilian case is Razao Social
+  wikidata_id bigint,  -- without "Q" prefix
+  url text,     -- official home page of the organization
+  info JSONb,   -- all other information using controlled keys
+  kx_vat_id text,    -- cache for normalized vat_id
+  UNIQUE(country_id,local_serial),
+  UNIQUE(country_id,kx_vat_id),
+  UNIQUE(country_id,legalName),
+  UNIQUE(country_id,kx_scope_label,shortname)
+);
 
 DROP FOREIGN TABLE IF EXISTS ingest.fdw_donor;
 CREATE FOREIGN TABLE ingest.fdw_donor (
  id integer,
  country_id integer,
  local_serial integer,
- scope text,
+ scope_osm_id bigint,
+ kx_scope_label text,
  shortname text,
  vat_id text,
  legalname text,
@@ -266,7 +288,7 @@ CREATE TABLE ingest.donated_PackComponent(
 
 DROP VIEW IF EXISTS ingest.vwall CASCADE;
 CREATE VIEW ingest.vwall AS
-  SELECT pc.id, dn.scope
+  SELECT pc.id, dn.kx_scope_label, j.housenumber_system_type
   FROM ingest.donated_PackComponent pc
   LEFT JOIN ingest.fdw_donated_packfilevers pf
     ON pc.packvers_id=pf.id
@@ -274,6 +296,8 @@ CREATE VIEW ingest.vwall AS
     ON pf.pack_id=pt.id
   LEFT JOIN ingest.fdw_donor dn
     ON pt.donor_id=dn.id
+  LEFT JOIN ingest.fdw_foreign_jurisdiction_geom j
+    ON dn.scope_osm_id=j.osm_id
 ;
 
 
@@ -1030,7 +1054,14 @@ RETURNS TABLE (ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
    max(DISTINCT is_compl::text)::boolean house_numbers_has_complement
   FROM (
      SELECT file_id, geom,
-       ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', to_integer(properties->>'house_number')) as row_id,
+        CASE
+          WHEN (SELECT housenumber_system_type FROM ingest.vwall WHERE id=p_file_id)='metric' THEN
+          ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', to_bigint(properties->>'house_number'))
+          ELSE
+          ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', to_bigint(properties->>'house_number'))
+          --ROW_NUMBER() OVER(ORDER BY  properties->>'address')) 
+          -- or (properties->>'via_name')||'#'||properties->>'house_number'
+       END AS row_id,
        COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) as is_compl,
        properties->>'via_name' as via_name,
        properties->>'house_number' as house_number,
