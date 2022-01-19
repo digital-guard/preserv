@@ -39,7 +39,7 @@ CREATE TABLE optim.auth_user (
   username text NOT NULL PRIMARY KEY,
   info jsonb
 );
-INSERT INTO optim.auth_user(username) VALUES ('carlos'),('igor'),('enio'),('peter'); -- minimal one Linux's /home/username
+INSERT INTO optim.auth_user(username) VALUES ('carlos'),('igor'),('enio'),('peter'),('claiton'); -- minimal one Linux's /home/username
 
 CREATE TABLE optim.donor (
   id integer NOT NULL PRIMARY KEY CHECK (id = country_id*1000000+local_serial),  -- by trigger!
@@ -323,7 +323,7 @@ BEGIN
     INSERT INTO optim.donor (country_id, local_serial, scope_osm_id, kx_scope_label, shortname, vat_id, legalname, wikidata_id, url)
     SELECT (SELECT jurisd_base_id FROM optim.jurisdiction WHERE osm_id = scope_osm_id) AS country_id, tmp_orig.fdw_donor%s.*
     FROM tmp_orig.fdw_donor%s
-    WHERE kx_scope_label <> 'INT' -- verificar escopo INT
+    --WHERE kx_scope_label <> 'INT' -- verificar escopo INT
     ON CONFLICT (country_id,local_serial)
     DO UPDATE 
     SET scope_osm_id=EXCLUDED.scope_osm_id, kx_scope_label=EXCLUDED.kx_scope_label, shortName=EXCLUDED.shortName, vat_id=EXCLUDED.vat_id, legalName=EXCLUDED.legalName, wikidata_id=EXCLUDED.wikidata_id, url=EXCLUDED.url;
