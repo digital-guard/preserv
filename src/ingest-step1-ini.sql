@@ -1057,6 +1057,8 @@ RETURNS TABLE (ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
         CASE
           WHEN (SELECT housenumber_system_type FROM ingest.vwall WHERE id=p_file_id)='metric' THEN
           ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', to_bigint(properties->>'house_number'))
+          WHEN (SELECT housenumber_system_type FROM ingest.vwall WHERE id=p_file_id)='teste' THEN
+          ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', NULLIF(regexp_replace(properties->>'house_number', '\D', '', 'g'), '')::int, regexp_replace(properties->>'house_number', '[^[:alpha:]]', '', 'g') )
           ELSE
           ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', to_bigint(properties->>'house_number'))
           --ROW_NUMBER() OVER(ORDER BY  properties->>'address')) 
