@@ -280,6 +280,7 @@ CREATE TABLE ingest.donated_PackComponent(
   hash_md5 text NOT NULL, -- or "size-md5" as really unique string
   proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
   file_meta jsonb,
+  hcode_distribution_parameters jsonb,
   feature_asis_summary jsonb,
   feature_distrib jsonb,
   UNIQUE(packvers_id,ftid,hash_md5)
@@ -1120,7 +1121,7 @@ CREATE FUNCTION ingest.publicating_geojsons_p2(
   SELECT 'p2';
 $f$ language SQL VOLATILE; --fim p2
 
-CREATE FUNCTION ingest.publicating_geojsons_p3(
+CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text        --
@@ -1137,7 +1138,7 @@ CREATE FUNCTION ingest.publicating_geojsons_p3(
     	(SELECT feature_distrib FROM ingest.donated_PackComponent WHERE id= p_file_id),
     	1,
     	(SELECT length(st_geohash(geom)) FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
-    	750, 8000, 3
+    	(SELECT hcode_distribution_parameters FROM ingest.donated_PackComponent WHERE id= p_file_id)
     ) t
   ;
   SELECT pg_catalog.pg_file_unlink(p_fileref || '/pts_*.geojson');
@@ -1163,6 +1164,12 @@ CREATE FUNCTION ingest.publicating_geojsons_p3(
   DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
   SELECT 'p3';
 $f$ language SQL VOLATILE; --fim p3
+--Configurar hcode_distribution_parameters para todos os donated_PackComponent.
+--Parametros default utilizados anteriormente:
+--psql postgres://postgres@localhost/ingest99 -c "UPDATE ingest.donated_PackComponent SET hcode_distribution_parameters = jsonb_build_object('p_threshold', 750, 'p_threshold_sum', 8000, 'p_heuristic',3) ;"
+
+--Configurar hcode_distribution_parameters para layer geoaddress de OSM https://github.com/digital-guard/preserv-BR/tree/main/data/_pk0004.01:
+--psql postgres://postgres@localhost/ingest99 -c "UPDATE ingest.donated_PackComponent SET hcode_distribution_parameters = jsonb_build_object('p_threshold', 650, 'p_threshold_sum', 10000, 'p_heuristic',3) WHERE id =<ID do layer geoaddress>;"
 
 CREATE FUNCTION ingest.publicating_geojsons_p4(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent

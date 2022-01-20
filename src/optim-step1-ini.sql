@@ -167,6 +167,7 @@ CREATE TABLE optim.donated_PackComponent(
   hash_md5 text NOT NULL, -- or "size-md5" as really unique string
   proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
   file_meta jsonb,
+  hcode_distribution_parameters jsonb,
   feature_asis_summary jsonb,
   feature_distrib jsonb,
   UNIQUE(packvers_id,ftid,hash_md5)
