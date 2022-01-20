@@ -2,40 +2,44 @@
 ## Installing Project Digital Preservation
 ##
 
-## -- -- VARS -- --
+## ## ## ##
+## -- VARS --
 
-pg_io       := /tmp/pg_io
-lockpath    := /var/gits/_lock-mkStatus
+pg_io           := /tmp/pg_io
+lockpath        := /var/gits/_lock-mkStatus
 
-pg_uri_root := postgres://postgres@localhost
+pg_uri_root     := postgres://postgres@localhost
 
-## danger dl03t_main, ingest1. Use dummy 99 to test.
-pg_db       := dl99t_main
-pg_dbingest := ingest99
+## Danger dl03t_main, ingest1.
+## Use dummy 99 to test.
+pg_db           := ingest99
+pg_datalake     := dl99t_main
 
-pg_uri      := $(pg_uri_root)/$(pg_db)
-pg_uringest := $(pg_uri_root)/$(pg_dbingest)
+pg_db_uri       := $(pg_uri_root)/$(pg_db)
+pg_datalake_uri := $(pg_uri_root)/$(pg_datalake)
 
-countries   := "'BR','CL','CO','EC','PE','VE'"  # em uso e conforme data/jurisdiction.csv
+countries       := "'BR','CL','CO','EC','PE','VE'"  # em uso e conforme data/jurisdiction.csv
 
-gits_basepath := /var/gits
-pk_basepath   := $(gits_basepath)/_dg
+gits_basepath   := /var/gits
 
-## not working!
-DB_TEST  := $(shell psql $(pg_uri_root) -c "\l" | awk '/$(pg_dbingest)/ {n=(n>0)?3:1} /$(pg_db)/ {n=(n>0)?3:2} END {print n;}')
-DB_TEST2 := $(shell echo '/$(pg_dbingest)/ {n=(n>0)?3:1} /$(pg_db)/ {n=(n>0)?3:2} END {print n;}')
-
+## ## ## ##
 ## -- CONFIGS --
 .SILENT: message countpacks status_disk_abuse
 
-## ## ## ## ##
+## ## ## ##
 ## -- HELP --
 message:
 	echo "--------  make of the Preserv project ----------"
 	echo
 	echo " -- SQL BUILDERs --"
-	echo " ini_all: configure and prepare all basic databases and schemas"
-	echo " ini_sql_db: ..."
+	echo " all: configure and prepare default test databases ingest99 and dl99t_main."
+	echo " all pg_db=ingest42 pg_datalake=dl42t_main: configure and prepare custom databases ingest42 and dl42t_main."
+	echo
+	echo " ini_ingest: configure and prepare default test database ingest99."
+	echo " ini_ingest pg_db=ingest42: configure and prepare custom database ingest42."
+	echo
+	echo " ini_datalake: configure and prepare default test database dl99t_main."
+	echo " ini_datalake pg_datalake=dl42t_main: configure and prepare custom database dl42t_main."
 	echo
 	echo " -- REPORT tools --"
 	echo " countpacks [pkdir=v]: count package-evidence files ok pkdir (e.g. preserv-BR) or its root"
@@ -46,62 +50,89 @@ message:
 	echo " fix_permissions: execute chmod and chown in the standard folders"
 	echo
 
-## ## ## ## ##
-## -- -- SQL BUILDERs -- --
+## ## ## ##
+## -- SQL BUILDERs --
 
 all: ini_all
 
-ini_all: ini_sql_db ini_sql
+ini_all: ini_ingest ini_datalake
 
-ini_sql_db:
-	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_dbingest)"
+ini_ingest: ini_ingest_sql load_license_tables
+
+ini_ingest_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_db)"
+	@echo "--- Preparing filesystem... ---"
+	rm -f $(lockpath)/digitalPreservation-makeSQL.~feito
+	@echo "--- Preparing databse... ---"
+	@echo "--- Running SQL pg_pubLib ---"
+	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_db)
+	@echo "--- Running Ingest ---"
+	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/lib-dg_preserv.sql
+	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
+	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
+	@echo "--- codec_type load ---"
+	psql $(pg_db_uri) -c "SELECT ingest.load_codec_type('$(gits_basepath)/_dg/preserv/data/codec_type.csv',',');"
+	touch $(lockpath)/digitalPreservation-makeSQL.~feito
+	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
 
-ini_sql_db_BUG:
-	@echo "... Checking databases "
-	@echo " debug $(DB_TEST), test2=$(DB_TEST2)"
-	exit
-ifneq ($(DB_TEST),$(filter $(DB_TEST),1 3))
-	@echo "... Creating database $(pg_dbingest)"
-	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_dbingest)"
-endif
-ifneq ($(DB_TEST),$(filter $(DB_TEST),3 2))
-	@echo "... Creating database $(pg_db)"
-	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_db)"
-endif
-	@echo "Databases $(pg_db) and $(pg_dbingest) created."
+load_license_tables: pgio
+	@echo "--- license table load ---"
+# 	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/families.csv" -O "$(pg_io)/families.csv"
+	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/licenses.csv" -O "$(pg_io)/licenses.csv"
+	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/implieds.csv" -O "$(pg_io)/implieds.csv"
+	wget "https://raw.githubusercontent.com/digital-guard/preserv-BR/main/data/donatedPack.csv" -O "$(pg_io)/donatedPack.csv"
 
+	psql $(pg_db_uri) -c "SELECT ingest.fdw_generate_direct_csv('$(pg_io)/licenses.csv','tmp_licenses'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/implieds.csv','tmp_implieds'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/donatedPack.csv','tmp_donatedPack'); \
+	DROP TABLE IF EXISTS tmp_pack_licenses; CREATE TABLE tmp_pack_licenses AS SELECT d.pack_id, l.* FROM tmp_donatedPack AS d \
+	LEFT JOIN (\
+	SELECT id_label, name, family, url, 'yes' AS license_is_explicit FROM tmp_licenses \
+	UNION \
+	SELECT id_label, name, family, url_report AS url, 'no' AS license_is_explicit FROM tmp_implieds) AS l \
+	ON lower(d.license) = l.id_label AND d.license_is_explicit = l.license_is_explicit;\
+	DROP FOREIGN TABLE IF EXISTS tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_donatedPack;"
 
-ini_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
+ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
+	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_datalake)"
 	@echo "--- Preparing filesystem... ---"
 	rm -f $(lockpath)/digitalPreservation-makeSQL.~feito
 	@echo "--- Preparing databses... ---"
 	@echo "--- Running SQL pubLib ---"
-	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_db)
-	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_dbingest)
+	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_datalake)
 	#@echo "Creating optim schema at $(pg_db) database"
-	#psql $(pg_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
+	#psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	@echo "--- Running API SQL templates ---"
 	@echo "!nao fazendo ainda, futuro"
-	#psql $(pg_uri) < step00-iniApi.sql
+	#psql $(pg_datalake_uri) < step00-iniApi.sql
 	@echo "--- Running Eclusa ---"
 	@echo "!nao fazendo ainda, futuro"
-	#psql $(pg_uri) < eclusa/step1-ini.sql
+	#psql $(pg_datalake_uri) < eclusa/step1-ini.sql
 	# sh eclusa-step2a-ins.sh
-	#/var/gits/WS/src? psql $(pg_uri) < eclusa/step2b-ins.sql
-	@echo "--- Running Ingest ---"
-	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/lib-dg_preserv.sql
-	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
-	psql $(pg_uringest) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
-
+	#/var/gits/WS/src? psql $(pg_datalake_uri) < eclusa/step2b-ins.sql
+	psql $(pg_datalake_uri) -c "CREATE SCHEMA    IF NOT EXISTS optim;"
+	psql $(pg_datalake_uri) -c "CREATE SCHEMA    IF NOT EXISTS tmp_orig;"
+	psql $(pg_datalake_uri) -c "CREATE EXTENSION IF NOT EXISTS file_fdw;"
+	psql $(pg_datalake_uri) -c "CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;"
+# 	psql $(pg_datalake_uri) -c "DROP TABLE IF EXISTS optim.jurisdiction ;"
+	pg_dump -t optim.jurisdiction $(pg_uri_root)/dl02s_main | psql $(pg_datalake_uri)
+	psql $(pg_datalake_uri) -c "ALTER TABLE optim.jurisdiction ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
+	pg_dump -t optim.jurisdiction_geom $(pg_uri_root)/dl02s_main | psql $(pg_datalake_uri)
+	psql $(pg_datalake_uri) -c "ALTER TABLE optim.jurisdiction_geom ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
+	psql $(pg_datalake_uri) -c "UPDATE optim.jurisdiction_geom SET housenumber_system_type ='teste' WHERE isolabel_ext ='BR-MG-BeloHorizonte';"
+	@echo "Creating optim schema at $(pg_db) database"
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
+	psql $(pg_datalake_uri) -c "select optim.load_donor_pack('br');"
+	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('br');"
+	psql $(pg_datalake_uri) -c "select optim.load_donor_pack('co');"
+	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('co');"
+# 	psql $(pg_datalake_uri) -c "select optim.load_donor_pack('pe');" # Falta donor.csv e donatedPack.csv
+# 	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('pe');"
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
-
 
 build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=name
 	@echo "DROP FOREIGN TABLE IF EXISTS $(fdwName);"
 	@echo "CREATE FOREIGN TABLE $(fdwName) ("
-	@psql postgres://postgres@localhost/$(fdwOrigBase) -c "\d $(fdwOrigSchema).$(fdwOrigName)" |  awk '/^ [a-z]/ {print $$1,$$3 ",";}'
+	@psql $(pg_uri_root)/$(fdwOrigBase) -c "\d $(fdwOrigSchema).$(fdwOrigName)" |  awk '/^ [a-z]/ {print $$1,$$3 ",";}'
 	@echo ") SERVER foreign_server"
 	@echo "  OPTIONS (schema_name '$(fdwOrigSchema)', table_name '$(fdwOrigName)');"
 	@echo
@@ -109,24 +140,40 @@ build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=n
 # make publicating_geojsons id=1 isolabel='BR-MG-BeloHorizonte' nmfolder=BH nmview=teste2022gBH
 publicating_geojsons: #id=id isolabel=isolabel_ext nmfolder=folder nmview=name
 	mkdir -m777 -p $(pg_io)/$(nmfolder)
-	psql $(pg_uringest) -c "DROP VIEW IF EXISTS $(nmview); SELECT ingest.publicating_geojsons($(id),'$(isolabel)','$(pg_io)/$(nmfolder)');"
-	psql $(pg_uringest) -c "CREATE VIEW $(nmview) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT feature_distrib from ingest.donated_packcomponent WHERE id=$(id)), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
-	psql $(pg_uringest) -c "SELECT write_geojsonb_features('$(nmview)','$(pg_io)/$(nmfolder)/geohahes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, 2, 5);"
+	psql $(pg_db_uri) -c "DROP VIEW IF EXISTS $(nmview); SELECT ingest.publicating_geojsons($(id),'$(isolabel)','$(pg_io)/$(nmfolder)');"
+	psql $(pg_db_uri) -c "CREATE VIEW $(nmview) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT feature_distrib from ingest.donated_packcomponent WHERE id=$(id)), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
+	psql $(pg_db_uri) -c "SELECT write_geojsonb_features('$(nmview)','$(pg_io)/$(nmfolder)/geohahes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, 2, 5);"
+
+makefile_pk_first:
+	@echo "------------------------------------------------------"
+	@echo "Iniciada cópia de makefile inicial nos diretórios '_pk*' de data."
+	# retorna todos os diretórios com o padrão '*_pk*' e copia o arquivo commomLast.mustache.mk para cada um deles, renomeando o arquivo para makefile.
+	sed "s/^country *.*/country=INT/" maketemplates/commomLast.mustache.mk > maketemplates/commomLast.mustache.mk.tmp
+	find ../data -type d -name '*_pk*' -exec cp maketemplates/commomLast.mustache.mk.tmp \{\}/makefile \;
+	rm maketemplates/commomLast.mustache.mk.tmp
+	@echo "Finalizada a cópia "
+	@echo "------------------------------------------------------"
+
+redirects_update: pgio
+	@echo "-- Atualiza redirecionamentos --"
+	@echo Download da tabela de-para ....
+	wget "https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk/gviz/tq?tqx=out:csv&sheet={de-para}" -O "$(pg_io)/de-para.csv"
+	psql $(pg_datalake_uri) -c "DELETE FROM download.redirects; COPY download.redirects FROM '$(pg_io)/de-para.csv' CSV HEADER;"
 
 
-## ## ## ## ##
-## -- -- REPORT tools -- --
+## ## ## ##
+## -- REPORT tools --
 
-countpacks: $(pk_basepath)
-	echo "---- Counting lines of $(pk_basepath)/$(pkdir) ----"
+countpacks: $(gits_basepath)/_dg
+	echo "---- Counting lines of $(gits_basepath)/_dg/$(pkdir) ----"
 	echo "* sha256sum.txt files:"
-	find $(pk_basepath)/$(pkdir) -name "sha256sum.txt" | wc -l
+	find $(gits_basepath)/_dg/$(pkdir) -name "sha256sum.txt" | wc -l
 	echo "* _pk* directories:"
-	(cd $(pk_basepath)/$(pkdir); find . -type d  -wholename "./*/*/*/_pk*" | wc -l)
+	(cd $(gits_basepath)/_dg/$(pkdir); find . -type d  -wholename "./*/*/*/_pk*" | wc -l)
 	echo "* README.md files:"
-	find $(pk_basepath)/$(pkdir) -name "README.md" | wc -l
+	find $(gits_basepath)/_dg/$(pkdir) -name "README.md" | wc -l
 	echo "* make_conf files:"
-	find $(pk_basepath)/$(pkdir) -name "make_conf.*" | wc -l
+	find $(gits_basepath)/_dg/$(pkdir) -name "make_conf.*" | wc -l
 
 status: status_base status_disk_abuse
 
@@ -135,18 +182,18 @@ status_base:
 
 status_schEtc:
 	@echo "-- database ingest1:"
-	psql $(pg_uri)/ingest1    -c "\dn"
+	psql $(pg_uri_root)/ingest1    -c "\dn"
 	@echo "-- OSM testing database DL01t_osm:"
-	psql $(pg_uri)/dl01t_osm  -c "\dn"
+	psql $(pg_uri_root)/dl01t_osm  -c "\dn"
 	@echo "-- MAIN testing database DL03t_main:"
-	psql $(pg_uri)/dl03t_main -c "\dn"
+	psql $(pg_uri_root)/dl03t_main -c "\dn"
 
 status_schProd:
 	@echo "-- -- -- ON-PRODUCTION SCHEMAS -- -- --"
 	@echo "-- OSM stable database DL02s_osm:"
-	psql $(pg_uri)/dl02s_osm  -c "\dn"
+	psql $(pg_uri_root)/dl02s_osm  -c "\dn"
 	@echo "-- MAIN stable database DL04s_main:"
-	psql $(pg_uri)/dl04s_main -c "\dn"
+	psql $(pg_uri_root)/dl04s_main -c "\dn"
 
 status_disk_abuse:
 	echo "-- -- -- CHECK disk usage ABUSE -- -- --"
@@ -154,6 +201,7 @@ status_disk_abuse:
 	# (du -h /var/www | grep -v "^[0-9][0-9,\.]*[KM]") || true
 	(du -h $(pg_io)     | grep -v "^[0-9][0-9,\.]*[KM]") || true
 	echo "... if no line, it is ok!"
+
 
 ## ## ## ##
 ## ECLUSA, commands to execute by root at crontab:
@@ -192,7 +240,7 @@ ins_step1: pgio # LIXO
 	   cp "$$gitdir/data/"*.csv $(pg_io)/digital-preservartion-XX; \
 	done
 
-##############
+
 ## ## ## ##
 ## LIXO? commands to execute by root at crontab:
 
@@ -230,62 +278,6 @@ jurisdiction_iso_test:
 	 WHERE osm_id IN (SELECT osm_id FROM rec_ids) order by 1\
 	"
 
-redirects_update: pgio
-	@echo "-- Atualiza redirecionamentos --"
-	@echo Download da tabela de-para ....
-	wget "https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk/gviz/tq?tqx=out:csv&sheet={de-para}" -O "$(pg_io)/de-para.csv"
-	psql $(pg_uri) -c "DELETE FROM download.redirects; COPY download.redirects FROM '$(pg_io)/de-para.csv' CSV HEADER;"
-
-makefile_pk_first:
-	@echo "------------------------------------------------------"
-	@echo "Iniciada cópia de makefile inicial nos diretórios '_pk*' de data."
-	# retorna todos os diretórios com o padrão '*_pk*' e copia o arquivo commomLast.mustache.mk para cada um deles, renomeando o arquivo para makefile.
-	sed "s/^country *.*/country=INT/" maketemplates/commomLast.mustache.mk > maketemplates/commomLast.mustache.mk.tmp
-	find ../data -type d -name '*_pk*' -exec cp maketemplates/commomLast.mustache.mk.tmp \{\}/makefile \;
-	rm maketemplates/commomLast.mustache.mk.tmp
-	@echo "Finalizada a cópia "
-	@echo "------------------------------------------------------"
-
-codec_type_prepare:
-	@echo "--- codec_type load ---"
-	psql $(pg_uringest) -c "SELECT ingest.load_codec_type('$(gits_basepath)/_dg/preserv/data/codec_type.csv',',');"
-
-load_license_tables: pgio
-	@echo "-- Carrega tabelas --"
-# 	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/families.csv" -O "$(pg_io)/families.csv"
-	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/licenses.csv" -O "$(pg_io)/licenses.csv"
-	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/implieds.csv" -O "$(pg_io)/implieds.csv"
-	wget "https://raw.githubusercontent.com/digital-guard/preserv-BR/main/data/donatedPack.csv" -O "$(pg_io)/donatedPack.csv"
-
-	psql $(pg_uringest) -c "SELECT ingest.fdw_generate_direct_csv('$(pg_io)/licenses.csv','tmp_licenses'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/implieds.csv','tmp_implieds'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/donatedPack.csv','tmp_donatedPack'); \
-	DROP TABLE IF EXISTS tmp_pack_licenses; CREATE TABLE tmp_pack_licenses AS SELECT d.pack_id, l.* FROM tmp_donatedPack AS d \
-	LEFT JOIN (\
-	SELECT id_label, name, family, url, 'yes' AS license_is_explicit FROM tmp_licenses \
-	UNION \
-	SELECT id_label, name, family, url_report AS url, 'no' AS license_is_explicit FROM tmp_implieds) AS l \
-	ON lower(d.license) = l.id_label AND d.license_is_explicit = l.license_is_explicit;\
-	DROP FOREIGN TABLE IF EXISTS tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_donatedPack;"
-
-idnew_test:
-	psql $(pg_uri) -c "CREATE SCHEMA    IF NOT EXISTS optim;"
-	psql $(pg_uri) -c "CREATE SCHEMA    IF NOT EXISTS tmp_orig;"
-	psql $(pg_uri) -c "CREATE EXTENSION IF NOT EXISTS file_fdw;"
-	psql $(pg_uri) -c "CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;"
-# 	psql $(pg_uri) -c "DROP TABLE IF EXISTS optim.jurisdiction ;"
-	pg_dump -t optim.jurisdiction $(pg_uri_root)/dl02s_main | psql $(pg_uri)
-	psql $(pg_uri) -c "ALTER TABLE optim.jurisdiction ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
-	pg_dump -t optim.jurisdiction_geom $(pg_uri_root)/dl02s_main | psql $(pg_uri)
-	psql $(pg_uri) -c "ALTER TABLE optim.jurisdiction_geom ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
-	psql $(pg_uri) -c "UPDATE optim.jurisdiction_geom SET housenumber_system_type ='teste' WHERE isolabel_ext ='BR-MG-BeloHorizonte';"
-	@echo "Creating optim schema at $(pg_db) database"
-	psql $(pg_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
-	psql $(pg_uri) -c "select optim.load_donor_pack('br');"
-	psql $(pg_uri) -c "select optim.insert_donor_pack('br');"
-	psql $(pg_uri) -c "select optim.load_donor_pack('co');"
-	psql $(pg_uri) -c "select optim.insert_donor_pack('co');"
-# 	psql $(pg_uri) -c "select optim.load_donor_pack('pe');" # Falta donor.csv e donatedPack.csv
-# 	psql $(pg_uri) -c "select optim.insert_donor_pack('pe');"
-
 ## ## ## ##
 ## -- ADMIN FIX TOOLS --
 fix_permissions: pgio
@@ -303,7 +295,7 @@ else
 endif
 
 ## ## ## ##
-## AUXILIAR TARGETS, snippet code for reuse
+## -- AUXILIAR TARGETS, snippet code for reuse --
 pgio:
 	mkdir -p $(pg_io)
 lck:
