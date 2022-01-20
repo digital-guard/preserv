@@ -316,7 +316,7 @@ BEGIN
     RETURN (SELECT '/var/gits/_dg/preserv-'|| regexp_replace(replace(regexp_replace(escopo, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml');
 END;
 $f$ LANGUAGE PLpgSQL;
---SELECT optim.format_filepath('BR', 34);iIF(p_jurisdiction='INT', '', '-' || UPPER(p_jurisdiction))
+--SELECT optim.format_filepath('BR', 34);
 
 CREATE or replace FUNCTION optim.insert_donor_pack(
     jurisdiction text
@@ -341,7 +341,7 @@ BEGIN
   q := $$
     -- popula optim.donated_PackTpl a partir de tmp_orig.fdw_donatedPack
     INSERT INTO optim.donated_PackTpl (donor_id, user_resp, pk_count, original_tpl, make_conf_tpl)
-    SELECT (SELECT jurisd_base_id*1000000+donor_id FROM optim.jurisdiction WHERE osm_id = (SELECT scope_osm_id FROM optim.donor WHERE donor_id = local_serial AND country_id = (SELECT jurisd_base_id FROM optim.jurisdiction WHERE admin_level = 2 AND lower(abbrev) = lower('%s'))) ), lower(user_resp), 1, optim.replace_file_and_version(pg_read_file(optim.format_filepath(escopo, donor_id))), yamlfile_to_jsonb(optim.format_filepath(escopo, donor_id)) as make_conf_tpl
+    SELECT (SELECT jurisd_base_id*1000000+donor_id FROM optim.jurisdiction WHERE osm_id = (SELECT scope_osm_id FROM optim.donor WHERE donor_id = local_serial AND country_id = (SELECT jurisd_base_id FROM optim.jurisdiction WHERE admin_level = 2 AND lower(abbrev) = lower('%s'))) ), lower(user_resp), pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(escopo, donor_id))), yamlfile_to_jsonb(optim.format_filepath(escopo, donor_id)) as make_conf_tpl
     FROM tmp_orig.fdw_donatedpack%s
     WHERE file_exists(optim.format_filepath(escopo, donor_id)) -- verificar make_conf.yaml ausentes
     ON CONFLICT (donor_id,pk_count)
