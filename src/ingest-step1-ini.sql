@@ -1826,7 +1826,7 @@ CREATE or replace VIEW api.redirects AS SELECT * FROM download.redirects;
 
 
 
-CREATE FUNCTION ingest.join(
+CREATE or replace FUNCTION ingest.join(
     p_ftname_layer text,
     p_join_col_layer text,
     p_fileref_layer_sha256 text,
@@ -1856,7 +1856,6 @@ CREATE FUNCTION ingest.join(
                 FROM ingest.fdw_feature_type
                 WHERE ftname=lower('%s')
                 )
-                --AND pck_fileref_sha256 = '%s'
                 AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
             )
       ),
@@ -1876,7 +1875,6 @@ CREATE FUNCTION ingest.join(
                     FROM ingest.fdw_feature_type
                     WHERE ftname=lower('%s')
                     )
-                    --AND pck_fileref_sha256 = '%s'
                     AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
             )
         ) AS asis
@@ -1906,7 +1904,6 @@ CREATE FUNCTION ingest.join(
                 FROM ingest.fdw_feature_type
                 WHERE ftname=lower('%s')
                 )
-                --AND pck_fileref_sha256 = '%s'
                 AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
             )
             AND l.properties->'%s' NOT IN (  SELECT * FROM duplicate_keys  )
