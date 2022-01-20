@@ -636,7 +636,7 @@ CREATE FUNCTION ingest.geojson_load(
  END;
 $f$ LANGUAGE PLpgSQL;
 
-CREATE FUNCTION ingest.getmeta_to_file(
+CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_file text,
   p_ftid int,
   p_pck_id bigint,
@@ -663,9 +663,9 @@ CREATE FUNCTION ingest.getmeta_to_file(
     FROM ingest.donated_PackComponent
     WHERE packvers_id=p_pck_id AND hash_md5=(SELECT hash_md5 FROM filedata)
   ), ins AS (
-   INSERT INTO ingest.donated_PackComponent(packvers_id,ftid,/*file_type,*/hash_md5,file_meta/*,pck_fileref_sha256*/)
+   INSERT INTO ingest.donated_PackComponent(packvers_id,ftid,/*file_type,*/hash_md5,file_meta,hcode_distribution_parameters/*,pck_fileref_sha256*/)
       --SELECT * , p_pck_fileref_sha256 FROM filedata
-      SELECT * FROM filedata
+      SELECT *, jsonb_build_object('p_threshold', 750, 'p_threshold_sum', 8000, 'p_heuristic',3) FROM filedata
    ON CONFLICT DO NOTHING
    RETURNING id
   )
