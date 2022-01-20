@@ -196,25 +196,6 @@ CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
   OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
 ;
 
-CREATE TABLE optim.donor (
-  id integer NOT NULL PRIMARY KEY CHECK (id = country_id*1000000+local_serial),  -- by trigger!
-  country_id int NOT NULL CHECK(country_id>0), -- ISO
-  local_serial  int NOT NULL CHECK(local_serial>0), -- byu contry
-  scope_osm_id bigint NOT NULL REFERENCES optim.jurisdiction(osm_id),
-  kx_scope_label text, -- city code or country code
-  shortname text, -- abreviation or acronym (local)
-  vat_id text,    -- in the Brazilian case is "CNPJ:number"
-  legalName text NOT NULL, -- in the Brazilian case is Razao Social
-  wikidata_id bigint,  -- without "Q" prefix
-  url text,     -- official home page of the organization
-  info JSONb,   -- all other information using controlled keys
-  kx_vat_id text,    -- cache for normalized vat_id
-  UNIQUE(country_id,local_serial),
-  UNIQUE(country_id,kx_vat_id),
-  UNIQUE(country_id,legalName),
-  UNIQUE(country_id,kx_scope_label,shortname)
-);
-
 DROP FOREIGN TABLE IF EXISTS ingest.fdw_donor;
 CREATE FOREIGN TABLE ingest.fdw_donor (
  id integer,
