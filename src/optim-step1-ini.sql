@@ -313,7 +313,7 @@ $f$ LANGUAGE PLpgSQL;
 
 CREATE or replace FUNCTION optim.format_filepath(escopo text, donor_id bigint, pack_count int) RETURNS text AS $f$
 BEGIN
-    RETURN (SELECT '/var/gits/_dg/preserv-'|| regexp_replace(replace(regexp_replace(escopo, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(1,'fm00') || '/make_conf.yaml');
+    RETURN (SELECT '/var/gits/_dg/preserv-'|| regexp_replace(replace(regexp_replace(escopo, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(pack_count,'fm00') || '/make_conf.yaml');
 END;
 $f$ LANGUAGE PLpgSQL;
 --SELECT optim.format_filepath('BR', 34);
