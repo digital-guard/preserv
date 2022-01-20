@@ -49,6 +49,11 @@ message:
 	echo " fix_usergroup username=v: add standard groups to username"
 	echo " fix_permissions: execute chmod and chown in the standard folders"
 	echo
+	echo " redirects_update: update download.redirects in default database dl."
+	echo " redirects_update pg_datalake=dl42t_main: update download.redirects in custom database dl42t_main."
+	echo " publicating_geojsons: "
+	echo " build_fdwtable:"
+	echo " first_makefile: copying initial makefile in 'data/_pk*' directories"
 
 ## ## ## ##
 ## -- SQL BUILDERs --
@@ -98,16 +103,8 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	@echo "--- Preparing databses... ---"
 	@echo "--- Running SQL pubLib ---"
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_datalake)
-	#@echo "Creating optim schema at $(pg_db) database"
+	@echo "Creating optim schema at $(pg_datalake) database"
 	#psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
-	@echo "--- Running API SQL templates ---"
-	@echo "!nao fazendo ainda, futuro"
-	#psql $(pg_datalake_uri) < step00-iniApi.sql
-	@echo "--- Running Eclusa ---"
-	@echo "!nao fazendo ainda, futuro"
-	#psql $(pg_datalake_uri) < eclusa/step1-ini.sql
-	# sh eclusa-step2a-ins.sh
-	#/var/gits/WS/src? psql $(pg_datalake_uri) < eclusa/step2b-ins.sql
 	psql $(pg_datalake_uri) -c "CREATE SCHEMA    IF NOT EXISTS optim;"
 	psql $(pg_datalake_uri) -c "CREATE SCHEMA    IF NOT EXISTS tmp_orig;"
 	psql $(pg_datalake_uri) -c "CREATE EXTENSION IF NOT EXISTS file_fdw;"
@@ -118,7 +115,6 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	pg_dump -t optim.jurisdiction_geom $(pg_uri_root)/dl02s_main | psql $(pg_datalake_uri)
 	psql $(pg_datalake_uri) -c "ALTER TABLE optim.jurisdiction_geom ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
 	psql $(pg_datalake_uri) -c "UPDATE optim.jurisdiction_geom SET housenumber_system_type ='teste' WHERE isolabel_ext ='BR-MG-BeloHorizonte';"
-	@echo "Creating optim schema at $(pg_db) database"
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_datalake_uri) -c "select optim.load_donor_pack('br');"
 	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('br');"
@@ -126,6 +122,14 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('co');"
 # 	psql $(pg_datalake_uri) -c "select optim.load_donor_pack('pe');" # Falta donor.csv e donatedPack.csv
 # 	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('pe');"
+	@echo "--- Running API SQL templates ---"
+	@echo "!nao fazendo ainda, futuro"
+	#psql $(pg_datalake_uri) < step00-iniApi.sql
+	@echo "--- Running Eclusa ---"
+	@echo "!nao fazendo ainda, futuro"
+	#psql $(pg_datalake_uri) < eclusa/step1-ini.sql
+	# sh eclusa-step2a-ins.sh
+	#/var/gits/WS/src? psql $(pg_datalake_uri) < eclusa/step2b-ins.sql
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
 
@@ -144,18 +148,15 @@ publicating_geojsons: #id=id isolabel=isolabel_ext nmfolder=folder nmview=name
 	psql $(pg_db_uri) -c "CREATE VIEW $(nmview) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT feature_distrib from ingest.donated_packcomponent WHERE id=$(id)), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
 	psql $(pg_db_uri) -c "SELECT write_geojsonb_features('$(nmview)','$(pg_io)/$(nmfolder)/geohahes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, 2, 5);"
 
-makefile_pk_first:
-	@echo "------------------------------------------------------"
-	@echo "Iniciada cópia de makefile inicial nos diretórios '_pk*' de data."
+first_makefile:
+	@echo "--- Copying initial makefile in 'data/_pk*' directories   ---"
 	# retorna todos os diretórios com o padrão '*_pk*' e copia o arquivo commomLast.mustache.mk para cada um deles, renomeando o arquivo para makefile.
 	sed "s/^country *.*/country=INT/" maketemplates/commomLast.mustache.mk > maketemplates/commomLast.mustache.mk.tmp
 	find ../data -type d -name '*_pk*' -exec cp maketemplates/commomLast.mustache.mk.tmp \{\}/makefile \;
 	rm maketemplates/commomLast.mustache.mk.tmp
-	@echo "Finalizada a cópia "
-	@echo "------------------------------------------------------"
 
 redirects_update: pgio
-	@echo "-- Atualiza redirecionamentos --"
+	@echo "--- Atualiza redirecionamentos ---"
 	@echo Download da tabela de-para ....
 	wget "https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk/gviz/tq?tqx=out:csv&sheet={de-para}" -O "$(pg_io)/de-para.csv"
 	psql $(pg_datalake_uri) -c "DELETE FROM download.redirects; COPY download.redirects FROM '$(pg_io)/de-para.csv' CSV HEADER;"
