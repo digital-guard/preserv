@@ -21,11 +21,11 @@
 	@tput bold
 	@echo Extracting ....
 	@tput sgr0
-	cd $(sandbox); 7z {{7z_opts}} x -y {{sha256file_path}} {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}"*{{orig_filename}}*"{{/orig_filename_string_extract}} ; chmod -R a+rwx . > /dev/null
+	cd $(sandbox); 7z {{7z_opts}} x -y $(orig)/{{sha256file}} {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}"*{{orig_filename}}*"{{/orig_filename_string_extract}} ; chmod -R a+rwx . > /dev/null
 {{/isOsm}}
 {{#isOsm}}
 	@tput bold
 	@echo Copying ....
 	@tput sgr0
-	cd $(sandbox); cp {{sha256file_path}} "{{orig_filename}}.pbf" ; chmod -R a+rwx . > /dev/null
+	cd $(sandbox); cp $(orig)/{{sha256file}} "{{orig_filename}}.pbf" ; chmod -R a+rwx . > /dev/null
 {{/isOsm}}
