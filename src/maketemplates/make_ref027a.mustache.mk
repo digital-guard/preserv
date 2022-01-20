@@ -168,7 +168,7 @@ via-clean:
 {{#openstreetmap}}
 openstreetmap: makedirs $(orig)/{{sha256file}}
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "openstreetmap" data
-	cd $(sandbox);  cp  $(orig)/{{sha256file}} . ; chmod -R a+rx . > /dev/null
+	cd $(sandbox);  cp  $(orig)/{{sha256file}} . ; chmod -R a+rwx . > /dev/null
 	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/{{sha256file}}
 	@echo "Convertendo hstore para jsonb"
 	psql $(pg_uri_db) < /var/gits/_dg/preserv/src/osm_hstore2jsonb.sql
