@@ -114,7 +114,9 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_datalake_uri) -c "ALTER TABLE optim.jurisdiction ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
 	pg_dump -t optim.jurisdiction_geom $(pg_uri_root)/dl02s_main | psql $(pg_datalake_uri)
 	psql $(pg_datalake_uri) -c "ALTER TABLE optim.jurisdiction_geom ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
-	psql $(pg_datalake_uri) -c "UPDATE optim.jurisdiction_geom SET housenumber_system_type ='teste' WHERE isolabel_ext ='BR-MG-BeloHorizonte';"
+	psql $(pg_datalake_uri) -c "UPDATE optim.jurisdiction_geom SET housenumber_system_type ='bh-metric' WHERE isolabel_ext ='BR-MG-BeloHorizonte';"
+	psql $(pg_datalake_uri) -c "UPDATE optim.jurisdiction_geom SET housenumber_system_type ='bauru-metric' WHERE isolabel_ext ='BR-SP-Bauru';"
+	psql $(pg_datalake_uri) -c "UPDATE optim.jurisdiction_geom SET housenumber_system_type ='string-metric' WHERE jurisd_base_id = 170;"
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_datalake_uri) -c "select optim.load_donor_pack('br');"
 	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('br');"

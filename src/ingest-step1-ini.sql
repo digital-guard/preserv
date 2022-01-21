@@ -1037,8 +1037,13 @@ RETURNS TABLE (ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
         CASE
           WHEN (SELECT housenumber_system_type FROM ingest.vwall WHERE id=p_file_id)='metric' THEN
           ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', to_bigint(properties->>'house_number'))
-          WHEN (SELECT housenumber_system_type FROM ingest.vwall WHERE id=p_file_id)='teste' THEN
+          WHEN (SELECT housenumber_system_type FROM ingest.vwall WHERE id=p_file_id)='bh-metric' THEN
           ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', NULLIF(regexp_replace(properties->>'house_number', '\D', '', 'g'), '')::bigint, regexp_replace(properties->>'house_number', '[^[:alpha:]]', '', 'g') )
+          WHEN (SELECT housenumber_system_type FROM ingest.vwall WHERE id=p_file_id)='string-metric' THEN
+          ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', regexp_replace(properties->>'house_number', '[^[:alnum:]]', '', 'g'))
+
+          WHEN (SELECT housenumber_system_type FROM ingest.vwall WHERE id=p_file_id)='bauru-metric' THEN
+          ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', split_part(replace(properties->>'house_number',' ',''), '-', 1)::bigint, split_part(replace(properties->>'house_number',' ',''), '-', 2)::bigint)
           ELSE
           ROW_NUMBER() OVER(ORDER BY  properties->>'via_name', to_bigint(properties->>'house_number'))
           --ROW_NUMBER() OVER(ORDER BY  properties->>'address')) 
