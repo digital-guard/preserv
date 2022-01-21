@@ -940,8 +940,6 @@ CREATE FUNCTION ingest.osm_load(
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text )
   );
 
-  RAISE NOTICE E'\n===q_query:\n %\n===END q_query\n',  q_query;
-
   EXECUTE q_query INTO num_items;
   msg_ret := format(
     E'From file_id=%s inserted type=%s\nin feature_asis %s items.',
@@ -1030,7 +1028,7 @@ RETURNS TABLE (ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
    MIN(row_id)::int as gid,
    COUNT(*) n,
    array_agg(geom) as geoms,
-   array_agg(DISTINCT via_name||', '||house_number) addresses,
+   array_agg(DISTINCT COALESCE(via_name || ', ' || house_number, via_name, house_number)) addresses,
    array_agg(DISTINCT via_name) via_names,
    array_agg(DISTINCT house_number) house_numbers,
    max(DISTINCT is_compl::text)::boolean house_numbers_has_complement
