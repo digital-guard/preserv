@@ -745,7 +745,7 @@ CREATE FUNCTION ingest.any_load(
   --END IF;
   q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256); -- not null when proc_step=1. Ideal retornar array.
   IF q_file_id IS NULL THEN
-    RETURN format('ERROR: file-read problem or data ingested before. See %s or use make delete_file id=%s to delete data.',p_fileref);
+    RETURN format('ERROR: file-read problem or data ingested before. See %s or use make delete_file id=%s to delete data.',p_fileref,q_file_id);
   END IF;
   IF p_tabcols=array[]::text[] THEN  -- condição para solicitar todas as colunas
     p_tabcols = rel_columns(p_tabname);
