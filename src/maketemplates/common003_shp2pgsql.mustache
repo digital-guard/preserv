@@ -1,17 +1,14 @@
 {{#srid}}
-{{^srid_proj}}
+{{#srid_proj}}
+	@echo "Configurando SRID via PROJ.4 string:"
+	@echo "{{.}}"
+	psql $(pg_uri_db) -c "INSERT INTO spatial_ref_sys (srid, auth_name, auth_srid, proj4text, srtext) VALUES ({{srid}},'carlos',{{srid}},'{{{.}}}',null);"
+{{/srid_proj}}
 	@echo "Conferindo se SRID {{.}} está configurado:"
 	@psql $(pg_uri_db) -c "SELECT srid, proj4text FROM spatial_ref_sys where srid={{.}}"
 	@echo "Tudo bem até aqui?  [ENTER para continuar ou ^C para rodar WS/ingest-step1]"
 	@read _tudo_bem_
-{{/srid_proj}}
 {{/srid}}
-{{#srid_proj}}
-	@echo "SRID configurado via PROJ.4 string:"
-	@echo "{{.}}"
-	@echo "Tudo bem até aqui?  [ENTER para continuar ou ^C para sair]"
-	@read _tudo_bem_
-{{/srid_proj}}
 {{#orig_subfilename}}
 	@echo Extraindo ...
 	cd $(sandbox); 7z x -y "*{{orig_filename}}*" ; chmod -R a+rx . > /dev/null
@@ -29,7 +26,7 @@
 {{/multiple_files_array}}
 {{/multiple_files}}
 {{^multiple_files}}
-	cd $(sandbox); shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} {{^srid_proj}}-s {{srid}}{{/srid_proj}} "{{orig_filename}}.shp" {{tabname}} | psql -q $(pg_uri_db) 2> /dev/null
+	cd $(sandbox); shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} "{{orig_filename}}.shp" {{tabname}} | psql -q $(pg_uri_db) 2> /dev/null
 {{/multiple_files}}
 {{/isShp}}
 {{#isCsv}}

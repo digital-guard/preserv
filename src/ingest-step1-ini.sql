@@ -726,8 +726,7 @@ CREATE or replace FUNCTION ingest.any_load(
     p_pck_fileref_sha256 text,
     p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
     p_geom_name text DEFAULT 'geom',
-    p_to4326 boolean DEFAULT true, -- on true converts SRID to 4326 .
-    p_srid_proj text DEFAULT NULL
+    p_to4326 boolean DEFAULT true -- on true converts SRID to 4326 .
 ) RETURNS text AS $f$
   DECLARE
     q_file_id integer;
@@ -775,7 +774,6 @@ CREATE or replace FUNCTION ingest.any_load(
                CASE
                  WHEN ST_SRID(geom)=0 THEN ST_SetSRID(geom,4326)
                  WHEN %s AND ST_SRID(geom)!=4326 AND %s THEN ST_Transform(geom,4326)
-                 WHEN %s AND ST_SRID(geom)!=4326 AND %s THEN ST_Transform(geom,'%s',4326)
                  ELSE geom
                END AS geom
         FROM (
@@ -795,10 +793,7 @@ CREATE or replace FUNCTION ingest.any_load(
     $$,
     q_file_id,
     iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
-    iif(p_srid_proj IS NULL,'true'::text,'false'),  -- decide ST_Transform
     iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
-    iif(p_srid_proj IS NOT NULL,'true'::text,'false'),  -- decide ST_Transform
-    p_srid_proj,
     feature_id_col,
     iIF( use_tabcols, 'to_jsonb(subq)'::text, E'\'{}\'::jsonb' ), -- properties
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
@@ -849,13 +844,13 @@ CREATE or replace FUNCTION ingest.any_load(
   RETURN msg_ret;
   END;
 $f$ LANGUAGE PLpgSQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],text,boolean,text)
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],text,boolean)
   IS 'Load (into ingest.feature_asis) shapefile or any other non-GeoJSON, of a separated table.'
 ;
 -- posto ipiranga logo abaixo..  sorvetorua.
 -- ex. SELECT ingest.any_load('/tmp/pg_io/NRO_IMOVEL.shp','geoaddress_none','pk027_geoaddress1',27,array['gid','textstring']);
 
-CREATE FUNCTION ingest.any_load(
+CREATE or replace FUNCTION ingest.any_load(
     p_method text,   -- 1.  shp/csv/etc.
     p_fileref text,  -- 2. apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- 3. featureType of layer... um file pode ter mais de um layer??
@@ -866,26 +861,9 @@ CREATE FUNCTION ingest.any_load(
     p_geom_name text DEFAULT 'geom', -- 8
     p_to4326 boolean DEFAULT true    -- 9. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9, null)
+   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9)
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],text,boolean)
-  IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
-;
-
-CREATE FUNCTION ingest.any_load(
-    p_method text,   -- shp/csv/etc.
-    p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
-    p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
-    p_tabname text,  -- tabela temporária de ingestáo
-    p_pck_id bigint,   -- id do package da Preservação.
-    p_pck_fileref_sha256 text,
-    p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
-    p_geom_name text DEFAULT 'geom',
-    p_to4326 boolean DEFAULT true -- on true converts SRID to 4326 .
-) RETURNS text AS $wrap$
-   SELECT ingest.any_load($1, $2, $3, $4, $5, $6, $7, $8, $9,null)
-$wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],text,boolean,text)
   IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
 ;
 
@@ -1418,6 +1396,16 @@ BEGIN
         codec_desc_global := jsonb_object(regexp_split_to_array ( dict->>'codec:descr_encode','(;|=)'));
 
         -- Compatibilidade com sql_view de BR-MG-BeloHorizonte/_pk0008.01
+        dict := dict || codec_desc_global;
+
+        RAISE NOTICE 'codec_desc_global : %', codec_desc_global;
+    END IF;
+
+    IF dict?'srid_proj'
+    THEN
+        codec_desc_global := jsonb_build_object('srid', (SELECT 952022 + floor(random()*100)));
+
+        -- Compatibilidade com srid_proj de BR-RS-PortoAlegre/_pk0018.01
         dict := dict || codec_desc_global;
 
         RAISE NOTICE 'codec_desc_global : %', codec_desc_global;
