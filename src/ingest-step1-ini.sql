@@ -717,7 +717,7 @@ CREATE FUNCTION ingest.any_load_debug(
   ) t
 $f$ LANGUAGE SQL;
 
-CREATE FUNCTION ingest.any_load(
+CREATE or replace FUNCTION ingest.any_load(
     p_method text,   -- shp/csv/etc.
     p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
     p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
@@ -726,7 +726,8 @@ CREATE FUNCTION ingest.any_load(
     p_pck_fileref_sha256 text,
     p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
     p_geom_name text DEFAULT 'geom',
-    p_to4326 boolean DEFAULT true -- on true converts SRID to 4326 .
+    p_to4326 boolean DEFAULT true, -- on true converts SRID to 4326 .
+    p_srid_proj text DEFAULT NULL
 ) RETURNS text AS $f$
   DECLARE
     q_file_id integer;
@@ -773,7 +774,8 @@ CREATE FUNCTION ingest.any_load(
         SELECT %s, gid, properties,
                CASE
                  WHEN ST_SRID(geom)=0 THEN ST_SetSRID(geom,4326)
-                 WHEN %s AND ST_SRID(geom)!=4326 THEN ST_Transform(geom,4326)
+                 WHEN %s AND ST_SRID(geom)!=4326 AND %s THEN ST_Transform(geom,4326)
+                 WHEN %s AND ST_SRID(geom)!=4326 AND %s THEN ST_Transform(geom,'%s',4326)
                  ELSE geom
                END AS geom
         FROM (
@@ -793,6 +795,10 @@ CREATE FUNCTION ingest.any_load(
     $$,
     q_file_id,
     iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
+    iif(p_srid_proj IS NULL,'true'::text,'false'),  -- decide ST_Transform
+    iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
+    iif(p_srid_proj IS NOT NULL,'true'::text,'false'),  -- decide ST_Transform
+    p_srid_proj,
     feature_id_col,
     iIF( use_tabcols, 'to_jsonb(subq)'::text, E'\'{}\'::jsonb' ), -- properties
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
@@ -843,7 +849,7 @@ CREATE FUNCTION ingest.any_load(
   RETURN msg_ret;
   END;
 $f$ LANGUAGE PLpgSQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],text,boolean)
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],text,boolean,text)
   IS 'Load (into ingest.feature_asis) shapefile or any other non-GeoJSON, of a separated table.'
 ;
 -- posto ipiranga logo abaixo..  sorvetorua.
@@ -860,9 +866,26 @@ CREATE FUNCTION ingest.any_load(
     p_geom_name text DEFAULT 'geom', -- 8
     p_to4326 boolean DEFAULT true    -- 9. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9)
+   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9, null)
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],text,boolean)
+  IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
+;
+
+CREATE FUNCTION ingest.any_load(
+    p_method text,   -- shp/csv/etc.
+    p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
+    p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
+    p_tabname text,  -- tabela temporária de ingestáo
+    p_pck_id bigint,   -- id do package da Preservação.
+    p_pck_fileref_sha256 text,
+    p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
+    p_geom_name text DEFAULT 'geom',
+    p_to4326 boolean DEFAULT true -- on true converts SRID to 4326 .
+) RETURNS text AS $wrap$
+   SELECT ingest.any_load($1, $2, $3, $4, $5, $6, $7, $8, $9,null)
+$wrap$ LANGUAGE SQL;
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],text,boolean,text)
   IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
 ;
 
