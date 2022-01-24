@@ -269,8 +269,8 @@ CREATE TABLE ingest.donated_PackComponent(
 );
 
 DROP VIEW IF EXISTS ingest.vwall CASCADE;
-CREATE VIEW ingest.vwall AS
-  SELECT pc.id, dn.kx_scope_label, j.housenumber_system_type
+CREATE or replace VIEW ingest.vwall AS
+  SELECT pc.id, dn.kx_scope_label, j.isolabel_ext, j.housenumber_system_type
   FROM ingest.donated_PackComponent pc
   LEFT JOIN ingest.fdw_donated_packfilevers pf
     ON pc.packvers_id=pf.id
@@ -280,6 +280,8 @@ CREATE VIEW ingest.vwall AS
     ON pt.donor_id=dn.id
   LEFT JOIN ingest.fdw_foreign_jurisdiction_geom j
     ON dn.scope_osm_id=j.osm_id
+  LEFT JOIN ingest.fdw_feature_type ft
+    ON pc.ftid = ft.ftid
 ;
 
 
