@@ -116,7 +116,7 @@ geoaddress: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
-	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, tags - ARRAY['addr:housenumber','addr:street'] || jsonb_objslice(ARRAY['addr:housenumber','addr:street'], tags, ARRAY['house_number','via_name']) AS tags FROM jplanet_osm_point WHERE tags ?| ARRAY['addr:housenumber','addr:street'] "
+	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, tags - ARRAY['addr:housenumber','addr:street'] || jsonb_objslice(ARRAY['addr:housenumber','addr:street'], tags, ARRAY['house_number','via_name']) AS tags FROM jplanet_osm_point WHERE tags ?| ARRAY['addr:housenumber','addr:street'] AND p_country_id = {{country_id}} "
 {{/isOsm}}
 {{>common001_pgAny_load}}
 {{>common007_layerFooter}}
@@ -155,7 +155,7 @@ via: makedirs $(orig)/{{sha256file}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
-	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, tags FROM jplanet_osm_roads WHERE tags->>'highway' IN ('residential','unclassified','tertiary','secondary','primary','trunk','motorway') "
+	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, tags FROM jplanet_osm_roads WHERE tags->>'highway' IN ('residential','unclassified','tertiary','secondary','primary','trunk','motorway') AND p_country_id = {{country_id}} "
 {{/isOsm}}
 {{>common001_pgAny_load}}
 {{>common007_layerFooter}}
@@ -171,7 +171,7 @@ openstreetmap: makedirs $(orig)/{{sha256file}}
 	cd $(sandbox);  cp  $(orig)/{{sha256file}} . ; chmod -R a+rwx . > /dev/null
 	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/{{sha256file}}
 	@echo "Convertendo hstore para jsonb"
-	psql $(pg_uri_db) < /var/gits/_dg/preserv/src/osm_hstore2jsonb.sql
+	psql $(pg_uri_db) -c "SELECT ingest.jplanet_inserts_and_drops({{country_id}},true);"
 {{>common007_layerFooter}}
 
 openstreetmap-clean:

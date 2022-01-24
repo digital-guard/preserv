@@ -1391,6 +1391,13 @@ BEGIN
         RAISE NOTICE 'pack_id : %', dict->>'pack_id';
     END IF;
 
+    IF dict?'jurisdiction'
+    THEN
+        dict := jsonb_set( dict, array['country_id'], to_jsonb((SELECT jurisd_base_id::int FROM ingest.fdw_foreign_jurisdiction_geom WHERE abbrev= upper(dict->>'jurisdiction'))));
+
+        RAISE NOTICE 'country_id : %', dict->>'country_id';
+    END IF;
+
     IF dict?'codec:descr_encode'
     THEN
         codec_desc_global := jsonb_object(regexp_split_to_array ( dict->>'codec:descr_encode','(;|=)'));
