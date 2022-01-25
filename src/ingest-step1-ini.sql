@@ -1136,7 +1136,7 @@ CREATE FUNCTION ingest.publicating_geojsons_p2(
 ) RETURNS text  AS $f$
 
   UPDATE ingest.donated_PackComponent
-  SET feature_distrib = geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7)
+  SET feature_distrib = geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7, false)
   WHERE id= p_file_id
   ;
   SELECT 'p2';
