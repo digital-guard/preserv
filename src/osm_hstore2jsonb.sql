@@ -34,11 +34,11 @@ CREATE INDEX IF NOT EXISTS jplanet_osm_roads_country
 
 --------
 
-CREATE or replace FUNCTION ingest.jplanet_inserts_and_drops(
+CREATE or replace  FUNCTION ingest.jplanet_inserts_and_drops(
   p_country_id smallint,
   p_drop_extra boolean DEFAULT true
 ) RETURNS void AS $f$
-
+BEGIN
   INSERT INTO jplanet_osm_point
     SELECT p_country_id, osm_id, z_order,
        jsonb_strip_nulls( lib.osm_to_jsonb(tags), true ) as tags,
@@ -71,7 +71,8 @@ CREATE or replace FUNCTION ingest.jplanet_inserts_and_drops(
   DROP TABLE planet_osm_lines;
   DROP TABLE planet_osm_rels;
   DROP TABLE planet_osm_ways;
-$f$ language SQL;
+END
+$f$ language PLpgSQL;
 
 -- To ingest planet of a country, for example Brazil:
 -- SELECT ingest.jplanet_inserts_and_drops(76,true);
