@@ -34,10 +34,10 @@ CREATE INDEX IF NOT EXISTS jplanet_osm_roads_country
 
 --------
 
-CREATE FUNCTION ingest.jplanet_inserts_and_drops(
+CREATE or replace FUNCTION ingest.jplanet_inserts_and_drops(
   p_country_id smallint,
   p_drop_extra boolean DEFAULT true
-) AS $f$
+) RETURNS void AS $f$
 
   INSERT INTO jplanet_osm_point
     SELECT p_country_id, osm_id, z_order,

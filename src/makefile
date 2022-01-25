@@ -76,6 +76,7 @@ ini_ingest_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/step01def-lib.sql
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
+	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/osm_hstore2jsonb.sql
 	@echo "--- codec_type load ---"
 	psql $(pg_db_uri) -c "SELECT ingest.load_codec_type('$(gits_basepath)/_dg/preserv/data/codec_type.csv',',');"
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito

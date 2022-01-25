@@ -171,7 +171,7 @@ openstreetmap: makedirs $(orig)/{{sha256file}}
 	cd $(sandbox);  cp  $(orig)/{{sha256file}} . ; chmod -R a+rwx . > /dev/null
 	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/{{sha256file}}
 	@echo "Convertendo hstore para jsonb"
-	psql $(pg_uri_db) -c "SELECT ingest.jplanet_inserts_and_drops({{country_id}},true);"
+	psql $(pg_uri_db) -c "SELECT ingest.jplanet_inserts_and_drops({{country_id}}::smallint,true);"
 {{>common007_layerFooter}}
 
 openstreetmap-clean:
