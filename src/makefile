@@ -83,9 +83,9 @@ ini_ingest_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 
 load_license_tables: pgio
 	@echo "--- license table load ---"
-# 	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/families.csv" -O "$(pg_io)/families.csv"
-	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/licenses.csv" -O "$(pg_io)/licenses.csv"
-	wget "https://raw.githubusercontent.com/ppKrauss/licenses/master/data/implieds.csv" -O "$(pg_io)/implieds.csv"
+# 	wget "https://github.com/digital-guard/licenses/raw/master/data/families.csv" -O "$(pg_io)/families.csv"
+	wget "https://github.com/digital-guard/licenses/raw/master/data/licenses.csv" -O "$(pg_io)/licenses.csv"
+	wget "https://github.com/digital-guard/licenses/raw/master/data/implieds.csv" -O "$(pg_io)/implieds.csv"
 	wget "https://raw.githubusercontent.com/digital-guard/preserv-BR/main/data/donatedPack.csv" -O "$(pg_io)/donatedPack.csv"
 
 	psql $(pg_db_uri) -c "SELECT ingest.fdw_generate_direct_csv('$(pg_io)/licenses.csv','tmp_licenses'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/implieds.csv','tmp_implieds'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/donatedPack.csv','tmp_donatedPack'); \
