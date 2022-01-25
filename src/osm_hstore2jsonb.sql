@@ -62,6 +62,8 @@ BEGIN
        jsonb_strip_nulls( lib.osm_to_jsonb(tags), true ) as tags,
        way
     FROM planet_osm_roads
+  ON CONFLICT ON CONSTRAINT jplanet_osm_roads_pkey 
+  DO NOTHING
   ;
   DROP TABLE planet_osm_roads
   ;
