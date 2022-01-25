@@ -268,22 +268,6 @@ CREATE TABLE ingest.donated_PackComponent(
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
 
-DROP VIEW IF EXISTS ingest.vwall CASCADE;
-CREATE or replace VIEW ingest.vwall AS
-  SELECT pc.id, dn.kx_scope_label, j.isolabel_ext, j.housenumber_system_type
-  FROM ingest.donated_PackComponent pc
-  LEFT JOIN ingest.fdw_donated_packfilevers pf
-    ON pc.packvers_id=pf.id
-  LEFT JOIN ingest.fdw_donated_PackTpl pt
-    ON pf.pack_id=pt.id
-  LEFT JOIN ingest.fdw_donor dn
-    ON pt.donor_id=dn.id
-  LEFT JOIN ingest.fdw_foreign_jurisdiction_geom j
-    ON dn.scope_osm_id=j.osm_id
-  LEFT JOIN ingest.fdw_feature_type ft
-    ON pc.ftid = ft.ftid
-;
-
 
 /* LIXO
 DROP TABLE ingest.layer_file;
@@ -418,6 +402,23 @@ CREATE VIEW ingest.vw06simple_layer AS
   SELECT t.*, (SELECT COUNT(*) FROM ingest.feature_asis WHERE file_id=t.file_id) AS n_items
   FROM ingest.vw04simple_layer_file t
 ; */
+
+DROP VIEW IF EXISTS ingest.vw07info_packcomponent CASCADE;
+CREATE VIEW ingest.vw07info_packcomponent AS
+  SELECT pc.packvers_id, pc.id, ft.ftid, ft.ftname AS ftname_full, split_part(ft.ftname, '_', 1) AS ftname_type, ft.geomtype, dn.kx_scope_label, j.isolabel_ext, j.housenumber_system_type, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.pack_item,'fm00') || '/' ||split_part(ft.ftname, '_', 1) AS path
+  FROM ingest.donated_PackComponent pc
+  LEFT JOIN ingest.fdw_donated_packfilevers pf
+    ON pc.packvers_id=pf.id
+  LEFT JOIN ingest.fdw_donated_PackTpl pt
+    ON pf.pack_id=pt.id
+  LEFT JOIN ingest.fdw_donor dn
+    ON pt.donor_id=dn.id
+  LEFT JOIN ingest.fdw_foreign_jurisdiction_geom j
+    ON dn.scope_osm_id=j.osm_id
+  LEFT JOIN ingest.fdw_feature_type ft
+    ON pc.ftid = ft.ftid
+  ORDER BY j.isolabel_ext
+;
 
 ----------------
 ----------------
@@ -1040,7 +1041,7 @@ BEGIN
       max(DISTINCT is_compl::text)::boolean house_numbers_has_complement
     FROM (
       SELECT fa.file_id, fa.geom,
-        CASE (SELECT housenumber_system_type FROM ingest.vwall WHERE id=p_file_id)
+        CASE (SELECT housenumber_system_type FROM ingest.vw07info_packcomponent WHERE id=p_file_id)
         WHEN 'metric' THEN
         ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', to_bigint(fa.properties->>'house_number'))
         WHEN 'bh-metric' THEN
