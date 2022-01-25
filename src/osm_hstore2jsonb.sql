@@ -68,7 +68,7 @@ BEGIN
   
   -- pending to build jplanet_osm_line of generic vias (waterway and railroad).
   DROP TABLE planet_osm_nodes;
-  DROP TABLE planet_osm_lines;
+  DROP TABLE planet_osm_line;
   DROP TABLE planet_osm_rels;
   DROP TABLE planet_osm_ways;
 END
