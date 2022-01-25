@@ -1133,11 +1133,12 @@ $f$ language SQL VOLATILE; --fim p1
 
 CREATE FUNCTION ingest.publicating_geojsons_p2(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
-	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+	p_sum  boolean  DEFAULT false
 ) RETURNS text  AS $f$
 
   UPDATE ingest.donated_PackComponent
-  SET feature_distrib = geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7, false)
+  SET feature_distrib = geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7, p_sum)
   WHERE id= p_file_id
   ;
   SELECT 'p2';
@@ -1220,7 +1221,7 @@ CREATE FUNCTION ingest.publicating_geojsons(
 	p_fileref text
 ) RETURNS text  AS $f$
   SELECT ingest.publicating_geojsons_p1($1,$2);
-  SELECT ingest.publicating_geojsons_p2($1,$2);
+  SELECT ingest.publicating_geojsons_p2($1,$2,(SELECT CASE geomtype WHEN 'point' THEN false ELSE true END FROM ingest.vw07info_packcomponent WHERE id=$1));
   SELECT ingest.publicating_geojsons_p3($1,$2,$3);
   SELECT ingest.publicating_geojsons_p4($1,$2,$3);
   SELECT 'fim';
