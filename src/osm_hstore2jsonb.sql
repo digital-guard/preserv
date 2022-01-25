@@ -34,7 +34,7 @@ CREATE INDEX IF NOT EXISTS jplanet_osm_roads_country
 
 --------
 
-CREATE or replace  FUNCTION ingest.jplanet_inserts_and_drops(
+CREATE FUNCTION ingest.jplanet_inserts_and_drops(
   p_country_id smallint,
   p_drop_extra boolean DEFAULT true
 ) RETURNS void AS $f$
