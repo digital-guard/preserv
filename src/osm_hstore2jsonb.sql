@@ -61,7 +61,7 @@ BEGIN
     SELECT p_country_id, osm_id, z_order,
        jsonb_strip_nulls( lib.osm_to_jsonb(tags), true ) as tags,
        way
-    FROM planet_osm_polygon
+    FROM planet_osm_roads
   ;
   DROP TABLE planet_osm_roads
   ;
