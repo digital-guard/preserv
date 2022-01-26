@@ -1070,10 +1070,10 @@ BEGIN
   WHEN 'via' THEN
   RETURN QUERY SELECT t2.ghs, t2.gid,
     CASE
-    WHEN n=1 THEN jsonb_build_object('via_name',via_names[1],'npoints',npoints)
+    WHEN n=1 THEN jsonb_build_object('via_name',via_names[1],'n',n,'npoints',npoints)
     WHEN n>1 AND cardinality(via_names)=1 THEN
-        jsonb_build_object('via_name',via_names[1],'npoints',npoints)
-    ELSE jsonb_build_object('via_names',via_names,'npoints',npoints)
+        jsonb_build_object('via_name',via_names[1],'n',n,'npoints',npoints)
+    ELSE jsonb_build_object('via_names',via_names,'n',n,'npoints',npoints)
     END as info,
     CASE n WHEN 1 THEN geoms[1] ELSE ST_Centroid(ST_Collect(geoms)) END AS geom
   FROM (
