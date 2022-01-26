@@ -44,6 +44,8 @@ BEGIN
        jsonb_strip_nulls( lib.osm_to_jsonb(tags), true ) as tags,
        way
     FROM planet_osm_point
+  ON CONFLICT ON CONSTRAINT jplanet_osm_point_pkey 
+  DO NOTHING
   ;
   DROP TABLE planet_osm_point
   ;
@@ -53,6 +55,8 @@ BEGIN
        jsonb_strip_nulls( lib.osm_to_jsonb(tags), true ) as tags,
        way
     FROM planet_osm_polygon
+  ON CONFLICT ON CONSTRAINT jplanet_osm_polygon_pkey 
+  DO NOTHING
   ;
   DROP TABLE planet_osm_polygon
   ;
