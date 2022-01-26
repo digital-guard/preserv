@@ -1,10 +1,11 @@
 
 CREATE TABLE IF NOT EXISTS jplanet_osm_point (
   country_id smallint   NOT NULL, 
-  osm_id     bigint     NOT NULL   PRIMARY KEY,
+  osm_id     bigint     NOT NULL,
   z_order    integer,
   tags       jsonb,
-  way        geometry(Point,4326) NOT NULL
+  way        geometry(Point,4326) NOT NULL,
+  PRIMARY KEY(country_id, osm_id)
 );
 CREATE INDEX IF NOT EXISTS jplanet_osm_point_country
        ON jplanet_osm_point USING brin(country_id)
@@ -12,10 +13,11 @@ CREATE INDEX IF NOT EXISTS jplanet_osm_point_country
 
 CREATE TABLE IF NOT EXISTS jplanet_osm_polygon (
   country_id smallint   NOT NULL, 
-  osm_id     bigint     NOT NULL   PRIMARY KEY,
-  z_order  integer,
-  tags     jsonb,
-  way      geometry(Geometry,4326) NOT NULL
+  osm_id     bigint     NOT NULL,
+  z_order    integer,
+  tags       jsonb,
+  way        geometry(Geometry,4326) NOT NULL,
+  PRIMARY KEY(country_id, osm_id)
 );
 CREATE INDEX IF NOT EXISTS jplanet_osm_polygon_country
        ON jplanet_osm_polygon USING brin(country_id)
@@ -23,10 +25,11 @@ CREATE INDEX IF NOT EXISTS jplanet_osm_polygon_country
 
 CREATE TABLE IF NOT EXISTS jplanet_osm_roads (
   country_id smallint   NOT NULL, 
-  osm_id     bigint     NOT NULL   PRIMARY KEY,
-  z_order  integer,
-  tags     jsonb,
-  way      geometry(LineString,4326) NOT NULL
+  osm_id     bigint     NOT NULL,
+  z_order    integer,
+  tags       jsonb,
+  way        geometry(MultiLineString,4326) NOT NULL,
+  PRIMARY KEY(country_id, osm_id)
 );
 CREATE INDEX IF NOT EXISTS jplanet_osm_roads_country
        ON jplanet_osm_roads USING brin(country_id)
@@ -44,8 +47,6 @@ BEGIN
        jsonb_strip_nulls( lib.osm_to_jsonb(tags), true ) as tags,
        way
     FROM planet_osm_point
-  ON CONFLICT ON CONSTRAINT jplanet_osm_point_pkey 
-  DO NOTHING
   ;
   DROP TABLE planet_osm_point
   ;
@@ -55,19 +56,16 @@ BEGIN
        jsonb_strip_nulls( lib.osm_to_jsonb(tags), true ) as tags,
        way
     FROM planet_osm_polygon
-  ON CONFLICT ON CONSTRAINT jplanet_osm_polygon_pkey 
-  DO NOTHING
   ;
   DROP TABLE planet_osm_polygon
   ;
   
   INSERT INTO jplanet_osm_roads
-    SELECT p_country_id, osm_id, z_order,
-       jsonb_strip_nulls( lib.osm_to_jsonb(tags), true ) as tags,
-       way
+    SELECT p_country_id, osm_id, MAX(z_order),
+        jsonb_strip_nulls( lib.osm_to_jsonb((array_agg(tags))[1]), true ) AS tags,
+        ST_Collect(way) AS way
     FROM planet_osm_roads
-  ON CONFLICT ON CONSTRAINT jplanet_osm_roads_pkey 
-  DO NOTHING
+    GROUP BY osm_id
   ;
   DROP TABLE planet_osm_roads
   ;
