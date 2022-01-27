@@ -306,6 +306,7 @@ CREATE TABLE ingest.feature_asis (
   file_id bigint NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   feature_id int NOT NULL,
   properties jsonb,
+  geohash text NOT NULL,
   geom geometry NOT NULL CHECK ( st_srid(geom)=4326 ),
   UNIQUE(file_id,feature_id)
 );
@@ -773,7 +774,7 @@ CREATE or replace FUNCTION ingest.any_load(
       $$
       WITH
       scan AS (
-        SELECT %s, gid, properties,
+        SELECT %s AS file_id, gid, properties,
                CASE
                  WHEN ST_SRID(geom)=0 THEN ST_SetSRID(geom,4326)
                  WHEN %s AND ST_SRID(geom)!=4326 AND %s THEN ST_Transform(geom,4326)
@@ -788,7 +789,11 @@ CREATE or replace FUNCTION ingest.any_load(
       ),
       ins AS (
         INSERT INTO ingest.feature_asis
-           SELECT *
+           SELECT file_id, gid, properties,
+            ST_Geohash(
+                CASE WHEN (SELECT geomtype FROM ingest.vw01info_feature_type WHERE ftname = '%s')='point' THEN geom 
+                ELSE ST_PointOnSurface(geom) END,9),
+            geom
            FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom)
         RETURNING 1
       )
@@ -801,7 +806,8 @@ CREATE or replace FUNCTION ingest.any_load(
     iIF( use_tabcols, 'to_jsonb(subq)'::text, E'\'{}\'::jsonb' ), -- properties
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
     p_tabname,
-    iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text )
+    iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
+    p_ftname
   );
   q_query_cad := format(
       $$
@@ -914,7 +920,7 @@ CREATE FUNCTION ingest.osm_load(
       $$
       WITH
       scan AS (
-        SELECT %s, gid, properties,
+        SELECT %s AS file_id, gid, properties,
                CASE
                  WHEN ST_SRID(geom)=0 THEN ST_SetSRID(geom,4326)
                  WHEN %s AND ST_SRID(geom)!=4326 THEN ST_Transform(geom,4326)
@@ -929,7 +935,11 @@ CREATE FUNCTION ingest.osm_load(
       ),
       ins AS (
         INSERT INTO ingest.feature_asis
-           SELECT *
+           SELECT file_id, gid, properties,
+            ST_Geohash(
+                CASE WHEN (SELECT geomtype FROM ingest.vw01info_feature_type WHERE ftname = '%s')='point' THEN geom 
+                ELSE ST_PointOnSurface(geom) END,9),
+            geom
            FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom)
         RETURNING 1
       )
@@ -1228,7 +1238,6 @@ CREATE FUNCTION ingest.publicating_geojsons(
 $f$ language SQL VOLATILE; -- need be a sequential PLpgSQL to neatly COMMIT?
 -- Ver id em ingest.donated_PackComponent
 -- SELECT ingest.publicating_geojsons(X,'BR-MG-BeloHorizonte','/tmp/pg_io');
-
 
 -- Armazena arquivos make_conf.yaml
 CREATE TABLE ingest.lix_conf_yaml (
