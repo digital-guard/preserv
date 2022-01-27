@@ -164,13 +164,16 @@ CREATE TABLE optim.donated_PackComponent(
   packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
   ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
   is_evidence boolean default false,
-  hash_md5 text NOT NULL, -- or "size-md5" as really unique string
+  --hash_md5 text NOT NULL, -- or "size-md5" as really unique string
   proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
-  file_meta jsonb,
-  hcode_distribution_parameters jsonb,
-  feature_asis_summary jsonb,
-  feature_distrib jsonb,
-  UNIQUE(packvers_id,ftid,hash_md5)
+  lineage jsonb NOT NULL,
+  lineage_md5 jsonb NOT NULL,
+  kx_profile jsonb,
+  --file_meta jsonb,
+  --hcode_distribution_parameters jsonb,
+  --feature_asis_summary jsonb,
+  --feature_distrib jsonb,
+  UNIQUE(packvers_id,ftid,lineage_md5)
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
 
