@@ -163,7 +163,6 @@ via: makedirs $(orig)/{{sha256file}}
 via-clean:
 {{>common006_clean}}
 
-# make publicating_geojsons id=1 isolabel='BR-MG-BeloHorizonte' nmfolder=BH nmview=teste2022gBH pretty_opt=2 pg_db=ingest99
 publicating_geojsons_via: isolabel   = {{isolabel_ext}}
 publicating_geojsons_via: folder     = $(sandbox)/{{path_root}}
 publicating_geojsons_via: pretty_opt = 3
@@ -175,7 +174,7 @@ publicating_geojsons_via:
 
 	@echo "--- Gerando geomosaico em $(folder) ---"
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT lineage->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw08info_packcomponent WHERE isolabel_ext=$(isolabel))), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
+	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT lineage->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw08info_packcomponent WHERE isolabel_ext='$(isolabel)')), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
 
 	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, $(pretty_opt), 5);"
 {{/via}}
