@@ -123,6 +123,21 @@ geoaddress: makedirs $(orig)/{{sha256file}}
 
 geoaddress-clean:
 {{>common006_clean}}
+
+publicating_geojsons_geoaddress: isolabel   = {{isolabel_ext}}
+publicating_geojsons_geoaddress: folder     = $(sandbox)/{{path_root}}
+publicating_geojsons_geoaddress: pretty_opt = 3
+publicating_geojsons_geoaddress: view       = vw{{file}}_{{tabname}}_publicating
+publicating_geojsons_geoaddress:
+	mkdir -m777 -p $(folder)
+	@echo "--- Gerando arquivos de pontos em $(folder) ---"
+	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)');"
+
+	@echo "--- Gerando geomosaico em $(folder) ---"
+	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
+	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT lineage->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw08info_packcomponent WHERE isolabel_ext='$(isolabel)')), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
+
+	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, $(pretty_opt), 5);"
 {{/geoaddress}}
 
 {{#nsvia}}
