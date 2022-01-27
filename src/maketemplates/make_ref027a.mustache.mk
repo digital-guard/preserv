@@ -171,7 +171,7 @@ publicating_geojsons_via: view       = vw{{file}}_{{tabname}}_publicating
 publicating_geojsons_via:
 	mkdir -m777 -p $(folder)
 	@echo "--- Gerando arquivos de pontos em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{.}}','$(isolabel)','$(folder)');"
+	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)');"
 
 	@echo "--- Gerando geomosaico em $(folder) ---"
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
