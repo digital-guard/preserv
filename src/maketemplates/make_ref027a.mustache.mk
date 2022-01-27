@@ -165,12 +165,13 @@ via-clean:
 
 # make publicating_geojsons id=1 isolabel='BR-MG-BeloHorizonte' nmfolder=BH nmview=teste2022gBH pretty_opt=2 pg_db=ingest99
 publicating_geojsons_via: isolabel   = {{isolabel_ext}}
-publicating_geojsons_via: folder     = $(sandbox)/{{path_root}}/{{layer}}
+publicating_geojsons_via: folder     = $(sandbox)/{{path_root}}
 publicating_geojsons_via: pretty_opt = 3
 publicating_geojsons_via: view       = vw{{file}}_{{tabname}}_publicating
+publicating_geojsons_via:
 	mkdir -m777 -p $(folder)
 	@echo "--- Gerando arquivos de pontos em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layer}}','$(isolabel)','$(folder)');"
+	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{.}}','$(isolabel)','$(folder)');"
 
 	@echo "--- Gerando geomosaico em $(folder) ---"
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
