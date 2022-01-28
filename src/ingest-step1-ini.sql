@@ -161,6 +161,14 @@ COMMENT ON TABLE ingest.addr_point
 ;
 */
 
+CREATE TABLE ingest.hcode_parameters (
+  id_profile_params             int   NOT NULL PRIMARY KEY,
+  distribution_parameters       jsonb NOT NULL,
+  distribution_parameters_publi jsonb NOT NULL,
+  signature_parameters          jsonb NOT NULL,
+  comments                      text
+);
+
 CREATE TABLE ingest.via_line(
   pck_id real NOT NULL, -- REFERENCES optim.donatedPack(pck_id),
   vianame text,
@@ -1990,14 +1998,6 @@ $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION ingest.join(text,text,text,text,text,text)
   IS 'Join layer and cadlayer.'
 ;
-
-CREATE TABLE ingest.hcode_parameters (
-  id_profile_params             int   NOT NULL PRIMARY KEY,
-  distribution_parameters       jsonb NOT NULL,
-  distribution_parameters_publi jsonb NOT NULL,
-  signature_parameters          jsonb NOT NULL,
-  comments                      text
-);
 
 CREATE or replace FUNCTION ingest.load_hcode_parameters(
   p_file text,  -- path+filename+ext
