@@ -392,7 +392,7 @@ CREATE VIEW ingest.vw06simple_layer AS
 
 DROP VIEW IF EXISTS ingest.vw07full_donated_packfilevers CASCADE;
 CREATE or replace VIEW ingest.vw07full_donated_packfilevers AS
-  SELECT pf.*, j.isolabel_ext, j.geom, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path
+  SELECT pf.*, j.isolabel_ext, j.geom, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pack_item,'fm00') AS path
   FROM ingest.fdw_donated_packfilevers pf
   LEFT JOIN ingest.fdw_donated_PackTpl pt
     ON pf.pack_id=pt.id
@@ -404,11 +404,11 @@ CREATE or replace VIEW ingest.vw07full_donated_packfilevers AS
 ;
 
 DROP VIEW IF EXISTS ingest.vw08info_packcomponent CASCADE;
-CREATE VIEW ingest.vw08info_packcomponent AS
+CREATE or replace VIEW ingest.vw08info_packcomponent AS
   SELECT pc.packvers_id, pc.id, ft.ftid, ft.ftname AS ftname_full, split_part(ft.ftname, '_', 1) AS ftname_type, ft.geomtype, dn.kx_scope_label, j.isolabel_ext, j.housenumber_system_type, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.pack_item,'fm00') || '/' ||split_part(ft.ftname, '_', 1) AS path
   FROM ingest.donated_PackComponent pc
   LEFT JOIN ingest.vw03full_layer_file ft
-    ON pc.ftid = ft.ftid
+    ON pc.ftid = ft.ftid AND pc.packvers_id = ft.packvers_id
   LEFT JOIN ingest.fdw_donated_packfilevers pf
     ON pc.packvers_id=pf.id
   LEFT JOIN ingest.fdw_donated_PackTpl pt
@@ -1145,7 +1145,7 @@ BEGIN
         jsonb_build_object('via_name',via_names[1],'n',n,'npoints',npoints)
     ELSE jsonb_build_object('via_names',via_names,'n',n,'npoints',npoints)
     END AS info,
-    CASE n WHEN 1 THEN geoms[1] ELSE ST_Centroid(ST_Collect(geoms)) END AS geom
+    CASE n WHEN 1 THEN geoms[1] ELSE ST_Collect(geoms) END AS geom
   FROM (
     SELECT ghs,
       MIN(row_id)::int AS gid,
