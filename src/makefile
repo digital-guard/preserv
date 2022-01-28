@@ -87,6 +87,8 @@ endif
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/osm_hstore2jsonb.sql
 	@echo "--- codec_type load ---"
 	psql $(pg_db_uri) -c "SELECT ingest.load_codec_type('$(gits_basepath)/_dg/preserv/data/codec_type.csv',',');"
+	@echo "--- hcode_parameters load ---"
+	psql $(pg_db_uri) -c "SELECT ingest.load_hcode_parameters('$(gits_basepath)/_dg/preserv/data/hcode_parameters.csv',',');"
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
 

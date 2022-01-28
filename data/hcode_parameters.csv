@@ -1,0 +1,3 @@
+id_profile_params,hcode_distribution_parameters,hcode_distribution_parameters_publi,hcode_signature_parameters,comments
+1,p_heuristic:2;p_threshold:500;p_threshold_sum:5000,p_heuristic:3;p_threshold:750;p_threshold_sum:8000,p_percentile:0.75;p_heuristic:1,'default'
+2,p_heuristic:2;p_threshold:500;p_threshold_sum:5000,p_heuristic:3;p_threshold:650;p_threshold_sum:10000,p_percentile:0.75;p_heuristic:1,'BR/_pk0004.01'

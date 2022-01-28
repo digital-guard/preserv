@@ -505,24 +505,24 @@ CREATE or replace FUNCTION ingest.feature_asis_assign(
         )
 $f$ LANGUAGE SQL;
 
-CREATE FUNCTION ingest.feature_asis_assign_distribution(
+CREATE or replace FUNCTION ingest.feature_asis_assign_distribution(
     p_file_id bigint  -- ID at ingest.donated_PackComponent
 ) RETURNS jsonb AS $f$
   SELECT jsonb_build_object(
         'ghs_feature_distrib',
-        hcode_distribution_reduce(ingest.feature_asis_geohashes(p_file_id,ghs_size), 2, 1, 500, 5000, 2)
+        hcode_distribution_reduce(ingest.feature_asis_geohashes(p_file_id,ghs_size), 2, 1, (SELECT lineage->'hcode_distribution_parameters' FROM ingest.donated_PackComponent WHERE id=p_file_id))
     )
   FROM (
     SELECT CASE WHEN (ingest.donated_PackComponent_geomtype(p_file_id))[1]='poly' THEN 5 ELSE 6 END AS ghs_size
   ) t
 $f$ LANGUAGE SQL;
 
-CREATE FUNCTION ingest.feature_asis_assign_signature(
+CREATE or replace FUNCTION ingest.feature_asis_assign_signature(
     p_file_id bigint  -- ID at ingest.donated_PackComponent
 ) RETURNS jsonb AS $f$
   SELECT jsonb_build_object(
         'ghs_signature',
-        hcode_signature_reduce(ingest.feature_asis_geohashes(p_file_id,ghs_size), 2, 1, 0.75, 1)
+        hcode_signature_reduce(ingest.feature_asis_geohashes(p_file_id,ghs_size), 2, 1, (SELECT lineage->'hcode_signature_parameters' FROM ingest.donated_PackComponent WHERE id=p_file_id))
     )
   FROM (
     SELECT CASE WHEN (ingest.donated_PackComponent_geomtype(p_file_id))[1]='poly' THEN 5 ELSE 6 END AS ghs_size
@@ -635,6 +635,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_ftid int,
   p_pck_id bigint,
   p_pck_fileref_sha256 text,
+  p_id_profile_params int,
   p_ftype text DEFAULT NULL
   -- proc_step = 1
   -- ,p_size_min int DEFAULT 5
@@ -657,7 +658,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
     WHERE packvers_id=p_pck_id AND lineage_md5=(SELECT hash_md5 FROM filedata)
   ), ins AS (
    INSERT INTO ingest.donated_PackComponent(packvers_id,ftid,lineage_md5,lineage)
-      SELECT p_pck_id, p_ftid, hash_md5, jsonb_build_object('p_distribution',jsonb_build_object('p_threshold', 750, 'p_threshold_sum', 8000, 'p_heuristic',3),'file_meta',fmeta) FROM filedata
+      SELECT p_pck_id, p_ftid, hash_md5, (SELECT jsonb_build_object('hcode_distribution_parameters',distribution_parameters,'hcode_distribution_parameters_publi',distribution_parameters_publi, 'hcode_signature_parameters',signature_parameters ) FROM ingest.hcode_parameters WHERE id_profile_params = $5) || jsonb_build_object('file_meta',fmeta) FROM filedata
    ON CONFLICT DO NOTHING
    RETURNING id
   )
@@ -667,24 +668,25 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
       SELECT id, proc_step      FROM file_exists
   ) t WHERE proc_step=1
 $f$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,text,text)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,text,int,text)
   IS 'Reads file metadata and inserts it into ingest.donated_PackComponent. If proc_step=1 returns valid ID else NULL.'
 ;
 
-CREATE FUNCTION ingest.getmeta_to_file(
+CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_file text,   -- 1.
   p_ftname text, -- 2. define o layer... um file pode ter mais de um layer??
   p_pck_id bigint,
   p_pck_fileref_sha256 text,
-  p_ftype text DEFAULT NULL -- 5
+  p_id_profile_params int,
+  p_ftype text DEFAULT NULL -- 6
 ) RETURNS bigint AS $wrap$
     SELECT ingest.getmeta_to_file(
       $1,
       (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower($2)),
-      $3, $4, $5
+      $3, $4, $5, $6
     );
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,text,text)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,text,int,text)
   IS 'Wrap para ingest.getmeta_to_file() usando ftName ao invés de ftID.'
 ;
 -- ex. select ingest.getmeta_to_file('/tmp/a.csv',3,555);
@@ -738,6 +740,7 @@ CREATE or replace FUNCTION ingest.any_load(
     p_pck_id bigint,   -- id do package da Preservação.
     p_pck_fileref_sha256 text,
     p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
+    p_id_profile_params int DEFAULT 1,
     p_geom_name text DEFAULT 'geom',
     p_to4326 boolean DEFAULT true -- on true converts SRID to 4326 .
 ) RETURNS text AS $f$
@@ -756,7 +759,7 @@ CREATE or replace FUNCTION ingest.any_load(
   --ELSE
     --p_fileref := regexp_replace(p_fileref,'\.shp$', '') || '.shp';
   --END IF;
-  q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256); -- not null when proc_step=1. Ideal retornar array.
+  q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params); -- not null when proc_step=1. Ideal retornar array.
   IF q_file_id IS NULL THEN
     RETURN format('ERROR: file-read problem or data ingested before. See %s or use make delete_file id=%s to delete data.',p_fileref,q_file_id);
   END IF;
@@ -880,7 +883,7 @@ CREATE or replace FUNCTION ingest.any_load(
   RETURN msg_ret;
   END;
 $f$ LANGUAGE PLpgSQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],text,boolean)
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],int,text,boolean)
   IS 'Load (into ingest.feature_asis) shapefile or any other non-GeoJSON, of a separated table.'
 ;
 -- posto ipiranga logo abaixo..  sorvetorua.
@@ -894,12 +897,13 @@ CREATE or replace FUNCTION ingest.any_load(
     p_pck_id text,   -- 5. id do package da Preservação no formato "a.b".
     p_pck_fileref_sha256 text,   -- 6
     p_tabcols text[] DEFAULT NULL,   -- 7. lista de atributos, ou só geometria
+    p_id_profile_params int DEFAULT 1,
     p_geom_name text DEFAULT 'geom', -- 8
     p_to4326 boolean DEFAULT true    -- 9. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9)
+   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9,$10)
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],text,boolean)
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],int,text,boolean)
   IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
 ;
 
@@ -910,6 +914,7 @@ CREATE FUNCTION ingest.osm_load(
     p_pck_id bigint,   -- id do package da Preservação.
     p_pck_fileref_sha256 text,
     p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
+    p_id_profile_params int DEFAULT 1,
     p_geom_name text DEFAULT 'way',
     p_to4326 boolean DEFAULT false -- on true converts SRID to 4326 .
 ) RETURNS text AS $f$
@@ -921,7 +926,7 @@ CREATE FUNCTION ingest.osm_load(
     msg_ret text;
     num_items bigint;
   BEGIN
-  q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256); -- not null when proc_step=1. Ideal retornar array.
+  q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params); -- not null when proc_step=1. Ideal retornar array.
   IF q_file_id IS NULL THEN
     RETURN format('ERROR: file-read problem or data ingested before, see %s.',p_fileref);
   END IF;
@@ -989,12 +994,28 @@ CREATE FUNCTION ingest.osm_load(
     E'From file_id=%s inserted type=%s\nin feature_asis %s items.',
     q_file_id, p_ftname, num_items
   );
+
   IF num_items>0 THEN
     UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
-        feature_asis_summary= ingest.feature_asis_assign(q_file_id)
+        lineage = lineage || ingest.feature_asis_assign(q_file_id)
     WHERE id=q_file_id;
   END IF;
+  
+  IF num_items>0 THEN
+    UPDATE ingest.donated_PackComponent
+    SET proc_step=3,   -- if insert process occurs after q_query.
+        lineage =  lineage || ingest.feature_asis_assign_distribution(q_file_id)
+    WHERE id=q_file_id;
+  END IF;
+
+  IF num_items>0 THEN
+    UPDATE ingest.donated_PackComponent
+    SET proc_step=4,   -- if insert process occurs after q_query.
+        lineage =  lineage || ingest.feature_asis_assign_signature(q_file_id)
+    WHERE id=q_file_id;
+  END IF;
+  
   RETURN msg_ret;
   END;
 $f$ LANGUAGE PLpgSQL;
@@ -1006,12 +1027,13 @@ CREATE FUNCTION ingest.osm_load(
     p_pck_id text,   -- 4. id do package da Preservação no formato "a.b".
     p_pck_fileref_sha256 text,   -- 5
     p_tabcols text[] DEFAULT NULL,   -- 6. lista de atributos, ou só geometria
-    p_geom_name text DEFAULT 'way', -- 7
-    p_to4326 boolean DEFAULT false    -- 8. on true converts SRID to 4326 .
+    p_id_profile_params int DEFAULT 1,       -- 7
+    p_geom_name text DEFAULT 'way', -- 8
+    p_to4326 boolean DEFAULT false    -- 9. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.osm_load($1, $2, $3, to_bigint($4), $5, $6, $7, $8)
+   SELECT ingest.osm_load($1, $2, $3, to_bigint($4), $5, $6, $7, $8, $9)
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.osm_load(text,text,text,text,text,text[],text,boolean)
+COMMENT ON FUNCTION ingest.osm_load(text,text,text,text,text,text[],int,text,boolean)
   IS 'Wrap to ingest.osm_load(1,2,3,4=real) using string format DD_DD.'
 ;
 
@@ -1201,7 +1223,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
     	(SELECT lineage->'ghs_distrib_mosaic' FROM ingest.donated_PackComponent WHERE id= p_file_id),
     	1,
     	(SELECT length(st_geohash(geom)) FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
-    	(SELECT lineage->'p_parameters' FROM ingest.donated_PackComponent WHERE id= p_file_id)
+    	(SELECT lineage->'hcode_distribution_parameters_publi' FROM ingest.donated_PackComponent WHERE id= p_file_id)
     ) t
   ;
   SELECT pg_catalog.pg_file_unlink(p_fileref || '/pts_*.geojson');
@@ -1227,12 +1249,6 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
   DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
   SELECT 'p3';
 $f$ language SQL VOLATILE; --fim p3
---Configurar hcode_distribution_parameters para todos os donated_PackComponent.
---Parametros default utilizados anteriormente:
---psql postgres://postgres@localhost/ingest99 -c "UPDATE ingest.donated_PackComponent SET hcode_distribution_parameters = jsonb_build_object('p_threshold', 750, 'p_threshold_sum', 8000, 'p_heuristic',3) ;"
-
---Configurar hcode_distribution_parameters para layer geoaddress de OSM https://github.com/digital-guard/preserv-BR/tree/main/data/_pk0004.01:
---psql postgres://postgres@localhost/ingest99 -c "UPDATE ingest.donated_PackComponent SET hcode_distribution_parameters = jsonb_build_object('p_threshold', 650, 'p_threshold_sum', 10000, 'p_heuristic',3) WHERE id =<ID do layer geoaddress>;"
 
 CREATE FUNCTION ingest.publicating_geojsons_p4(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
@@ -1457,6 +1473,11 @@ BEGIN
         
         RAISE NOTICE 'layer : %, method: %', key, method;
 
+        IF NOT dict->'layers'->key?'id_profile_params'
+        THEN
+            dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb(1));
+        END IF;
+        
         codec_desc := codec_desc0;
         codec_desc_default := codec_desc_default0;
         codec_desc_sobre := codec_desc_sobre0;
@@ -1970,6 +1991,37 @@ COMMENT ON FUNCTION ingest.join(text,text,text,text,text,text)
   IS 'Join layer and cadlayer.'
 ;
 
+CREATE TABLE ingest.hcode_parameters (
+  id_profile_params             int   NOT NULL PRIMARY KEY,
+  distribution_parameters       jsonb NOT NULL,
+  distribution_parameters_publi jsonb NOT NULL,
+  signature_parameters          jsonb NOT NULL,
+  comments                      text
+);
+
+CREATE or replace FUNCTION ingest.load_hcode_parameters(
+  p_file text,  -- path+filename+ext
+  p_delimiter text DEFAULT ',',
+  p_fdwname text DEFAULT 'tmp_hcode_parameters' -- nome da tabela fwd
+) RETURNS text  AS $f$
+DECLARE
+        q_query text;
+BEGIN
+    SELECT ingest.fdw_generate_direct_csv(p_file,p_fdwname,p_delimiter) INTO q_query;
+
+    DELETE FROM ingest.hcode_parameters;
+
+    EXECUTE format($$INSERT INTO ingest.hcode_parameters (id_profile_params,distribution_parameters,distribution_parameters_publi,signature_parameters,comments) SELECT id_profile_params::int, jsonb_object(regexp_split_to_array(replace(hcode_distribution_parameters,' ',''),'(:|;)')), jsonb_object(regexp_split_to_array(replace(hcode_distribution_parameters_publi,' ',''),'(:|;)')), jsonb_object(regexp_split_to_array(replace(hcode_signature_parameters,' ',''),'(:|;)')), comments FROM %s$$, p_fdwname);
+
+    EXECUTE format('DROP FOREIGN TABLE IF EXISTS %s;',p_fdwname);
+
+    RETURN ' '|| E'Load hcode_parameters from: '||p_file|| ' ';
+END;
+$f$ language PLpgSQL;
+COMMENT ON FUNCTION ingest.load_hcode_parameters
+  IS 'Load hcode_parameters.csv.'
+;
+--SELECT ingest.load_hcode_parameters('/home/claiton/hcode_parameters.csv')
 
 CREATE TABLE ingest.codec_type (
   extension text,
