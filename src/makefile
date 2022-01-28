@@ -68,10 +68,10 @@ ini_ingest: ini_ingest_sql load_license_tables
 
 ini_ingest_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 ifeq ($(DB_TEST),$(pg_db))
-        @echo "... DROP old database $(pg_db)?"
-        @echo "[ENTER to drop or ^C para sair]"
-        @read _tudo_bem_
-        psql $(pg_uri_root) -c "DROP DATABASE $(pg_db)"
+	@echo "... DROP old database $(pg_db)?"
+	@echo "[ENTER to drop or ^C para sair]"
+	@read _tudo_bem_
+	psql $(pg_uri_root) -c "DROP DATABASE $(pg_db)"
 endif
 	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_db)"
 	@echo "--- Preparing filesystem... ---"
