@@ -164,7 +164,6 @@ COMMENT ON TABLE ingest.addr_point
 CREATE TABLE ingest.hcode_parameters (
   id_profile_params             int   NOT NULL PRIMARY KEY,
   distribution_parameters       jsonb NOT NULL,
-  distribution_parameters_publi jsonb NOT NULL,
   signature_parameters          jsonb NOT NULL,
   comments                      text
 );
@@ -666,7 +665,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
     WHERE packvers_id=p_pck_id AND lineage_md5=(SELECT hash_md5 FROM filedata)
   ), ins AS (
    INSERT INTO ingest.donated_PackComponent(packvers_id,ftid,lineage_md5,lineage)
-      SELECT p_pck_id, p_ftid, hash_md5, (SELECT jsonb_build_object('hcode_distribution_parameters',distribution_parameters,'hcode_distribution_parameters_publi',distribution_parameters_publi, 'hcode_signature_parameters',signature_parameters ) FROM ingest.hcode_parameters WHERE id_profile_params = $5) || jsonb_build_object('file_meta',fmeta) FROM filedata
+      SELECT p_pck_id, p_ftid, hash_md5, (SELECT jsonb_build_object('hcode_distribution_parameters',distribution_parameters,'hcode_signature_parameters',signature_parameters ) FROM ingest.hcode_parameters WHERE id_profile_params = $5) || jsonb_build_object('file_meta',fmeta) FROM filedata
    ON CONFLICT DO NOTHING
    RETURNING id
   )
@@ -1208,7 +1207,7 @@ CREATE FUNCTION ingest.publicating_geojsons_p2(
 ) RETURNS text  AS $f$
 
   UPDATE ingest.donated_PackComponent
-  SET lineage = lineage || jsonb_build_object('ghs_distrib_mosaic', geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7, p_sum))
+  SET kx_profile = coalesce(kx_profile,'{}'::jsonb) || jsonb_build_object('ghs_distrib_mosaic', geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7, p_sum))
   WHERE id= p_file_id
   ;
   SELECT 'p2';
@@ -1228,10 +1227,10 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
         (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
       ) AS geom
     FROM hcode_distribution_reduce_recursive_raw(
-    	(SELECT lineage->'ghs_distrib_mosaic' FROM ingest.donated_PackComponent WHERE id= p_file_id),
+    	(SELECT kx_profile->'ghs_distrib_mosaic' FROM ingest.donated_PackComponent WHERE id= p_file_id),
     	1,
     	(SELECT length(st_geohash(geom)) FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
-    	(SELECT lineage->'hcode_distribution_parameters_publi' FROM ingest.donated_PackComponent WHERE id= p_file_id)
+    	(SELECT lineage->'hcode_distribution_parameters' FROM ingest.donated_PackComponent WHERE id= p_file_id)
     ) t
   ;
   SELECT pg_catalog.pg_file_unlink(p_fileref || '/pts_*.geojson');
@@ -1250,7 +1249,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
   ;
 
   UPDATE ingest.donated_PackComponent
-  SET lineage = lineage || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_items) FROM ingest.publicating_geojsons_p2distrib))
+  SET kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_items) FROM ingest.publicating_geojsons_p2distrib))
   WHERE id= p_file_id
   ;
 
@@ -2011,7 +2010,7 @@ BEGIN
 
     DELETE FROM ingest.hcode_parameters;
 
-    EXECUTE format($$INSERT INTO ingest.hcode_parameters (id_profile_params,distribution_parameters,distribution_parameters_publi,signature_parameters,comments) SELECT id_profile_params::int, jsonb_object(regexp_split_to_array(replace(hcode_distribution_parameters,' ',''),'(:|;)')), jsonb_object(regexp_split_to_array(replace(hcode_distribution_parameters_publi,' ',''),'(:|;)')), jsonb_object(regexp_split_to_array(replace(hcode_signature_parameters,' ',''),'(:|;)')), comments FROM %s$$, p_fdwname);
+    EXECUTE format($$INSERT INTO ingest.hcode_parameters (id_profile_params,distribution_parameters,signature_parameters,comments) SELECT id_profile_params::int, jsonb_object(regexp_split_to_array(replace(hcode_distribution_parameters,' ',''),'(:|;)')), jsonb_object(regexp_split_to_array(replace(hcode_signature_parameters,' ',''),'(:|;)')), comments FROM %s$$, p_fdwname);
 
     EXECUTE format('DROP FOREIGN TABLE IF EXISTS %s;',p_fdwname);
 
