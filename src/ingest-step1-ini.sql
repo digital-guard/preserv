@@ -876,7 +876,7 @@ CREATE or replace FUNCTION ingest.any_load(
   IF num_items>0 THEN
     UPDATE ingest.donated_PackComponent
     SET proc_step=3,   -- if insert process occurs after q_query.
-        lineage =  lineage || ingest.feature_asis_assign_distribution(q_file_id)
+        kx_profile = coalesce(kx_profile,'{}'::jsonb) || ingest.feature_asis_assign_distribution(q_file_id)
     WHERE id=q_file_id;
   END IF;
 
@@ -1012,7 +1012,7 @@ CREATE FUNCTION ingest.osm_load(
   IF num_items>0 THEN
     UPDATE ingest.donated_PackComponent
     SET proc_step=3,   -- if insert process occurs after q_query.
-        lineage =  lineage || ingest.feature_asis_assign_distribution(q_file_id)
+        kx_profile = coalesce(kx_profile,'{}'::jsonb) || ingest.feature_asis_assign_distribution(q_file_id)
     WHERE id=q_file_id;
   END IF;
 
