@@ -391,7 +391,7 @@ CREATE VIEW ingest.vw06simple_layer AS
 
 DROP VIEW IF EXISTS ingest.vw07full_donated_packfilevers CASCADE;
 CREATE or replace VIEW ingest.vw07full_donated_packfilevers AS
-  SELECT pf.*, j.isolabel_ext, j.geom, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pack_item,'fm00') AS path
+  SELECT pf.*, j.isolabel_ext, j.geom, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.pack_item,'fm00') AS path
   FROM ingest.fdw_donated_packfilevers pf
   LEFT JOIN ingest.fdw_donated_PackTpl pt
     ON pf.pack_id=pt.id
