@@ -290,7 +290,7 @@ jurisdiction_iso_test:
 ## -- ADMIN FIX TOOLS --
 fix_permissions: pgio
 	@echo "... Fixing standard permissions, as sudor:"
-	sudo bash fixaPermissoes.sh /var/gits /tmp/pg_io /var/www
+	sudo bash fixaPermissoes.sh /var/gits /tmp/pg_io /var/www /tmp/sandbox
 
 fix_usergroup:
 	@echo "... Adding standard usergroups, as sudor:"
