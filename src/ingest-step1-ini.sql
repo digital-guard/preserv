@@ -5,18 +5,13 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS adminpack;
 
-CREATE EXTENSION IF NOT EXISTS file_fdw;
-CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;
-
 -- old CREATE SCHEMA    IF NOT EXISTS ingest;
-DROP SCHEMA    IF EXISTS ingest CASCADE; -- important to clean!
-CREATE SCHEMA  ingest;
+DROP SCHEMA      IF EXISTS     ingest CASCADE; -- important to clean!
+CREATE SCHEMA                  ingest;
 
 CREATE SCHEMA    IF NOT EXISTS tmp_orig;
 CREATE SCHEMA    IF NOT EXISTS api;
 CREATE SCHEMA    IF NOT EXISTS download;
-
-
 
 CREATE EXTENSION IF NOT EXISTS file_fdw;
 CREATE SERVER    IF NOT EXISTS files
@@ -182,7 +177,7 @@ COMMENT ON TABLE ingest.via_line
 
 ---------
 
-DROP FOREIGN TABLE IF EXISTS ingest.fdw_foreign_jurisdiction_geom cascade;
+DROP FOREIGN TABLE IF EXISTS ingest.fdw_foreign_jurisdiction_geom CASCADE;
 CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
  osm_id          bigint,
  jurisd_base_id  integer,
@@ -203,7 +198,7 @@ CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
   OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
 ;
 
-DROP FOREIGN TABLE IF EXISTS ingest.fdw_donor;
+--DROP FOREIGN TABLE IF EXISTS ingest.fdw_donor;
 CREATE FOREIGN TABLE ingest.fdw_donor (
  id integer,
  country_id integer,
@@ -220,7 +215,7 @@ CREATE FOREIGN TABLE ingest.fdw_donor (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'donor');
 
-DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackTpl;
+--DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackTpl;
 CREATE FOREIGN TABLE ingest.fdW_donated_PackTpl (
  id bigint,
  donor_id integer,
@@ -233,7 +228,7 @@ CREATE FOREIGN TABLE ingest.fdW_donated_PackTpl (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'donated_packtpl');
 
-DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackFileVers;
+--DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackFileVers;
 CREATE FOREIGN TABLE ingest.fdw_donated_PackFileVers (
  id bigint,
  hashedfname text,
@@ -246,7 +241,7 @@ CREATE FOREIGN TABLE ingest.fdw_donated_PackFileVers (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'donated_packfilevers');
 
-DROP FOREIGN TABLE IF EXISTS ingest.fdw_feature_type;
+--DROP FOREIGN TABLE IF EXISTS ingest.fdw_feature_type;
 CREATE FOREIGN TABLE ingest.fdw_feature_type (
  ftid smallint,
  ftname text,
