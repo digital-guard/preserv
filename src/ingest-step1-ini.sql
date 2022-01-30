@@ -1164,6 +1164,12 @@ BEGIN
   ) t2
   ORDER BY gid;
 
+  --WHEN 'block' THEN
+  --WHEN 'building' THEN
+  --WHEN 'genericvia' THEN
+  --WHEN 'nsvia' THEN
+  --WHEN 'parcel' THEN
+  
   END CASE;
 END;
 $f$ LANGUAGE PLpgSQL;
