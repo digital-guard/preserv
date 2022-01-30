@@ -507,18 +507,6 @@ CREATE or replace FUNCTION ingest.feature_asis_assign(
         )
 $f$ LANGUAGE SQL;
 
-CREATE or replace FUNCTION ingest.feature_asis_assign_distribution(
-    p_file_id bigint  -- ID at ingest.donated_PackComponent
-) RETURNS jsonb AS $f$
-  SELECT jsonb_build_object(
-        'ghs_feature_distrib',
-        hcode_distribution_reduce(ingest.feature_asis_geohashes(p_file_id,ghs_size), 2, 1, (SELECT lineage->'hcode_distribution_parameters' FROM ingest.donated_PackComponent WHERE id=p_file_id))
-    )
-  FROM (
-    SELECT CASE WHEN (ingest.donated_PackComponent_geomtype(p_file_id))[1]='poly' THEN 5 ELSE 6 END AS ghs_size
-  ) t
-$f$ LANGUAGE SQL;
-
 CREATE or replace FUNCTION ingest.feature_asis_assign_signature(
     p_file_id bigint  -- ID at ingest.donated_PackComponent
 ) RETURNS jsonb AS $f$
@@ -867,17 +855,10 @@ CREATE or replace FUNCTION ingest.any_load(
         lineage = lineage || ingest.feature_asis_assign(q_file_id)
     WHERE id=q_file_id;
   END IF;
-  
-  IF num_items>0 THEN
-    UPDATE ingest.donated_PackComponent
-    SET proc_step=3,   -- if insert process occurs after q_query.
-        kx_profile = coalesce(kx_profile,'{}'::jsonb) || ingest.feature_asis_assign_distribution(q_file_id)
-    WHERE id=q_file_id;
-  END IF;
 
   IF num_items>0 THEN
     UPDATE ingest.donated_PackComponent
-    SET proc_step=4,   -- if insert process occurs after q_query.
+    SET proc_step=3,   -- if insert process occurs after q_query.
         lineage =  lineage || ingest.feature_asis_assign_signature(q_file_id)
     WHERE id=q_file_id;
   END IF;
@@ -1003,17 +984,10 @@ CREATE FUNCTION ingest.osm_load(
         lineage = lineage || ingest.feature_asis_assign(q_file_id)
     WHERE id=q_file_id;
   END IF;
-  
-  IF num_items>0 THEN
-    UPDATE ingest.donated_PackComponent
-    SET proc_step=3,   -- if insert process occurs after q_query.
-        kx_profile = coalesce(kx_profile,'{}'::jsonb) || ingest.feature_asis_assign_distribution(q_file_id)
-    WHERE id=q_file_id;
-  END IF;
 
   IF num_items>0 THEN
     UPDATE ingest.donated_PackComponent
-    SET proc_step=4,   -- if insert process occurs after q_query.
+    SET proc_step=3,   -- if insert process occurs after q_query.
         lineage =  lineage || ingest.feature_asis_assign_signature(q_file_id)
     WHERE id=q_file_id;
   END IF;
@@ -1208,9 +1182,11 @@ CREATE FUNCTION ingest.publicating_geojsons_p2(
 ) RETURNS text  AS $f$
 
   UPDATE ingest.donated_PackComponent
-  SET kx_profile = coalesce(kx_profile,'{}'::jsonb) || jsonb_build_object('ghs_distrib_mosaic', geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7, p_sum))
+  SET proc_step=4, 
+      kx_profile = coalesce(kx_profile,'{}'::jsonb) || jsonb_build_object('ghs_distrib_mosaic', geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7, p_sum))
   WHERE id= p_file_id
   ;
+
   SELECT 'p2';
 $f$ language SQL VOLATILE; --fim p2
 
@@ -1250,7 +1226,8 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
   ;
 
   UPDATE ingest.donated_PackComponent
-  SET kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_items) FROM ingest.publicating_geojsons_p2distrib))
+  SET proc_step=5, 
+      kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_items) FROM ingest.publicating_geojsons_p2distrib))
   WHERE id= p_file_id
   ;
 
