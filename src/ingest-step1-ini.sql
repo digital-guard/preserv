@@ -1355,8 +1355,8 @@ CREATE or replace FUNCTION ingest.lix_insert(
             jurisd := 'INT';
         END IF;
 
-        RAISE NOTICE 'ext orig_filename_ext : %', p_type;
-        RAISE NOTICE 'ext orig_filename_ext : %', jurisd;
+        --RAISE NOTICE 'type : %', p_type;
+        --RAISE NOTICE 'Jurisdiction : %', jurisd;
 
         CASE p_type
         WHEN 'make_conf.yaml' THEN
