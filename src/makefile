@@ -108,6 +108,12 @@ load_license_tables: pgio
 	ON lower(d.license) = l.id_label AND d.license_is_explicit = l.license_is_explicit;\
 	DROP FOREIGN TABLE IF EXISTS tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_donatedPack;"
 
+to_report:
+	pg_dump --inserts -t ingest.donated_packcomponent $(pg_db_uri) > $(pg_io)/dump_component_$(pg_db).sql
+	sed -i 's/\(INSERT INTO.*\);$/\1 ON CONFLICT (packvers_id,ftid,lineage_md5) DO UPDATE SET (is_evidence, proc_step, lineage, kx_profile) = (EXCLUDED.is_evidence, EXCLUDED.proc_step, EXCLUDED.lineage, EXCLUDED.kx_profile);/g' $(pg_io)/dump_component_$(pg_db).sql
+	sed -i 's/ingest\.donated_packcomponent/optim\.relatorio/g' $(pg_io)/dump_component_$(pg_db).sql
+	grep "INSERT INTO" $(pg_io)/dump_component_$(pg_db).sql | psql postgres://postgres@localhost/dl03t_main
+
 ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_datalake)"
 	@echo "--- Preparing filesystem... ---"

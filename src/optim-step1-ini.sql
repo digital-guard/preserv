@@ -167,7 +167,7 @@ CREATE TABLE optim.donated_PackComponent(
   --hash_md5 text NOT NULL, -- or "size-md5" as really unique string
   proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
   lineage jsonb NOT NULL,
-  lineage_md5 jsonb NOT NULL,
+  lineage_md5 text NOT NULL,
   kx_profile jsonb,
   --file_meta jsonb,
   --hcode_distribution_parameters jsonb,
@@ -175,6 +175,18 @@ CREATE TABLE optim.donated_PackComponent(
   --feature_distrib jsonb,
   UNIQUE(packvers_id,ftid,lineage_md5)
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
+);
+
+CREATE TABLE optim.relatorio(
+  id bigint,
+  packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
+  ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
+  is_evidence boolean default false,
+  proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
+  lineage jsonb NOT NULL,
+  lineage_md5 text NOT NULL,
+  kx_profile jsonb,
+  primary key(packvers_id,ftid,lineage_md5)
 );
 
 CREATE TABLE optim.housenumber_system_type (
