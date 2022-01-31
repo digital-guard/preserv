@@ -1184,11 +1184,38 @@ BEGIN
   ) t2
   ORDER BY gid;
 
+  WHEN 'nsvia' THEN
+  RETURN QUERY SELECT t2.ghs, t2.gid,
+    CASE
+    WHEN n=1 THEN jsonb_build_object('ns_name',ns_names[1],'n',n,'npoints',npoints)
+    WHEN n>1 AND cardinality(ns_names)=1 THEN
+        jsonb_build_object('ns_name',ns_names[1],'n',n,'npoints',npoints)
+    ELSE jsonb_build_object('ns_names',ns_names,'n',n,'npoints',npoints)
+    END AS info,
+    CASE n WHEN 1 THEN geoms[1] ELSE ST_Collect(geoms) END AS geom
+  FROM (
+    SELECT ghs,
+      MIN(row_id)::int AS gid,
+      COUNT(*) n,
+      SUM(ST_NPoints(t1.geom)) npoints,
+      array_agg(t1.geom) AS geoms,
+      array_agg(DISTINCT ns_name) AS ns_names
+    FROM (
+      SELECT fa.file_id, fa.geom,
+        ROW_NUMBER() OVER(ORDER BY fa.properties->>'ns_name') AS row_id,
+        fa.properties->>'ns_name' AS ns_name,
+        fa.ghs9 AS ghs
+      FROM ingest.feature_asis AS fa
+      WHERE fa.file_id=p_file_id
+    ) t1
+    GROUP BY 1
+  ) t2
+  ORDER BY gid;
+
   --WHEN 'genericvia' THEN
 
   --WHEN 'block' THEN
   --WHEN 'building' THEN
-  --WHEN 'nsvia' THEN
   
   END CASE;
 END;
