@@ -645,7 +645,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   file_exists AS (
     SELECT id,proc_step
     FROM ingest.donated_PackComponent
-    WHERE packvers_id=p_pck_id AND lineage_md5=(SELECT hash_md5 FROM filedata)
+    WHERE packvers_id=p_pck_id AND lineage_md5=(SELECT hash_md5 FROM filedata) AND ftid=p_ftid
   ), ins AS (
    INSERT INTO ingest.donated_PackComponent(packvers_id,ftid,lineage_md5,lineage)
       SELECT p_pck_id, p_ftid, hash_md5, (SELECT jsonb_build_object('hcode_distribution_parameters',distribution_parameters,'hcode_signature_parameters',signature_parameters ) FROM ingest.hcode_parameters WHERE id_profile_params = $5) || jsonb_build_object('file_meta',fmeta) FROM filedata
