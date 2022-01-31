@@ -109,9 +109,13 @@ load_license_tables: pgio
 	DROP FOREIGN TABLE IF EXISTS tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_donatedPack;"
 
 to_report:
+	@echo "--- DUMP ingest.donated_packcomponent to $(pg_io)/dump_component_$(pg_db).sql ---"
 	pg_dump --inserts -t ingest.donated_packcomponent $(pg_db_uri) > $(pg_io)/dump_component_$(pg_db).sql
+	@echo "--- Preparing $(pg_io)/dump_component_$(pg_db).sql ---"
 	bash to_report.bash $(pg_io)/dump_component_$(pg_db).sql
+	@echo "--- INSERT $(pg_io)/dump_component_$(pg_db).sql INTO DL03t_main optim.report ---"
 	grep "INSERT INTO" $(pg_io)/dump_component_$(pg_db).sql | psql postgres://postgres@localhost/dl03t_main
+	@echo "--- See optim.report in DL03t_main ---"
 
 ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_datalake)"
