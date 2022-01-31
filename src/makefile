@@ -110,8 +110,7 @@ load_license_tables: pgio
 
 to_report:
 	pg_dump --inserts -t ingest.donated_packcomponent $(pg_db_uri) > $(pg_io)/dump_component_$(pg_db).sql
-	sed -i 's/\(INSERT INTO.*\);$/\1 ON CONFLICT (packvers_id,ftid,lineage_md5) DO UPDATE SET (is_evidence, proc_step, lineage, kx_profile) = (EXCLUDED.is_evidence, EXCLUDED.proc_step, EXCLUDED.lineage, EXCLUDED.kx_profile);/g' $(pg_io)/dump_component_$(pg_db).sql
-	sed -i 's/ingest\.donated_packcomponent/optim\.report/g' $(pg_io)/dump_component_$(pg_db).sql
+	bash to_report.bash $(pg_io)/dump_component_$(pg_db).sql
 	grep "INSERT INTO" $(pg_io)/dump_component_$(pg_db).sql | psql postgres://postgres@localhost/dl03t_main
 
 ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
