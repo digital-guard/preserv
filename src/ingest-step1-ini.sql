@@ -399,7 +399,7 @@ CREATE or replace VIEW ingest.vw07full_donated_packfilevers AS
 
 DROP VIEW IF EXISTS ingest.vw08info_packcomponent CASCADE;
 CREATE or replace VIEW ingest.vw08info_packcomponent AS
-  SELECT pc.packvers_id, pc.id, ft.ftid, ft.ftname AS ftname_full, split_part(ft.ftname, '_', 1) AS ftname_type, ft.geomtype, dn.kx_scope_label, j.isolabel_ext, j.housenumber_system_type, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.pack_item,'fm00') || '/' ||split_part(ft.ftname, '_', 1) AS path
+  SELECT pc.packvers_id, pc.id, ft.ftid, ft.ftname AS ftname_full, split_part(ft.ftname, '_', 1) AS ftname_class, ft.geomtype, dn.kx_scope_label, j.isolabel_ext, j.housenumber_system_type, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.pack_item,'fm00') || '/' ||split_part(ft.ftname, '_', 1) AS path
   FROM ingest.donated_PackComponent pc
   LEFT JOIN ingest.vw03full_layer_file ft
     ON pc.ftid = ft.ftid AND pc.packvers_id = ft.packvers_id
@@ -1352,7 +1352,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_isolabel_ext text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text       -- e.g. 
 ) RETURNS text AS $wrap$
-  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw08info_packcomponent WHERE isolabel_ext = $2 AND lower(ftname_type) = lower($1)),$2,$3);
+  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw08info_packcomponent WHERE isolabel_ext = $2 AND lower(ftname_class) = lower($1)),$2,$3);
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text)
   IS 'Wrap to ingest.publicating_geojsons'
