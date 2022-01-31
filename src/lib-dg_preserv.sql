@@ -4,7 +4,6 @@
  */
 
 CREATE SCHEMA IF NOT EXISTS dg_preserv;
-
 --------------
 -- BEGIN LIXO:
 CREATE or replace FUNCTION dg_preserv.packid_to_real(pkid int, version int) RETURNS real AS $f$

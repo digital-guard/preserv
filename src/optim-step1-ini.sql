@@ -177,7 +177,7 @@ CREATE TABLE optim.donated_PackComponent(
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
 
-CREATE TABLE optim.relatorio(
+CREATE TABLE optim.report(
   id bigint,
   packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
   ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
@@ -186,7 +186,7 @@ CREATE TABLE optim.relatorio(
   lineage jsonb NOT NULL,
   lineage_md5 text NOT NULL,
   kx_profile jsonb,
-  primary key(packvers_id,ftid,lineage_md5)
+  UNIQUE(packvers_id,ftid,lineage_md5)
 );
 
 CREATE TABLE optim.housenumber_system_type (
