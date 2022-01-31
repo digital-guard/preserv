@@ -1153,7 +1153,6 @@ BEGIN
     ) t1
     GROUP BY 1
   ) t2
-  WHERE cardinality(via_names)<3
   ORDER BY gid;
 
   WHEN 'via' THEN
