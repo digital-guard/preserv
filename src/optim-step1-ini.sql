@@ -189,6 +189,28 @@ CREATE TABLE optim.report(
   UNIQUE(packvers_id,ftid,lineage_md5)
 );
 
+CREATE or replace VIEW optim.vw01report AS
+SELECT isolabel_ext, legalName, vat_id, "ID de pack_componente", ftname, ftid, step, data_feito, n_items, size
+FROM (
+  SELECT jg.isolabel_ext, dn.legalName, dn.vat_id, packvers_id, idcomp AS "ID de pack_componente",ft.ftname, t.ftid,step, data_feito, (j->>'n')||' '||(j->>'n_unit') AS n_items,  (j->>'size')||' '||(j->>'size_unit') AS size
+  FROM (
+    SELECT packvers_id, replace(lib.id_format('packfilevers',packvers_id), '076.00','br') AS idcomp, ftid, proc_step AS step, substr(lineage->'file_meta'->>'modification',1,10) AS data_feito, lineage->'feature_asis_summary' AS j
+    FROM optim.report AS r
+    ORDER BY 1) t 
+  INNER JOIN optim.feature_type ft
+    ON ft.ftid=t.ftid
+  INNER JOIN optim.donated_packfilevers pf
+    ON packvers_id=pf.id
+  INNER JOIN optim.donated_PackTpl pt
+    ON pf.pack_id=pt.id
+  INNER JOIN optim.donor dn
+    ON pt.donor_id=dn.id
+  INNER JOIN optim.jurisdiction_geom jg
+    ON dn.scope_osm_id=jg.osm_id
+  ORDER BY jg.isolabel_ext
+) AS g
+;
+
 CREATE TABLE optim.housenumber_system_type (
   hstid smallint PRIMARY KEY NOT NULL,
   hstname text NOT NULL CHECK(lower(hstname)=hstname), -- hslabel
