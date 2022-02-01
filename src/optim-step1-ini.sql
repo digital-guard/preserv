@@ -393,9 +393,12 @@ BEGIN
     -- popula optim.donated_PackFileVers a partir de optim.donated_PackTpl
     -- falta pack_item_accepted_date
     INSERT INTO optim.donated_PackFileVers (hashedfname, pack_id, pack_item, pack_item_accepted_date, user_resp)
-    SELECT j->>'file'::text AS hashedfname, pack_id , (j->>'p')::int AS pack_item, '1970-01-01'::date, lower(user_resp::text)
+    SELECT j->>'file'::text AS hashedfname, pack_id , (j->>'p')::int AS pack_item, '1970-01-01'::date, lower(user_resp::text) AS user_resp
     FROM (SELECT id AS pack_id, user_resp, jsonb_array_elements(make_conf_tpl->'files')::jsonb AS j FROM optim.donated_packtpl WHERE donor_id IN (SELECT id FROM optim.donor WHERE country_id = (SELECT jurisd_base_id FROM optim.jurisdiction WHERE admin_level = 2 AND lower(abbrev) = lower('%s'))) ) AS t 
-    WHERE j->'file' IS NOT NULL; -- verificar hash null
+    WHERE j->'file' IS NOT NULL -- verificar hash null
+    ON CONFLICT (hashedfname)
+    DO UPDATE 
+    SET pack_id=EXCLUDED.pack_id, pack_item=EXCLUDED.pack_item, pack_item_accepted_date=EXCLUDED.pack_item_accepted_date, user_resp=EXCLUDED.user_resp;
   $$;
   
   EXECUTE format( q, jurisdiction ) ;
