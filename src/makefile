@@ -143,8 +143,8 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('br');"
 	psql $(pg_datalake_uri) -c "select optim.load_donor_pack('co');"
 	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('co');"
-# 	psql $(pg_datalake_uri) -c "select optim.load_donor_pack('pe');" # Falta donor.csv e donatedPack.csv
-# 	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('pe');"
+	psql $(pg_datalake_uri) -c "select optim.load_donor_pack('pe');"
+	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('pe');"
 	@echo "--- Running API SQL templates ---"
 	@echo "!nao fazendo ainda, futuro"
 	#psql $(pg_datalake_uri) < step00-iniApi.sql
