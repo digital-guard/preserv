@@ -125,19 +125,12 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	@echo "--- Running SQL pubLib ---"
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_datalake)
 	@echo "Creating optim schema at $(pg_datalake) database"
-	#psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_datalake_uri) -c "CREATE SCHEMA    IF NOT EXISTS optim;"
 	psql $(pg_datalake_uri) -c "CREATE SCHEMA    IF NOT EXISTS tmp_orig;"
 	psql $(pg_datalake_uri) -c "CREATE EXTENSION IF NOT EXISTS file_fdw;"
 	psql $(pg_datalake_uri) -c "CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;"
-# 	psql $(pg_datalake_uri) -c "DROP TABLE IF EXISTS optim.jurisdiction ;"
-	pg_dump -t optim.jurisdiction $(pg_uri_root)/dl02s_main | psql $(pg_datalake_uri)
-	psql $(pg_datalake_uri) -c "ALTER TABLE optim.jurisdiction ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
-	pg_dump -t optim.jurisdiction_geom $(pg_uri_root)/dl02s_main | psql $(pg_datalake_uri)
-	psql $(pg_datalake_uri) -c "ALTER TABLE optim.jurisdiction_geom ADD COLUMN housenumber_system_type text, ADD COLUMN lex_urn text ;"
-	psql $(pg_datalake_uri) -c "UPDATE optim.jurisdiction_geom SET housenumber_system_type ='bh-metric' WHERE isolabel_ext ='BR-MG-BeloHorizonte';"
-	psql $(pg_datalake_uri) -c "UPDATE optim.jurisdiction_geom SET housenumber_system_type ='block-metric' WHERE isolabel_ext ='BR-SP-Bauru';"
-	psql $(pg_datalake_uri) -c "UPDATE optim.jurisdiction_geom SET housenumber_system_type ='street-metric' WHERE jurisd_base_id = 170;"
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction-01-02-22.sql
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction_geom-01-02-22.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_datalake_uri) -c "select optim.load_donor_pack('br');"
 	psql $(pg_datalake_uri) -c "select optim.insert_donor_pack('br');"

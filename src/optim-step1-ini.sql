@@ -34,6 +34,15 @@
   --,UNIQUE(jurisd_base_id,parent_abbrev,abbrev)
 --);
 
+--CREATE TABLE optim.jurisdiction_geom (
+  --osm_id bigint PRIMARY KEY, 
+  --isolabel_ext text NOT NULL, 
+  --geom geometry(Geometry,4326),
+  --kx_ghs1_intersects text[],
+  --kx_ghs2_intersects text[],
+  --UNIQUE(isolabel_ext)
+--);
+
 CREATE TABLE optim.auth_user (
   -- authorized users to be a datapack responsible and eclusa-FTP manager
   username text NOT NULL PRIMARY KEY,
