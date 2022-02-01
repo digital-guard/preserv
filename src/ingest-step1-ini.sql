@@ -1494,7 +1494,7 @@ BEGIN
 
     IF dict?'jurisdiction'
     THEN
-        dict := jsonb_set( dict, array['country_id'], to_jsonb((SELECT jurisd_base_id::int FROM ingest.fdw_foreign_jurisdiction_geom WHERE abbrev= upper(dict->>'jurisdiction'))));
+        dict := jsonb_set( dict, array['country_id'], to_jsonb((SELECT jurisd_base_id::int FROM ingest.fdw_foreign_jurisdiction_geom WHERE abbrev= upper(dict->>'jurisdiction') AND jurisd_local_id=0)));
 
         RAISE NOTICE 'country_id : %', dict->>'country_id';
     END IF;
@@ -1771,8 +1771,7 @@ $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/SP/SaoPaulo/_pk0033.01/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/PR/Araucaria/_pk0061.01/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/_pk0004.01/make_conf.yaml') );
--- new ingest.make_conf_yaml2jsonb() = ? read file
-
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk0001.01/make_conf.yaml') ); 
 
 CREATE or replace FUNCTION ingest.insert_bytesize(
   dict jsonb  -- input
