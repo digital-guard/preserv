@@ -9,7 +9,6 @@ CREATE or replace FUNCTION lib.id_format(p_type text,pck_id bigint) RETURNS text
  WHEN 'packfilevers' THEN regexp_replace(to_char(pck_id,'FM00000000000000'),'^(\d{3})(\d{6})(\d{2})(\d{1})(\d{2})$','\1.\2.\3.\4.\5')
  END
 $f$ language SQL IMMUTABLE;
-psql postgres://postgres@localhost/dl03t_main < dump_report-01-02-22.sql
 -- SELECT lib.id_format('donor',       lib.id_encode('donor',       '{76,29}'));
 -- SELECT lib.id_format('packtpl',     lib.id_encode('packtpl',     '{76000029,1}'));
 -- SELECT lib.id_format('packfilevers',lib.id_encode('packfilevers','{7600002901,1,1}'));
