@@ -1,65 +1,17 @@
 --------------------
 --------------------
--- OSM lib
-
--- only for ingest OSM
-CREATE EXTENSION IF NOT EXISTS hstore;     -- to make osm
-
-CREATE EXTENSION IF NOT EXISTS unaccent;   -- to normalize
 CREATE SCHEMA    IF NOT EXISTS lib;  -- lib geral, que não é public mas pode fazer drop/create sem medo.
 
-CREATE or replace FUNCTION lib.osm_to_jsonb_remove() RETURNS text[] AS $f$
-   SELECT array['osm_uid','osm_user','osm_version','osm_changeset','osm_timestamp'];
-$f$ LANGUAGE SQL IMMUTABLE;
-
-CREATE or replace FUNCTION lib.osm_to_jsonb(
-  p_input text[], p_strip boolean DEFAULT false
-) RETURNS jsonb AS $f$
-  SELECT CASE WHEN p_strip THEN jsonb_strip_nulls(x,true) ELSE x END
-  FROM (
-    SELECT jsonb_object($1) - lib.osm_to_jsonb_remove()
-  ) t(x)
-$f$ LANGUAGE sql IMMUTABLE;
-
-CREATE or replace FUNCTION lib.osm_to_jsonb(
-  p_input public.hstore, p_strip boolean DEFAULT false
-) RETURNS jsonb AS $f$
-  SELECT CASE WHEN p_strip THEN jsonb_strip_nulls(x,true) ELSE x END
-  FROM (
-    SELECT hstore_to_jsonb_loose($1) - lib.osm_to_jsonb_remove()
-  ) t(x)
-$f$ LANGUAGE sql IMMUTABLE;
-
-CREATE or replace FUNCTION lib.name2lex_pre(
-  p_name       text                  -- 1
-  ,p_normalize boolean DEFAULT true  -- 2
-  ,p_cut       boolean DEFAULT true  -- 3
-  ,p_unaccent  boolean DEFAULT false -- 4
-) RETURNS text AS $f$
-   SELECT
-      CASE WHEN p_unaccent THEN lower(unaccent(x)) ELSE x END
-   FROM (
-     -- old    SELECT CASE WHEN p_normalize THEN stable.normalizeterm2($1,p_cut) ELSE $1 END
-     SELECT CASE WHEN p_normalize THEN $1 ELSE $1 END
-    ) t(x)
-$f$ LANGUAGE SQL IMMUTABLE;
-
-CREATE or replace FUNCTION lib.name2lex(
-  p_name       text                  -- 1
-  ,p_normalize boolean DEFAULT true  -- 2
-  ,p_cut       boolean DEFAULT true  -- 3
-  ,p_flag      boolean DEFAULT false -- 4
-) RETURNS text AS $f$
-  SELECT trim(replace(
-    regexp_replace(
-      lib.name2lex_pre($1,$2,$3,$4),
-      E' d[aeo] | d[oa]s | com | para |^d[aeo] | / .+| [aeo]s | [aeo] |\-d\'| d\'|[\-\' ]',
-      '.',
-      'g'
-    ),
-    '..',
-    '.'
-  ),'.')
-$f$ LANGUAGE SQL IMMUTABLE;
+CREATE or replace FUNCTION lib.id_format(p_type text,pck_id bigint) RETURNS text AS $f$
+ SELECT CASE p_type
+ WHEN 'donor'        THEN regexp_replace(to_char(pck_id,'FM000000000'),     '^(\d{3})(\d{6})$',                     '\1.\2'         )
+ WHEN 'packtpl'      THEN regexp_replace(to_char(pck_id,'FM00000000000'),   '^(\d{3})(\d{6})(\d{2})$',              '\1.\2.\3'      )
+ WHEN 'packfilevers' THEN regexp_replace(to_char(pck_id,'FM00000000000000'),'^(\d{3})(\d{6})(\d{2})(\d{1})(\d{2})$','\1.\2.\3.\4.\5')
+ END
+$f$ language SQL IMMUTABLE;
+psql postgres://postgres@localhost/dl03t_main < dump_report-01-02-22.sql
+-- SELECT lib.id_format('donor',       lib.id_encode('donor',       '{76,29}'));
+-- SELECT lib.id_format('packtpl',     lib.id_encode('packtpl',     '{76000029,1}'));
+-- SELECT lib.id_format('packfilevers',lib.id_encode('packfilevers','{7600002901,1,1}'));
 
 -------------------------------------------------

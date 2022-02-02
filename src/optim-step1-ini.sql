@@ -220,6 +220,11 @@ FROM (
 ) AS g
 ;
 
+CREATE or replace VIEW optim.vw02report_simple AS
+SELECT isolabel_ext, ftname
+FROM optim.vw01report
+;
+
 CREATE TABLE optim.housenumber_system_type (
   hstid smallint PRIMARY KEY NOT NULL,
   hstname text NOT NULL CHECK(lower(hstname)=hstname), -- hslabel

@@ -81,10 +81,10 @@ endif
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_db)
 	@echo "--- Running Ingest ---"
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/lib-dg_preserv.sql
-	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/step01def-lib.sql
+	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/step01def-lib_osm.sql
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
-	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/osm_hstore2jsonb.sql
+	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/step07igt-osm.sql
 	@echo "--- codec_type load ---"
 	psql $(pg_db_uri) -c "SELECT ingest.load_codec_type('$(gits_basepath)/_dg/preserv/data/codec_type.csv',',');"
 	@echo "--- hcode_parameters load ---"
@@ -129,6 +129,7 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_datalake_uri) -c "CREATE SCHEMA    IF NOT EXISTS tmp_orig;"
 	psql $(pg_datalake_uri) -c "CREATE EXTENSION IF NOT EXISTS file_fdw;"
 	psql $(pg_datalake_uri) -c "CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;"
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/step01def-lib.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction-01-02-22.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction_geom-01-02-22.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
