@@ -64,7 +64,7 @@ all: ini_all
 
 ini_all: ini_ingest ini_datalake
 
-ini_ingest: ini_ingest_sql load_license_tables
+ini_ingest: ini_ingest_sql load_codec_type load_hcode_parameters load_license_tables
 
 ini_ingest_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 ifeq ($(DB_TEST),$(pg_db))
@@ -85,12 +85,16 @@ endif
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/step07igt-osm.sql
-	@echo "--- codec_type load ---"
-	psql $(pg_db_uri) -c "SELECT ingest.load_codec_type('$(gits_basepath)/_dg/preserv/data/codec_type.csv',',');"
-	@echo "--- hcode_parameters load ---"
-	psql $(pg_db_uri) -c "SELECT ingest.load_hcode_parameters('$(gits_basepath)/_dg/preserv/data/hcode_parameters.csv',',');"
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
+
+load_codec_type:
+	@echo "--- codec_type load ---"
+	psql $(pg_db_uri) -c "SELECT ingest.load_codec_type('$(gits_basepath)/_dg/preserv/data/codec_type.csv',',');"
+
+load_hcode_parameters:
+	@echo "--- hcode_parameters load ---"
+	psql $(pg_db_uri) -c "SELECT ingest.load_hcode_parameters('$(gits_basepath)/_dg/preserv/data/hcode_parameters.csv',',');"
 
 load_license_tables: pgio
 	@echo "--- license table load ---"
