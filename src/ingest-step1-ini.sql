@@ -282,14 +282,22 @@ CREATE TABLE ingest.tmp_geojson_feature (
   UNIQUE(file_id,feature_id)
 ); -- to be feature_asis after GeoJSON ingestion.
 
+CREATE OR REPLACE FUNCTION f(geom text, file_id bigint)
+RETURNS text AS $f$
+    --SELECT ST_Geohash(CASE WHEN (SELECT geomtype FROM ingest.vw03full_layer_file  WHERE id = file_id)='point' THEN geom ELSE ST_PointOnSurface(geom) END,9)
+    SELECT ST_Geohash(ST_PointOnSurface(geom),9)
+$f$ LANGUAGE SQL IMMUTABLE;
+
+
 CREATE TABLE ingest.feature_asis (
   file_id bigint NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   feature_id int NOT NULL,
   properties jsonb,
-  ghs9 text NOT NULL,
   geom geometry NOT NULL CHECK ( st_srid(geom)=4326 ),
+  kx_ghs9 text GENERATED ALWAYS AS (f(geom,file_id)) STORED,
   UNIQUE(file_id,feature_id)
 );
+CREATE INDEX ingest_feature_asis_ghs9_idx ON ingest.feature_asis (file_id,kx_ghs9);
 
 CREATE TABLE ingest.cadastral_asis (
   file_id bigint NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
@@ -355,7 +363,7 @@ CREATE VIEW ingest.vw03full_layer_file AS
 CREATE VIEW ingest.vw03dup_feature_asis AS
  SELECT v.ftname, v.geomtype, t.*, round(100.0*n_ghs/n::float, 2)::text || '%' as n_ghs_perc
  FROM (
-   SELECT file_id, count(*) n, count(DISTINCT ghs9) as n_ghs
+   SELECT file_id, count(*) n, count(DISTINCT kx_ghs9) as n_ghs
    FROM ingest.feature_asis
    GROUP BY 1
    ORDER BY 1
@@ -763,8 +771,9 @@ CREATE or replace FUNCTION ingest.any_load(
     --p_fileref := regexp_replace(p_fileref,'\.shp$', '') || '.shp';
   --END IF;
   q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params); -- not null when proc_step=1. Ideal retornar array.
+  
   IF q_file_id IS NULL THEN
-    RETURN format('ERROR: file-read problem or data ingested before. See %s or use make delete_file id=%s to delete data.',p_fileref,q_file_id);
+    RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s or use make delete_file id= to delete data.\nSee ingest.vw03full_layer_file.',p_fileref);
   END IF;
   IF p_tabcols=array[]::text[] THEN  -- condição para solicitar todas as colunas
     p_tabcols = rel_columns(p_tabname);
@@ -804,11 +813,9 @@ CREATE or replace FUNCTION ingest.any_load(
       ),
       ins AS (
         INSERT INTO ingest.feature_asis
-           SELECT file_id, gid, properties,
-            ST_Geohash(
-                CASE WHEN (SELECT geomtype FROM ingest.vw01info_feature_type WHERE ftname = '%s')='point' THEN geom 
-                ELSE ST_PointOnSurface(geom) END,9),
-            ST_Intersection(geom, (SELECT geom FROM ingest.vw07full_donated_packfilevers WHERE id=%s))
+           SELECT file_id, gid,
+                  properties,
+                  ST_Intersection(geom, (SELECT geom FROM ingest.vw07full_donated_packfilevers WHERE id=%s))
            FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom) AND ST_Intersects(geom,(SELECT geom FROM ingest.vw07full_donated_packfilevers WHERE id=%s))
         RETURNING 1
       )
@@ -822,7 +829,6 @@ CREATE or replace FUNCTION ingest.any_load(
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
-    p_ftname,
     p_pck_id,
     p_pck_id
   );
@@ -866,7 +872,7 @@ CREATE or replace FUNCTION ingest.any_load(
     q_query := format(
         $$
         WITH dup AS (
-            SELECT file_id, ghs9
+            SELECT file_id, kx_ghs9
             FROM ingest.feature_asis
             WHERE file_id = %s
             GROUP BY 1,2
@@ -874,19 +880,19 @@ CREATE or replace FUNCTION ingest.any_load(
             ORDER BY 1,2
         ),
         dup_agg AS (
-            SELECT t.file_id, t.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb), t.ghs9, f.geom
+            SELECT t.file_id, t.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb), f.geom
             FROM (
-                SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, ghs9
+                SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, kx_ghs9
                 FROM ingest.feature_asis
-                WHERE (file_id, ghs9) IN ( SELECT * FROM dup)
-                GROUP BY file_id, ghs9
-                ORDER BY file_id, ghs9
+                WHERE (file_id, kx_ghs9) IN ( SELECT * FROM dup)
+                GROUP BY file_id, kx_ghs9
+                ORDER BY file_id, kx_ghs9
                 ) AS t
             LEFT JOIN ingest.feature_asis f
             ON t.file_id = f.file_id AND t.feature_id = f.feature_id
         ),
         del AS (
-            DELETE FROM ingest.feature_asis WHERE (file_id, ghs9) IN ( SELECT * FROM dup)
+            DELETE FROM ingest.feature_asis WHERE (file_id, kx_ghs9) IN ( SELECT * FROM dup)
             RETURNING 1
         ),
         ins AS (
@@ -969,7 +975,7 @@ CREATE FUNCTION ingest.osm_load(
   BEGIN
   q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params); -- not null when proc_step=1. Ideal retornar array.
   IF q_file_id IS NULL THEN
-    RETURN format('ERROR: file-read problem or data ingested before, see %s.',p_fileref);
+    RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s or use make delete_file id= to delete data.\nSee ingest.vw03full_layer_file.',p_fileref);
   END IF;
   IF p_tabcols=array[]::text[] THEN  -- condição para solicitar todas as colunas
     p_tabcols = rel_columns(p_tabname);
@@ -1008,11 +1014,9 @@ CREATE FUNCTION ingest.osm_load(
       ),
       ins AS (
         INSERT INTO ingest.feature_asis
-           SELECT file_id, gid, properties,
-            ST_Geohash(
-                CASE WHEN (SELECT geomtype FROM ingest.vw01info_feature_type WHERE ftname = '%s')='point' THEN geom 
-                ELSE ST_PointOnSurface(geom) END,9),
-            ST_Intersection(geom, (SELECT geom FROM ingest.vw07full_donated_packfilevers WHERE id=%s))
+           SELECT file_id, gid,
+                  properties,
+                  ST_Intersection(geom, (SELECT geom FROM ingest.vw07full_donated_packfilevers WHERE id=%s))
            FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom) AND ST_Intersects(geom,(SELECT geom FROM ingest.vw07full_donated_packfilevers WHERE id=%s))
         RETURNING 1
       )
@@ -1025,7 +1029,6 @@ CREATE FUNCTION ingest.osm_load(
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
-    p_ftname,
     p_pck_id,
     p_pck_id
   );
@@ -1040,7 +1043,7 @@ CREATE FUNCTION ingest.osm_load(
     q_query := format(
         $$
         WITH dup AS (
-            SELECT file_id, ghs9
+            SELECT file_id, kx_ghs9
             FROM ingest.feature_asis
             WHERE file_id = %s
             GROUP BY 1,2
@@ -1048,19 +1051,19 @@ CREATE FUNCTION ingest.osm_load(
             ORDER BY 1,2
         ),
         dup_agg AS (
-            SELECT t.file_id, t.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb), t.ghs9, f.geom
+            SELECT t.file_id, t.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb), t.kx_ghs9, f.geom
             FROM (
-                SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, ghs9
+                SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, kx_ghs9
                 FROM ingest.feature_asis
-                WHERE (file_id, ghs9) IN ( SELECT * FROM dup)
-                GROUP BY file_id, ghs9
-                ORDER BY file_id, ghs9
+                WHERE (file_id, kx_ghs9) IN ( SELECT * FROM dup)
+                GROUP BY file_id, kx_ghs9
+                ORDER BY file_id, kx_ghs9
                 ) AS t
             LEFT JOIN ingest.feature_asis f
             ON t.file_id = f.file_id AND t.feature_id = f.feature_id
         ),
         del AS (
-            DELETE FROM ingest.feature_asis WHERE (file_id, ghs9) IN ( SELECT * FROM dup)
+            DELETE FROM ingest.feature_asis WHERE (file_id, kx_ghs9) IN ( SELECT * FROM dup)
             RETURNING 1
         ),
         ins AS (
@@ -1157,7 +1160,7 @@ $f$ LANGUAGE SQL;
 
 
 CREATE or replace FUNCTION ingest.feature_asis_export(p_file_id bigint)
-RETURNS TABLE (ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
+RETURNS TABLE (kx_ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
 DECLARE
     p_ftname text;
 BEGIN
@@ -1201,7 +1204,7 @@ BEGIN
       COALESCE(nullif(fa.properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
       fa.properties->>'via_name' AS via_name,
       fa.properties->>'house_number' AS house_number,
-      fa.ghs9 AS ghs
+      fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
     ) t1
@@ -1248,7 +1251,7 @@ BEGIN
       COALESCE(nullif(fa.properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
       fa.properties->>'via_name' AS via_name,
       fa.properties->>'house_number' AS house_number,
-      fa.ghs9 AS ghs
+      fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
     ) t1
@@ -1276,7 +1279,7 @@ BEGIN
       SELECT fa.file_id, fa.geom,
         ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name') AS row_id,
         fa.properties->>'via_name' AS via_name,
-        fa.ghs9 AS ghs
+        fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
     ) t1
@@ -1304,7 +1307,7 @@ BEGIN
       SELECT fa.file_id, fa.geom,
         ROW_NUMBER() OVER(ORDER BY fa.properties->>'ns_name') AS row_id,
         fa.properties->>'ns_name' AS ns_name,
-        fa.ghs9 AS ghs
+        fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
     ) t1
@@ -1327,7 +1330,7 @@ $f$ LANGUAGE PLpgSQL;
 
 DROP TABLE IF EXISTS ingest.publicating_geojsons_p3exprefix;
 CREATE TABLE ingest.publicating_geojsons_p3exprefix(
- ghs9   text,
+ kx_ghs9   text,
  prefix text,
  gid    integer,
  info   jsonb,
@@ -1347,7 +1350,7 @@ CREATE FUNCTION ingest.publicating_geojsons_p1(
 
   DELETE FROM ingest.publicating_geojsons_p3exprefix;
   INSERT INTO ingest.publicating_geojsons_p3exprefix
-     SELECT ghs9, NULL::text, gid, info, geom
+     SELECT kx_ghs9, NULL::text, gid, info, geom
      FROM ingest.feature_asis_export(p_file_id) t
   ;
   SELECT 'p1';
@@ -1397,7 +1400,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
      SELECT hcode_prefixset_parse( array_agg(hcode) )
      FROM ingest.publicating_geojsons_p2distrib
     )
-      SELECT hcode_prefixset_element(t.ghs9,'^(?:'|| t1.prefix_regex ||')') AS prefix, t.gid
+      SELECT hcode_prefixset_element(t.kx_ghs9,'^(?:'|| t1.prefix_regex ||')') AS prefix, t.gid
       FROM ingest.publicating_geojsons_p3exprefix t, t1
   ) t4
   WHERE t4.gid = publicating_geojsons_p3exprefix.gid
