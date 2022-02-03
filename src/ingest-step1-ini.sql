@@ -353,11 +353,34 @@ COMMENT ON VIEW ingest.vw02simple_feature_asis
 -- Homologando o uso do feature_id como gid, n=n2:
 --  SELECT count(*) n, count(distinct feature_id::text||','||file_id::text) n2 FROM ingest.feature_asis;
 
+DROP VIEW IF EXISTS ingest.vw02full_donated_packfilevers CASCADE;
+CREATE or replace VIEW ingest.vw02full_donated_packfilevers AS
+  SELECT pf.*, j.isolabel_ext, j.geom, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS path
+  FROM ingest.fdw_donated_packfilevers pf
+  LEFT JOIN ingest.fdw_donated_PackTpl pt
+    ON pf.pack_id=pt.id
+  LEFT JOIN ingest.fdw_donor dn
+    ON pt.donor_id=dn.id
+  LEFT JOIN ingest.fdw_foreign_jurisdiction_geom j
+    ON dn.scope_osm_id=j.osm_id
+  ORDER BY j.isolabel_ext
+;
+
 DROP VIEW IF EXISTS ingest.vw03full_layer_file CASCADE;
 CREATE VIEW ingest.vw03full_layer_file AS
-  SELECT lf.*, ft.ftname, ft.geomtype, ft.need_join, ft.description, ft.info AS ft_info
-  FROM ingest.donated_PackComponent lf INNER JOIN ingest.vw01info_feature_type ft
-    ON lf.ftid=ft.ftid
+  SELECT j.isolabel_ext,dn.kx_scope_label, pc.*, ft.ftname, ft.geomtype, j.housenumber_system_type, ft.need_join, ft.description, ft.info AS ft_info
+  FROM ingest.donated_PackComponent pc
+  INNER JOIN ingest.vw01info_feature_type ft
+    ON pc.ftid=ft.ftid
+  LEFT JOIN ingest.fdw_donated_packfilevers pf
+    ON pc.packvers_id=pf.id
+  LEFT JOIN ingest.fdw_donated_PackTpl pt
+    ON pf.pack_id=pt.id
+  LEFT JOIN ingest.fdw_donor dn
+    ON pt.donor_id=dn.id
+  LEFT JOIN ingest.fdw_foreign_jurisdiction_geom j
+    ON dn.scope_osm_id=j.osm_id
+  ORDER BY j.isolabel_ext
 ;
 
 CREATE VIEW ingest.vw03dup_feature_asis AS
@@ -402,36 +425,6 @@ CREATE VIEW ingest.vw06simple_layer AS
   SELECT t.*, (SELECT COUNT(*) FROM ingest.feature_asis WHERE file_id=t.file_id) AS n_items
   FROM ingest.vw04simple_layer_file t
 ; */
-
-DROP VIEW IF EXISTS ingest.vw07full_donated_packfilevers CASCADE;
-CREATE or replace VIEW ingest.vw07full_donated_packfilevers AS
-  SELECT pf.*, j.isolabel_ext, j.geom, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS path
-  FROM ingest.fdw_donated_packfilevers pf
-  LEFT JOIN ingest.fdw_donated_PackTpl pt
-    ON pf.pack_id=pt.id
-  LEFT JOIN ingest.fdw_donor dn
-    ON pt.donor_id=dn.id
-  LEFT JOIN ingest.fdw_foreign_jurisdiction_geom j
-    ON dn.scope_osm_id=j.osm_id
-  ORDER BY j.isolabel_ext
-;
-
-DROP VIEW IF EXISTS ingest.vw08info_packcomponent CASCADE;
-CREATE or replace VIEW ingest.vw08info_packcomponent AS
-  SELECT pc.packvers_id, pc.id, ft.ftid, ft.ftname AS ftname_full, split_part(ft.ftname, '_', 1) AS ftname_class, ft.geomtype, dn.kx_scope_label, j.isolabel_ext, j.housenumber_system_type, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') || '/' ||split_part(ft.ftname, '_', 1) AS path
-  FROM ingest.donated_PackComponent pc
-  LEFT JOIN ingest.vw03full_layer_file ft
-    ON pc.ftid = ft.ftid AND pc.packvers_id = ft.packvers_id
-  LEFT JOIN ingest.fdw_donated_packfilevers pf
-    ON pc.packvers_id=pf.id
-  LEFT JOIN ingest.fdw_donated_PackTpl pt
-    ON pf.pack_id=pt.id
-  LEFT JOIN ingest.fdw_donor dn
-    ON pt.donor_id=dn.id
-  LEFT JOIN ingest.fdw_foreign_jurisdiction_geom j
-    ON dn.scope_osm_id=j.osm_id
-  ORDER BY j.isolabel_ext
-;
 
 ----------------
 ----------------
@@ -815,8 +808,8 @@ CREATE or replace FUNCTION ingest.any_load(
         INSERT INTO ingest.feature_asis
            SELECT file_id, gid,
                   properties,
-                  ST_Intersection(geom, (SELECT geom FROM ingest.vw07full_donated_packfilevers WHERE id=%s))
-           FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom) AND ST_Intersects(geom,(SELECT geom FROM ingest.vw07full_donated_packfilevers WHERE id=%s))
+                  ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
+           FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom) AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
         RETURNING 1
       )
       SELECT COUNT(*) FROM ins
@@ -1016,8 +1009,8 @@ CREATE FUNCTION ingest.osm_load(
         INSERT INTO ingest.feature_asis
            SELECT file_id, gid,
                   properties,
-                  ST_Intersection(geom, (SELECT geom FROM ingest.vw07full_donated_packfilevers WHERE id=%s))
-           FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom) AND ST_Intersects(geom,(SELECT geom FROM ingest.vw07full_donated_packfilevers WHERE id=%s))
+                  ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
+           FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom) AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
         RETURNING 1
       )
       SELECT COUNT(*) FROM ins
@@ -1187,7 +1180,7 @@ BEGIN
       max(DISTINCT is_compl::text)::boolean house_numbers_has_complement
     FROM (
       SELECT fa.file_id, fa.geom,
-        CASE (SELECT housenumber_system_type FROM ingest.vw08info_packcomponent WHERE id=p_file_id)
+        CASE (SELECT housenumber_system_type FROM ingest.vw03full_layer_file WHERE id=p_file_id)
         WHEN 'metric' THEN
         ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', to_bigint(fa.properties->>'house_number'))
         WHEN 'bh-metric' THEN
@@ -1234,7 +1227,7 @@ BEGIN
       max(DISTINCT is_compl::text)::boolean house_numbers_has_complement
     FROM (
       SELECT fa.file_id, fa.geom,
-        CASE (SELECT housenumber_system_type FROM ingest.vw08info_packcomponent WHERE id=p_file_id)
+        CASE (SELECT housenumber_system_type FROM ingest.vw03full_layer_file WHERE id=p_file_id)
         WHEN 'metric' THEN
         ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', to_bigint(fa.properties->>'house_number'))
         WHEN 'bh-metric' THEN
@@ -1443,7 +1436,7 @@ CREATE FUNCTION ingest.publicating_geojsons(
 	p_fileref text
 ) RETURNS text  AS $f$
   SELECT ingest.publicating_geojsons_p1($1,$2);
-  SELECT ingest.publicating_geojsons_p2($1,$2,(SELECT CASE geomtype WHEN 'point' THEN false ELSE true END FROM ingest.vw08info_packcomponent WHERE id=$1));
+  SELECT ingest.publicating_geojsons_p2($1,$2,(SELECT CASE geomtype WHEN 'point' THEN false ELSE true END FROM ingest.vw03full_layer_file WHERE id=$1));
   SELECT ingest.publicating_geojsons_p3($1,$2,$3);
   SELECT ingest.publicating_geojsons_p4($1,$2,$3);
   SELECT 'fim';
@@ -1456,7 +1449,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_isolabel_ext text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text       -- e.g. 
 ) RETURNS text AS $wrap$
-  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw08info_packcomponent WHERE isolabel_ext = $2 AND lower(ftname_class) = lower($1)),$2,$3);
+  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1)),$2,$3);
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text)
   IS 'Wrap to ingest.publicating_geojsons'
@@ -1668,8 +1661,8 @@ BEGIN
         dict := jsonb_set( dict, array['layers',key,'layername'] , to_jsonb(key || '_' || (dict->'layers'->key->>'subtype') ));
         dict := jsonb_set( dict, array['layers',key,'tabname'] , to_jsonb('pk' || (dict->'layers'->key->>'fullPkID') || '_p' || (dict->'layers'->key->>'file') || '_' || key));
 
-        dict := jsonb_set( dict, array['layers',key,'isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw07full_donated_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['layers',key,'path_root'] , to_jsonb((SELECT path || '/' || key FROM ingest.vw07full_donated_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['layers',key,'isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['layers',key,'path_root'] , to_jsonb((SELECT path || '/' || key FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
 
         
         IF dict?'orig'
