@@ -675,6 +675,48 @@ COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,text,int,text)
 ;
 
 CREATE or replace FUNCTION ingest.getmeta_to_file(
+  p_file text,
+  p_ftid int,
+  p_pck_id bigint
+) RETURNS bigint AS $f$
+ WITH filedata AS (
+   SELECT p_pck_id, p_ftid,
+          CASE
+            WHEN (fmeta->'size')::int<5 OR (fmeta->>'hash_md5')='' THEN NULL --guard
+            ELSE fmeta->>'hash_md5'
+          END AS hash_md5,
+          (fmeta - 'hash_md5') AS fmeta
+   FROM (
+       SELECT jsonb_pg_stat_file(p_file,true) as fmeta
+   ) t
+ ),
+  file_exists AS (
+    SELECT id
+    FROM ingest.donated_PackComponent
+    WHERE packvers_id=p_pck_id AND lineage_md5=(SELECT hash_md5 FROM filedata) AND ftid=p_ftid
+  )
+  SELECT id FROM file_exists
+$f$ LANGUAGE SQL;
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint)
+  IS 'Reads file metadata and return id if exists in ingest.donated_PackComponent.'
+;
+
+CREATE or replace FUNCTION ingest.getmeta_to_file(
+  p_file text,   -- 1.
+  p_ftname text, -- 2. define o layer... um file pode ter mais de um layer??
+  p_pck_id bigint
+) RETURNS bigint AS $wrap$
+    SELECT ingest.getmeta_to_file(
+      $1,
+      (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower($2)),
+      $3
+    );
+$wrap$ LANGUAGE SQL;
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint)
+  IS 'Wrap para ingest.getmeta_to_file(text,int,bigint) usando ftName ao invés de ftID.'
+;
+
+CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_file text,   -- 1.
   p_ftname text, -- 2. define o layer... um file pode ter mais de um layer??
   p_pck_id bigint,
@@ -766,7 +808,7 @@ CREATE or replace FUNCTION ingest.any_load(
   q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params); -- not null when proc_step=1. Ideal retornar array.
   
   IF q_file_id IS NULL THEN
-    RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s or use make delete_file id= to delete data.\nSee ingest.vw03full_layer_file.',p_fileref);
+    RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s\nor use make delete_file id=%s to delete data.\nSee ingest.vw03full_layer_file.',p_fileref,ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id));
   END IF;
   IF p_tabcols=array[]::text[] THEN  -- condição para solicitar todas as colunas
     p_tabcols = rel_columns(p_tabname);
@@ -968,7 +1010,7 @@ CREATE FUNCTION ingest.osm_load(
   BEGIN
   q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params); -- not null when proc_step=1. Ideal retornar array.
   IF q_file_id IS NULL THEN
-    RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s or use make delete_file id= to delete data.\nSee ingest.vw03full_layer_file.',p_fileref);
+    RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s\nor use make delete_file id=%s to delete data.\nSee ingest.vw03full_layer_file.',p_fileref,ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id));
   END IF;
   IF p_tabcols=array[]::text[] THEN  -- condição para solicitar todas as colunas
     p_tabcols = rel_columns(p_tabname);
