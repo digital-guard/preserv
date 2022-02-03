@@ -352,6 +352,17 @@ CREATE VIEW ingest.vw03full_layer_file AS
     ON lf.ftid=ft.ftid
 ;
 
+CREATE VIEW ingest.vw03dup_feature_asis AS
+ SELECT v.ftname, v.geomtype, t.*, round(100.0*n_ghs/n::float, 2)::text || '%' as n_ghs_perc
+ FROM (
+   SELECT file_id, count(*) n, count(DISTINCT ghs9) as n_ghs
+   FROM ingest.feature_asis
+   GROUP BY 1
+   ORDER BY 1
+) t INNER JOIN ingest.vw03full_layer_file v
+    ON v.id = t.file_id
+;
+
 DROP VIEW IF EXISTS ingest.vw04simple_layer_file CASCADE;
 CREATE VIEW ingest.vw04simple_layer_file AS
   --SELECT id, geomtype, proc_step, ftid, ftname, file_type,
