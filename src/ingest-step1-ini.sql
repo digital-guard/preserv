@@ -753,6 +753,8 @@ CREATE or replace FUNCTION ingest.any_load(
     use_tabcols boolean;
     msg_ret text;
     num_items bigint;
+    num_items_ins bigint;
+    num_items_del bigint;
   BEGIN
   --IF p_method='csv2sql' THEN
     --p_fileref := p_fileref || '.csv';
@@ -860,6 +862,49 @@ CREATE or replace FUNCTION ingest.any_load(
     q_file_id, p_ftname, num_items
   );
 
+  IF num_items>0 AND (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower(p_ftname))>=20 THEN
+    q_query := format(
+        $$
+        WITH dup AS (
+            SELECT file_id, ghs9
+            FROM ingest.feature_asis
+            WHERE file_id = %s
+            GROUP BY 1,2
+            HAVING count(*) > 1
+            ORDER BY 1,2
+        ),
+        dup_agg AS (
+            SELECT t.file_id, t.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb), t.ghs9, f.geom
+            FROM (
+                SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, ghs9
+                FROM ingest.feature_asis
+                WHERE (file_id, ghs9) IN ( SELECT * FROM dup)
+                GROUP BY file_id, ghs9
+                ORDER BY file_id, ghs9
+                ) AS t
+            LEFT JOIN ingest.feature_asis f
+            ON t.file_id = f.file_id AND t.feature_id = f.feature_id
+        ),
+        del AS (
+            DELETE FROM ingest.feature_asis WHERE (file_id, ghs9) IN ( SELECT * FROM dup)
+            RETURNING 1
+        ),
+        ins AS (
+            INSERT INTO ingest.feature_asis SELECT * FROM dup_agg
+            RETURNING 1
+        )
+        SELECT (SELECT count(*) FROM ins) AS delete, count(*) AS insert FROM del;
+        $$,
+        q_file_id
+    );
+    EXECUTE q_query INTO num_items_ins, num_items_del;
+
+    msg_ret := format(
+        E'From file_id=%s inserted type=%s\nin feature_asis %s items.\nRemoved %s duplicates and inserted %s aggregated duplicates.\nResulting in %s items at feature_asis. ',
+        q_file_id, p_ftname, num_items, num_items_del, num_items_ins,num_items-num_items_del+num_items_ins
+    );
+  END IF;
+
   IF num_items>0 THEN
     UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
@@ -919,6 +964,8 @@ CREATE FUNCTION ingest.osm_load(
     use_tabcols boolean;
     msg_ret text;
     num_items bigint;
+    num_items_ins bigint;
+    num_items_del bigint;
   BEGIN
   q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params); -- not null when proc_step=1. Ideal retornar array.
   IF q_file_id IS NULL THEN
@@ -988,6 +1035,49 @@ CREATE FUNCTION ingest.osm_load(
     E'From file_id=%s inserted type=%s\nin feature_asis %s items.',
     q_file_id, p_ftname, num_items
   );
+
+  IF num_items>0 AND (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower(p_ftname))>=20 THEN
+    q_query := format(
+        $$
+        WITH dup AS (
+            SELECT file_id, ghs9
+            FROM ingest.feature_asis
+            WHERE file_id = %s
+            GROUP BY 1,2
+            HAVING count(*) > 1
+            ORDER BY 1,2
+        ),
+        dup_agg AS (
+            SELECT t.file_id, t.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb), t.ghs9, f.geom
+            FROM (
+                SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, ghs9
+                FROM ingest.feature_asis
+                WHERE (file_id, ghs9) IN ( SELECT * FROM dup)
+                GROUP BY file_id, ghs9
+                ORDER BY file_id, ghs9
+                ) AS t
+            LEFT JOIN ingest.feature_asis f
+            ON t.file_id = f.file_id AND t.feature_id = f.feature_id
+        ),
+        del AS (
+            DELETE FROM ingest.feature_asis WHERE (file_id, ghs9) IN ( SELECT * FROM dup)
+            RETURNING 1
+        ),
+        ins AS (
+            INSERT INTO ingest.feature_asis SELECT * FROM dup_agg
+            RETURNING 1
+        )
+        SELECT (SELECT count(*) FROM ins) AS delete, count(*) AS insert FROM del;
+        $$,
+        q_file_id
+    );
+    EXECUTE q_query INTO num_items_ins, num_items_del;
+
+    msg_ret := format(
+        E'From file_id=%s inserted type=%s\nin feature_asis %s items.\nRemoved %s duplicates and inserted %s aggregated duplicates.\nResulting in %s items at feature_asis. ',
+        q_file_id, p_ftname, num_items, num_items_del, num_items_ins,num_items-num_items_del+num_items_ins
+    );
+  END IF;
 
   IF num_items>0 THEN
     UPDATE ingest.donated_PackComponent
