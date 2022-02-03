@@ -2159,13 +2159,13 @@ CREATE or replace FUNCTION ingest.load_hcode_parameters(
   p_fdwname text DEFAULT 'tmp_hcode_parameters' -- nome da tabela fwd
 ) RETURNS text  AS $f$
 DECLARE
-        q_query text;
+    q_query text;
 BEGIN
     SELECT ingest.fdw_generate_direct_csv(p_file,p_fdwname,p_delimiter) INTO q_query;
 
     DELETE FROM ingest.hcode_parameters;
 
-    EXECUTE format($$INSERT INTO ingest.hcode_parameters (id_profile_params,distribution_parameters,signature_parameters,comments) SELECT id_profile_params::int, jsonb_object(regexp_split_to_array(replace(hcode_distribution_parameters,' ',''),'(:|;)')), jsonb_object(regexp_split_to_array(replace(hcode_signature_parameters,' ',''),'(:|;)')), comments FROM %s$$, p_fdwname);
+    EXECUTE format($$INSERT INTO ingest.hcode_parameters (id_profile_params,distribution_parameters,signature_parameters,comments) SELECT id_profile_params::int, (SELECT json_build_object(t[1],t[2]::int,t[3],t[4]::int,t[5],t[6]::int) FROM regexp_split_to_array(replace(hcode_distribution_parameters,' ',''),'(:|;)') AS t), (SELECT json_build_object(t[1],t[2]::real,t[3],t[4]::int) FROM regexp_split_to_array(replace(hcode_signature_parameters,' ',''),'(:|;)') AS t), comments FROM %s$$, p_fdwname);
 
     EXECUTE format('DROP FOREIGN TABLE IF EXISTS %s;',p_fdwname);
 
@@ -2175,7 +2175,7 @@ $f$ language PLpgSQL;
 COMMENT ON FUNCTION ingest.load_hcode_parameters
   IS 'Load hcode_parameters.csv.'
 ;
---SELECT ingest.load_hcode_parameters('/home/claiton/hcode_parameters.csv')
+--SELECT ingest.load_hcode_parameters('/var/gits/_dg/preserv/data/hcode_parameters.csv')
 
 CREATE TABLE ingest.codec_type (
   extension text,
