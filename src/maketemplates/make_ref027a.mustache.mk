@@ -66,15 +66,7 @@ publicating_geojsons_block: folder     = $(sandbox)/{{path_root}}
 publicating_geojsons_block: pretty_opt = 3
 publicating_geojsons_block: view       = vw{{file}}_{{tabname}}_publicating
 publicating_geojsons_block:
-	mkdir -m777 -p $(folder)
-	@echo "--- Gerando arquivos de pontos em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)');"
-
-	@echo "--- Gerando geomosaico em $(folder) ---"
-	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\",\"area_km2\":\"val\",\"area\":\"val\"}  '::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
-
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2, (info->''area'')::float AS area, (info->''area_km2'')::float AS area_km2', NULL, NULL, $(pretty_opt), 5);"
+{{>common008_publicating_geojsons}}
 {{/block}}
 
 {{#building}}
@@ -93,15 +85,7 @@ publicating_geojsons_building: folder     = $(sandbox)/{{path_root}}
 publicating_geojsons_building: pretty_opt = 3
 publicating_geojsons_building: view       = vw{{file}}_{{tabname}}_publicating
 publicating_geojsons_building:
-	mkdir -m777 -p $(folder)
-	@echo "--- Gerando arquivos de pontos em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)');"
-
-	@echo "--- Gerando geomosaico em $(folder) ---"
-	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\",\"area_km2\":\"val\",\"area\":\"val\"}  '::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
-
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2, (info->''area'')::float AS area, (info->''area_km2'')::float AS area_km2', NULL, NULL, $(pretty_opt), 5);"
+{{>common008_publicating_geojsons}}
 {{/building}}
 
 {{#cadparcel}}
@@ -144,15 +128,7 @@ publicating_geojsons_genericvia: folder     = $(sandbox)/{{path_root}}
 publicating_geojsons_genericvia: pretty_opt = 3
 publicating_geojsons_genericvia: view       = vw{{file}}_{{tabname}}_publicating
 publicating_geojsons_genericvia:
-	mkdir -m777 -p $(folder)
-	@echo "--- Gerando arquivos de pontos em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)');"
-
-	@echo "--- Gerando geomosaico em $(folder) ---"
-	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
-
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, $(pretty_opt), 5);"
+{{>common008_publicating_geojsons}}
 {{/genericvia}}
 
 {{#geoaddress}}
@@ -174,15 +150,7 @@ publicating_geojsons_geoaddress: folder     = $(sandbox)/{{path_root}}
 publicating_geojsons_geoaddress: pretty_opt = 3
 publicating_geojsons_geoaddress: view       = vw{{file}}_{{tabname}}_publicating
 publicating_geojsons_geoaddress:
-	mkdir -m777 -p $(folder)
-	@echo "--- Gerando arquivos de pontos em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)');"
-
-	@echo "--- Gerando geomosaico em $(folder) ---"
-	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
-
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, $(pretty_opt), 5);"
+{{>common008_publicating_geojsons}}
 {{/geoaddress}}
 
 {{#nsvia}}
@@ -201,15 +169,7 @@ publicating_geojsons_nsvia: folder     = $(sandbox)/{{path_root}}
 publicating_geojsons_nsvia: pretty_opt = 3
 publicating_geojsons_nsvia: view       = vw{{file}}_{{tabname}}_publicating
 publicating_geojsons_nsvia:
-	mkdir -m777 -p $(folder)
-	@echo "--- Gerando arquivos de pontos em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)');"
-
-	@echo "--- Gerando geomosaico em $(folder) ---"
-	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
-
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, $(pretty_opt), 5);"
+{{>common008_publicating_geojsons}}
 {{/nsvia}}
 
 {{#parcel}}
@@ -228,15 +188,7 @@ publicating_geojsons_parcel: folder     = $(sandbox)/{{path_root}}
 publicating_geojsons_parcel: pretty_opt = 3
 publicating_geojsons_parcel: view       = vw{{file}}_{{tabname}}_publicating
 publicating_geojsons_parcel:
-	mkdir -m777 -p $(folder)
-	@echo "--- Gerando arquivos de pontos em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)');"
-
-	@echo "--- Gerando geomosaico em $(folder) ---"
-	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\",\"area_km2\":\"val\",\"area\":\"val\"}  '::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
-
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2, (info->''area'')::float AS area, (info->''area_km2'')::float AS area_km2', NULL, NULL, $(pretty_opt), 5);"
+{{>common008_publicating_geojsons}}
 {{/parcel}}
 
 {{#via}}
@@ -258,15 +210,7 @@ publicating_geojsons_via: folder     = $(sandbox)/{{path_root}}
 publicating_geojsons_via: pretty_opt = 3
 publicating_geojsons_via: view       = vw{{file}}_{{tabname}}_publicating
 publicating_geojsons_via:
-	mkdir -m777 -p $(folder)
-	@echo "--- Gerando arquivos de pontos em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)');"
-
-	@echo "--- Gerando geomosaico em $(folder) ---"
-	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
-
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, $(pretty_opt), 5);"
+{{>common008_publicating_geojsons}}
 {{/via}}
 {{/layers}}
 
