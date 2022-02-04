@@ -1208,162 +1208,90 @@ RETURNS TABLE (kx_ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS 
 DECLARE
     p_ftname text;
 BEGIN
-
   p_ftname := (SELECT split_part(ftname, '_', 1) FROM ingest.fdw_feature_type WHERE ftid = (SELECT ftid FROM ingest.donated_PackComponent WHERE id=p_file_id));
   CASE p_ftname
-  WHEN 'geoaddress' THEN
-  RETURN QUERY SELECT t2.ghs, t2.gid,
-    CASE
-    WHEN n=1 THEN jsonb_build_object('address',addresses[1])
-    WHEN n>1 AND cardinality(via_names)=1 THEN
-        jsonb_build_object('via_name',via_names[1], 'house_numbers',to_jsonb(house_numbers))
-    ELSE jsonb_build_object('addresses',addresses)
-    END AS info,
-    CASE n WHEN 1 THEN geoms[1] ELSE ST_Centroid(ST_Collect(geoms)) END AS geom
+  WHEN 'geoaddress', 'parcel' THEN
+  RETURN QUERY
+  SELECT 
+        t.ghs,
+        t.row_id::int AS gid, 
+        CASE p_ftname WHEN 'parcel' THEN jsonb_build_object('address',address,'npoints',ST_NPoints(t.geom)) ELSE jsonb_build_object('address',address) END AS info,
+        t.geom
   FROM (
-    SELECT ghs,
-      MIN(row_id)::int AS gid,
-      COUNT(*) n,
-      array_agg(t1.geom) AS geoms,
-      array_agg(DISTINCT COALESCE(via_name || ', ' || house_number, via_name, house_number)) addresses,
-      array_agg(DISTINCT via_name) via_names,
-      array_agg(DISTINCT house_number) house_numbers,
-      max(DISTINCT is_compl::text)::boolean house_numbers_has_complement
-    FROM (
-      SELECT fa.file_id, fa.geom,
+      SELECT file_id, fa.geom,
         CASE (SELECT housenumber_system_type FROM ingest.vw03full_layer_file WHERE id=p_file_id)
         WHEN 'metric' THEN
-        ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', to_bigint(fa.properties->>'house_number'))
+        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', to_bigint(properties->>'house_number'))
         WHEN 'bh-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', NULLIF(regexp_replace(fa.properties->>'house_number', '\D', '', 'g'), '')::bigint, regexp_replace(fa.properties->>'house_number', '[^[:alpha:]]', '', 'g') )
+        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', NULLIF(regexp_replace(properties->>'house_number', '\D', '', 'g'), '')::bigint, regexp_replace(properties->>'house_number', '[^[:alpha:]]', '', 'g') )
         WHEN 'street-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', regexp_replace(fa.properties->>'house_number', '[^[:alnum:]]', '', 'g'))
+        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', regexp_replace(properties->>'house_number', '[^[:alnum:]]', '', 'g'))
         WHEN 'block-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', to_bigint(split_part(replace(fa.properties->>'house_number',' ',''), '-', 1)), to_bigint(split_part(replace(fa.properties->>'house_number',' ',''), '-', 2)))
+        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', to_bigint(split_part(replace(properties->>'house_number',' ',''), '-', 1)), to_bigint(split_part(replace(properties->>'house_number',' ',''), '-', 2)))
         ELSE
-        ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', to_bigint(fa.properties->>'house_number'))
-        --ROW_NUMBER() OVER(ORDER BY  fa.properties->>'address')) 
-        -- or (fa.properties->>'via_name')||'#'||fa.properties->>'house_number'
+        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', to_bigint(properties->>'house_number'))
+        --ROW_NUMBER() OVER(ORDER BY  properties->>'address')) 
+        -- or (properties->>'via_name')||'#'||properties->>'house_number'
       END AS row_id,
-      COALESCE(nullif(fa.properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
-      fa.properties->>'via_name' AS via_name,
-      fa.properties->>'house_number' AS house_number,
+      COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
+      properties->>'via_name' AS via_name,
+      properties->>'house_number' AS house_number,
+      COALESCE((properties->>'via_name') || ', ' || (properties->>'house_number'), properties->>'via_name', properties->>'house_number') AS address,
       fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
-    ) t1
-    GROUP BY 1
-  ) t2
-  WHERE cardinality(via_names)<3
+  ) t
   ORDER BY gid;
 
-  WHEN 'parcel' THEN
-  RETURN QUERY SELECT t2.ghs, t2.gid,
-    CASE
-    WHEN n=1 THEN jsonb_build_object('address',addresses[1],'npoints',npoints)
-    WHEN n>1 AND cardinality(via_names)=1 THEN
-        jsonb_build_object('via_name',via_names[1], 'house_numbers',to_jsonb(house_numbers), 'npoints',npoints)
-    ELSE jsonb_build_object('addresses',addresses, 'npoints',npoints)
-    END AS info,
-    CASE n WHEN 1 THEN geoms[1] ELSE ST_Collect(geoms) END AS geom
+  WHEN 'via','genericvia' THEN
+  RETURN QUERY 
+  SELECT 
+        t.ghs, 
+        t.row_id::int AS gid, 
+        jsonb_build_object('via_name',via_name,'npoints',ST_NPoints(t.geom)) AS info,
+        t.geom
   FROM (
-    SELECT ghs,
-      MIN(row_id)::int AS gid,
-      COUNT(*) n,
-      SUM(ST_NPoints(t1.geom)) npoints,
-      array_agg(t1.geom) AS geoms,
-      array_agg(DISTINCT COALESCE(via_name || ', ' || house_number, via_name, house_number)) addresses,
-      array_agg(DISTINCT via_name) via_names,
-      array_agg(DISTINCT house_number) house_numbers,
-      max(DISTINCT is_compl::text)::boolean house_numbers_has_complement
-    FROM (
-      SELECT fa.file_id, fa.geom,
-        CASE (SELECT housenumber_system_type FROM ingest.vw03full_layer_file WHERE id=p_file_id)
-        WHEN 'metric' THEN
-        ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', to_bigint(fa.properties->>'house_number'))
-        WHEN 'bh-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', NULLIF(regexp_replace(fa.properties->>'house_number', '\D', '', 'g'), '')::bigint, regexp_replace(fa.properties->>'house_number', '[^[:alpha:]]', '', 'g') )
-        WHEN 'street-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', regexp_replace(fa.properties->>'house_number', '[^[:alnum:]]', '', 'g'))
-        WHEN 'block-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', to_bigint(split_part(replace(fa.properties->>'house_number',' ',''), '-', 1)), to_bigint(split_part(replace(fa.properties->>'house_number',' ',''), '-', 2)))
-        ELSE
-        ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name', to_bigint(fa.properties->>'house_number'))
-        --ROW_NUMBER() OVER(ORDER BY  fa.properties->>'address')) 
-        -- or (fa.properties->>'via_name')||'#'||fa.properties->>'house_number'
-      END AS row_id,
-      COALESCE(nullif(fa.properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
-      fa.properties->>'via_name' AS via_name,
-      fa.properties->>'house_number' AS house_number,
-      fa.kx_ghs9 AS ghs
-      FROM ingest.feature_asis AS fa
-      WHERE fa.file_id=p_file_id
-    ) t1
-    GROUP BY 1
-  ) t2
-  ORDER BY gid;
-
-  WHEN 'via' THEN
-  RETURN QUERY SELECT t2.ghs, t2.gid,
-    CASE
-    WHEN n=1 THEN jsonb_build_object('via_name',via_names[1],'n',n,'npoints',npoints)
-    WHEN n>1 AND cardinality(via_names)=1 THEN
-        jsonb_build_object('via_name',via_names[1],'n',n,'npoints',npoints)
-    ELSE jsonb_build_object('via_names',via_names,'n',n,'npoints',npoints)
-    END AS info,
-    CASE n WHEN 1 THEN geoms[1] ELSE ST_Collect(geoms) END AS geom
-  FROM (
-    SELECT ghs,
-      MIN(row_id)::int AS gid,
-      COUNT(*) n,
-      SUM(ST_NPoints(t1.geom)) npoints,
-      array_agg(t1.geom) AS geoms,
-      array_agg(DISTINCT via_name) AS via_names
-    FROM (
       SELECT fa.file_id, fa.geom,
         ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name') AS row_id,
         fa.properties->>'via_name' AS via_name,
         fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
-    ) t1
-    GROUP BY 1
-  ) t2
+  ) t
   ORDER BY gid;
 
   WHEN 'nsvia' THEN
-  RETURN QUERY SELECT t2.ghs, t2.gid,
-    CASE
-    WHEN n=1 THEN jsonb_build_object('ns_name',ns_names[1],'n',n,'npoints',npoints)
-    WHEN n>1 AND cardinality(ns_names)=1 THEN
-        jsonb_build_object('ns_name',ns_names[1],'n',n,'npoints',npoints)
-    ELSE jsonb_build_object('ns_names',ns_names,'n',n,'npoints',npoints)
-    END AS info,
-    CASE n WHEN 1 THEN geoms[1] ELSE ST_Collect(geoms) END AS geom
+  RETURN QUERY 
+  SELECT 
+        t.ghs, 
+        t.row_id::int AS gid, 
+        jsonb_build_object('ns_name',ns_name,'npoints',ST_NPoints(t.geom)) AS info,
+        t.geom
   FROM (
-    SELECT ghs,
-      MIN(row_id)::int AS gid,
-      COUNT(*) n,
-      SUM(ST_NPoints(t1.geom)) npoints,
-      array_agg(t1.geom) AS geoms,
-      array_agg(DISTINCT ns_name) AS ns_names
-    FROM (
       SELECT fa.file_id, fa.geom,
         ROW_NUMBER() OVER(ORDER BY fa.properties->>'ns_name') AS row_id,
         fa.properties->>'ns_name' AS ns_name,
         fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
-    ) t1
-    GROUP BY 1
-  ) t2
+  ) t
   ORDER BY gid;
 
-  --WHEN 'genericvia' THEN
-
-  --WHEN 'block' THEN
-  --WHEN 'building' THEN
-  
+  WHEN 'block','building' THEN
+  RETURN QUERY 
+  SELECT 
+        t.ghs, 
+        t.row_id::int AS gid, 
+        jsonb_build_object('npoints',ST_NPoints(t.geom)) AS info,
+        t.geom
+  FROM (
+      SELECT fa.file_id, fa.geom,
+        ROW_NUMBER() OVER(ORDER BY gid) AS row_id,
+        fa.kx_ghs9 AS ghs
+      FROM ingest.feature_asis AS fa
+      WHERE fa.file_id=p_file_id
+  ) t
+  ORDER BY gid;
   END CASE;
 END;
 $f$ LANGUAGE PLpgSQL;
