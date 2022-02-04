@@ -177,26 +177,6 @@ COMMENT ON TABLE ingest.via_line
 
 ---------
 
---CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
- --osm_id          bigint,
- --jurisd_base_id  integer,
- --jurisd_local_id integer,
- --name            text,
- --parent_abbrev   text,
- --abbrev          text,
- --wikidata_id     bigint,
- --lexlabel        text,
- --isolabel_ext    text,
- --ddd             integer,
- --info            jsonb,
- --jtags           jsonb,
- --housenumber_system_type text,
- --lex_urn         text,
- --geom            geometry(Geometry,4326)
---) SERVER foreign_server_dl03
-  --OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
---;
-
 CREATE FOREIGN TABLE ingest.fdw_jurisdiction (
  osm_id          bigint,
  jurisd_base_id  integer,
@@ -229,15 +209,14 @@ CREATE FOREIGN TABLE ingest.fdw_jurisdiction_geom (
   OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
 ;
 
-DROP VIEW IF EXISTS ingest.vw01full_jurisdiction_geom CASCADE;
 CREATE VIEW ingest.vw01full_jurisdiction_geom AS
     SELECT j.*, g.geom
-    FROM optim.jurisdiction j
-    LEFT JOIN optim.jurisdiction_geom g
+    FROM ingest.fdw_jurisdiction j
+    LEFT JOIN ingest.fdw_jurisdiction_geom g
     ON j.osm_id = g.osm_id
 ;
 COMMENT ON VIEW ingest.vw01full_jurisdiction_geom
-  IS 'Adds class_ftname, class_description and class_info to ingest.fdw_feature_type.info.'
+  IS 'Add geom to ingest.fdw_jurisdiction.'
 ;
 
 CREATE FOREIGN TABLE ingest.fdw_donor (
@@ -391,7 +370,7 @@ CREATE or replace VIEW ingest.vw02full_donated_packfilevers AS
     ON pf.pack_id=pt.id
   LEFT JOIN ingest.fdw_donor dn
     ON pt.donor_id=dn.id
-  LEFT JOIN ingest.fdw_foreign_jurisdiction_geom j
+  LEFT JOIN ingest.vw01full_jurisdiction_geom j
     ON dn.scope_osm_id=j.osm_id
   ORDER BY j.isolabel_ext
 ;
@@ -408,7 +387,7 @@ CREATE VIEW ingest.vw03full_layer_file AS
     ON pf.pack_id=pt.id
   LEFT JOIN ingest.fdw_donor dn
     ON pt.donor_id=dn.id
-  LEFT JOIN ingest.fdw_foreign_jurisdiction_geom j
+  LEFT JOIN ingest.vw01full_jurisdiction_geom j
     ON dn.scope_osm_id=j.osm_id
   ORDER BY j.isolabel_ext
 ;
@@ -1447,12 +1426,12 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
     SELECT t.hcode, t.n_items,  -- length(t.hcode) AS len,
       ST_Intersection(
         ST_SetSRID( ST_geomFromGeohash(replace(t.hcode, '*', '')) ,  4326),
-        (SELECT geom FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
+        (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
       ) AS geom
     FROM hcode_distribution_reduce_recursive_raw(
     	(SELECT kx_profile->'ghs_distrib_mosaic' FROM ingest.donated_PackComponent WHERE id= p_file_id),
     	1,
-    	(SELECT length(st_geohash(geom)) FROM ingest.fdw_foreign_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
+    	(SELECT length(st_geohash(geom)) FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
     	(SELECT lineage->'hcode_distribution_parameters' FROM ingest.donated_PackComponent WHERE id= p_file_id)
     ) t
   ;
@@ -1663,7 +1642,7 @@ BEGIN
 
     IF dict?'jurisdiction'
     THEN
-        dict := jsonb_set( dict, array['country_id'], to_jsonb((SELECT jurisd_base_id::int FROM ingest.fdw_foreign_jurisdiction_geom WHERE abbrev= upper(dict->>'jurisdiction') AND jurisd_local_id=0)));
+        dict := jsonb_set( dict, array['country_id'], to_jsonb((SELECT jurisd_base_id::int FROM ingest.vw01full_jurisdiction_geom WHERE abbrev= upper(dict->>'jurisdiction') AND jurisd_local_id=0)));
 
         RAISE NOTICE 'country_id : %', dict->>'country_id';
     END IF;
