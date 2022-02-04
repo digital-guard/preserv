@@ -784,6 +784,21 @@ CREATE FUNCTION ingest.any_load_debug(
   ) t
 $f$ LANGUAGE SQL;
 
+CREATE or replace FUNCTION ingest.feature_asis_similarity(
+    p_file_id bigint,  -- ID at ingest.donated_PackComponent
+    p_geom geometry,
+    p_geoms geometry[]
+) RETURNS jsonb AS $f$
+
+  SELECT to_jsonb(t)
+  FROM (
+      SELECT (SELECT array_agg(ST_Equals(p_geom, n)) FROM unnest(p_geoms) AS n) AS geom_cmp_equals,
+        CASE (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype) 
+        WHEN 'line' THEN (SELECT array_agg(ST_FrechetDistance(p_geom, n)) FROM unnest(p_geoms) AS n) END AS geom_cmp_frechet,
+        CASE (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype) 
+        WHEN 'poly' THEN (SELECT array_agg( 2*ST_Area(ST_INTERSECTION(p_geom, n))/(ST_Area(p_geom)+ST_Area(n))) FROM unnest(p_geoms) AS n) END AS geom_cmp_intersec
+  ) t;
+$f$ LANGUAGE SQL;
   
 CREATE or replace FUNCTION ingest.any_load(
     p_method text,   -- shp/csv/etc.
@@ -924,9 +939,9 @@ CREATE or replace FUNCTION ingest.any_load(
             ORDER BY 1,2
         ),
         dup_agg AS (
-            SELECT t.file_id, t.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb), f.geom
+            SELECT t.file_id, t.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb) || ingest.feature_asis_similarity(%s,f.geom,geoms), f.geom
             FROM (
-                SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, kx_ghs9
+                SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, kx_ghs9, array_agg(geom) AS geoms
                 FROM ingest.feature_asis
                 WHERE (file_id, kx_ghs9) IN ( SELECT * FROM dup)
                 GROUP BY file_id, kx_ghs9
@@ -945,6 +960,7 @@ CREATE or replace FUNCTION ingest.any_load(
         )
         SELECT (SELECT count(*) FROM ins) AS delete, count(*) AS insert FROM del;
         $$,
+        q_file_id,
         q_file_id
     );
     EXECUTE q_query INTO num_items_ins, num_items_del;
@@ -1095,7 +1111,7 @@ CREATE FUNCTION ingest.osm_load(
             ORDER BY 1,2
         ),
         dup_agg AS (
-            SELECT t.file_id, t.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb), t.kx_ghs9, f.geom
+            SELECT t.file_id, t.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb) || ingest.feature_asis_similarity(%s,f.geom,geoms), f.geom
             FROM (
                 SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, kx_ghs9
                 FROM ingest.feature_asis
@@ -1116,6 +1132,7 @@ CREATE FUNCTION ingest.osm_load(
         )
         SELECT (SELECT count(*) FROM ins) AS delete, count(*) AS insert FROM del;
         $$,
+        q_file_id,
         q_file_id
     );
     EXECUTE q_query INTO num_items_ins, num_items_del;
