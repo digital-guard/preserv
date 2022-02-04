@@ -72,9 +72,9 @@ publicating_geojsons_block:
 
 	@echo "--- Gerando geomosaico em $(folder) ---"
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
+	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\",\"area_km2\":\"val\",\"area\":\"val\"}  '::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
 
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, $(pretty_opt), 5);"
+	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2, (info->''area'')::float AS area, (info->''area_km2'')::float AS area_km2', NULL, NULL, $(pretty_opt), 5);"
 {{/block}}
 
 {{#building}}
@@ -99,9 +99,9 @@ publicating_geojsons_building:
 
 	@echo "--- Gerando geomosaico em $(folder) ---"
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
+	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\",\"area_km2\":\"val\",\"area\":\"val\"}  '::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
 
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, $(pretty_opt), 5);"
+	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2, (info->''area'')::float AS area, (info->''area_km2'')::float AS area_km2', NULL, NULL, $(pretty_opt), 5);"
 {{/building}}
 
 {{#cadparcel}}
@@ -234,9 +234,9 @@ publicating_geojsons_parcel:
 
 	@echo "--- Gerando geomosaico em $(folder) ---"
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view);"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\"}'::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
+	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\",\"area_km2\":\"val\",\"area\":\"val\"}  '::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
 
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2', NULL, NULL, $(pretty_opt), 5);"
+	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2, (info->''area'')::float AS area, (info->''area_km2'')::float AS area_km2', NULL, NULL, $(pretty_opt), 5);"
 {{/parcel}}
 
 {{#via}}
