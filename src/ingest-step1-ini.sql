@@ -177,11 +177,32 @@ COMMENT ON TABLE ingest.via_line
 
 ---------
 
-DROP FOREIGN TABLE IF EXISTS ingest.fdw_foreign_jurisdiction_geom CASCADE;
-CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
+--CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
+ --osm_id          bigint,
+ --jurisd_base_id  integer,
+ --jurisd_local_id integer,
+ --name            text,
+ --parent_abbrev   text,
+ --abbrev          text,
+ --wikidata_id     bigint,
+ --lexlabel        text,
+ --isolabel_ext    text,
+ --ddd             integer,
+ --info            jsonb,
+ --jtags           jsonb,
+ --housenumber_system_type text,
+ --lex_urn         text,
+ --geom            geometry(Geometry,4326)
+--) SERVER foreign_server_dl03
+  --OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
+--;
+
+CREATE FOREIGN TABLE ingest.fdw_jurisdiction (
  osm_id          bigint,
  jurisd_base_id  integer,
  jurisd_local_id integer,
+ parent_id       bigint,
+ admin_level     smallint,
  name            text,
  parent_abbrev   text,
  abbrev          text,
@@ -189,16 +210,36 @@ CREATE FOREIGN TABLE ingest.fdw_foreign_jurisdiction_geom (
  lexlabel        text,
  isolabel_ext    text,
  ddd             integer,
- info            jsonb,
- jtags           jsonb,
  housenumber_system_type text,
  lex_urn         text,
- geom            geometry(Geometry,4326)
+ info            jsonb,
+ name_en         text,
+ isolevel        text
+) SERVER foreign_server_dl03
+  OPTIONS (schema_name 'optim', table_name 'jurisdiction')
+;
+
+CREATE FOREIGN TABLE ingest.fdw_jurisdiction_geom (
+ osm_id          bigint,
+ isolabel_ext    text,
+ geom            geometry(Geometry,4326),
+ kx_ghs1_intersects text[],
+ kx_ghs2_intersects text[]
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
 ;
 
---DROP FOREIGN TABLE IF EXISTS ingest.fdw_donor;
+DROP VIEW IF EXISTS ingest.vw01full_jurisdiction_geom CASCADE;
+CREATE VIEW ingest.vw01full_jurisdiction_geom AS
+    SELECT j.*, g.geom
+    FROM optim.jurisdiction j
+    LEFT JOIN optim.jurisdiction_geom g
+    ON j.osm_id = g.osm_id
+;
+COMMENT ON VIEW ingest.vw01full_jurisdiction_geom
+  IS 'Adds class_ftname, class_description and class_info to ingest.fdw_feature_type.info.'
+;
+
 CREATE FOREIGN TABLE ingest.fdw_donor (
  id integer,
  country_id integer,
@@ -215,7 +256,6 @@ CREATE FOREIGN TABLE ingest.fdw_donor (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'donor');
 
---DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackTpl;
 CREATE FOREIGN TABLE ingest.fdW_donated_PackTpl (
  id bigint,
  donor_id integer,
@@ -228,7 +268,6 @@ CREATE FOREIGN TABLE ingest.fdW_donated_PackTpl (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'donated_packtpl');
 
---DROP FOREIGN TABLE IF EXISTS ingest.fdw_donated_PackFileVers;
 CREATE FOREIGN TABLE ingest.fdw_donated_PackFileVers (
  id bigint,
  hashedfname text,
@@ -241,7 +280,6 @@ CREATE FOREIGN TABLE ingest.fdw_donated_PackFileVers (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'donated_packfilevers');
 
---DROP FOREIGN TABLE IF EXISTS ingest.fdw_feature_type;
 CREATE FOREIGN TABLE ingest.fdw_feature_type (
  ftid smallint,
  ftname text,
