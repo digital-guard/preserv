@@ -9,7 +9,7 @@
 	@echo " Tema dos sub-arquivos: {{sha256file_name}}"
 	@echo "Run with tmux and sudo! (DANGER: seems not idempotent on psql)"
 	@whoami
-	@printf "Above user is root? If not, you have permissions for all paths?"
+	@echo "Above user is root? If not, you have permissions for all paths?"
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 {{#isCsv}}
 	psql $(pg_uri_db) -c "DROP FOREIGN TABLE IF EXISTS {{tabname}}"

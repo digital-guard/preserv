@@ -1,5 +1,5 @@
 -- INGEST STEP1
--- Inicialização do Módulo Ingest dos prjetos Digital-Guard.
+-- Inicialização do Módulo Ingest dos projetos Digital-Guard.
 --
 
 CREATE EXTENSION IF NOT EXISTS postgis;
@@ -166,7 +166,7 @@ CREATE TABLE ingest.hcode_parameters (
 CREATE TABLE ingest.via_line(
   pck_id real NOT NULL, -- REFERENCES optim.donatedPack(pck_id),
   vianame text,
-  is_informal boolean default false, -- non-official name (loteametos com ruas ainda sem nome)
+  is_informal boolean default false, -- non-official name (loteamentos com ruas ainda sem nome)
   geom geometry,
   info JSONb,
   UNIQUE(pck_id,geom)
@@ -255,19 +255,12 @@ CREATE FOREIGN TABLE ingest.fdw_feature_type (
 CREATE TABLE ingest.donated_PackComponent(
   -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
   id bigserial NOT NULL PRIMARY KEY,  -- layerfile_id
-  --packvers_id bigint NOT NULL REFERENCES ingest.t_donated_PackFileVers(id),
-  --ftid smallint NOT NULL REFERENCES ingest.t_feature_type(ftid),
-  packvers_id bigint NOT NULL,
-  ftid smallint NOT NULL,
+  packvers_id bigint NOT NULL, --REFERENCES ingest.t_donated_PackFileVers(id),
+  ftid smallint NOT NULL,      --REFERENCES ingest.t_feature_type(ftid),
   is_evidence boolean default false,
-  --hash_md5 text NOT NULL, -- or "size-md5" as really unique string
   proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
-  --file_meta jsonb,
-  --hcode_distribution_parameters jsonb,
-  --feature_asis_summary jsonb,
-  --feature_distrib jsonb,
   lineage jsonb NOT NULL,
-  lineage_md5 text NOT NULL,
+  lineage_md5 text NOT NULL, -- or "size-md5" as really unique string
   kx_profile jsonb,
   UNIQUE(packvers_id,ftid,lineage_md5)
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
@@ -282,19 +275,18 @@ CREATE TABLE ingest.tmp_geojson_feature (
   UNIQUE(file_id,feature_id)
 ); -- to be feature_asis after GeoJSON ingestion.
 
-CREATE OR REPLACE FUNCTION f(geom text, file_id bigint)
+CREATE OR REPLACE FUNCTION f(geom text, file_id bigint, ghs_size integer)
 RETURNS text AS $f$
-    --SELECT ST_Geohash(CASE WHEN (SELECT geomtype FROM ingest.vw03full_layer_file  WHERE id = file_id)='point' THEN geom ELSE ST_PointOnSurface(geom) END,9)
-    SELECT ST_Geohash(ST_PointOnSurface(geom),9)
+    --SELECT ST_Geohash(CASE WHEN (SELECT geomtype FROM ingest.vw03full_layer_file  WHERE id = file_id)='point' THEN geom ELSE ST_PointOnSurface(geom) END,ghs_size)
+    SELECT ST_Geohash(ST_PointOnSurface(geom),ghs_size)
 $f$ LANGUAGE SQL IMMUTABLE;
-
 
 CREATE TABLE ingest.feature_asis (
   file_id bigint NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   feature_id int NOT NULL,
   properties jsonb,
   geom geometry NOT NULL CHECK ( st_srid(geom)=4326 ),
-  kx_ghs9 text GENERATED ALWAYS AS (f(geom,file_id)) STORED,
+  kx_ghs9 text GENERATED ALWAYS AS (f(geom,file_id,9)) STORED,
   UNIQUE(file_id,feature_id)
 );
 CREATE INDEX ingest_feature_asis_ghs9_idx ON ingest.feature_asis (file_id,kx_ghs9);
