@@ -316,7 +316,7 @@ makedirs: clean_sandbox
 wget_files:
 	@echo "Under construction, need to check that orig path is not /var/www! or use orig=x [ENTER if not else ^C]"
 	@echo $(orig)
-	@read _ENTER_OK_
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	mkdir -p $(orig)
 {{#files}}
 	@cd $(orig); wget http://preserv.addressforall.org/download/{{file}} && chmod o+rw {{file}}

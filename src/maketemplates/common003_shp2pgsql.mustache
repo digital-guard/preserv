@@ -6,8 +6,7 @@
 {{/srid_proj}}
 	@echo "Conferindo se SRID {{.}} está configurado:"
 	@psql $(pg_uri_db) -c "SELECT srid, proj4text FROM spatial_ref_sys where srid={{.}}"
-	@echo "Tudo bem até aqui?  [ENTER para continuar ou ^C para rodar WS/ingest-step1]"
-	@read _tudo_bem_
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 {{/srid}}
 {{#orig_subfilename}}
 	@echo Extraindo ...

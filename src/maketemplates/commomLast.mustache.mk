@@ -42,8 +42,7 @@ me: insert_make_conf
 	@diff $(mkme_output) ./makefile || :
 	@echo "If some changes, and no error in the changes, move the script:"
 	@echo " mv $(mkme_output) ./makefile"
-	@echo "[ENTER para rodar mv ou ^C para sair]"
-	@read _tudo_bem_
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	mv $(mkme_output) ./makefile
 
 readme:
@@ -54,8 +53,7 @@ readme:
 	@diff $(readme_output) ./README-draft.md || :
 	@echo "If some changes, and no error in the changes, move the readme:"
 	@echo " mv $(readme_output) ./README-draft.md"
-	@echo "[ENTER para rodar mv ou ^C para sair]"
-	@read _tudo_bem_
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	mv $(readme_output) ./README-draft.md
 
 insert_size: insert_make_conf
@@ -66,8 +64,7 @@ insert_size: insert_make_conf
 	@diff $(conf_output) ./make_conf.yaml || :
 	@echo "If some changes, and no error in the changes, move the script:"
 	@echo " mv $(conf_output) ./make_conf.yaml"
-	@echo "[ENTER para rodar mv ou ^C para sair]"
-	@read _tudo_bem_
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	mv $(conf_output) ./make_conf.yaml
 
 insert_license: insert_make_conf
@@ -78,21 +75,18 @@ insert_license: insert_make_conf
 	@diff $(conf_output) ./make_conf.yaml || :
 	@echo "If some changes, and no error in the changes, move the script:"
 	@echo " mv $(conf_output) ./make_conf.yaml"
-	@echo "[ENTER para rodar mv ou ^C para sair]"
-	@read _tudo_bem_
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	mv $(conf_output) ./make_conf.yaml
 
 insert_make_conf:
-	@echo "-- Carrega make_conf.yaml na base de dados. --"
-	@echo "Uso: make insert_make_conf"
+	@echo "-- Load make_conf.yaml into the database. --"
+	@echo "Usage: make insert_make_conf"
 	@echo "pack_id: $(pack_id)"
-	@echo "[ENTER para continuar ou ^C para sair]"
-	@read _tudo_bem_
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	psql $(pg_uri_db) -c "SELECT ingest.lix_insert('$(mkme_input)');"
 
 delete_file:
-	@echo "Uso: make delete_file id=<id de donated_packcomponent>"
+	@echo "Usage: make delete_file id=<id de donated_packcomponent>"
 	@echo "id: $(id)"
-	@echo "[ENTER para continuar ou ^C para sair]"
-	@read _tudo_bem_
-	@[ "${id}" ] && psql $(pg_uri_db) -c "DELETE FROM ingest.donated_packcomponent WHERE id = $(id)" || ( echo "id não informado.")
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+	@[ "${id}" ] && psql $(pg_uri_db) -c "DELETE FROM ingest.donated_packcomponent WHERE id = $(id)" || ( echo "Unknown id.")
