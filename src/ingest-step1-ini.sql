@@ -974,7 +974,11 @@ CREATE or replace FUNCTION ingest.any_load(
   IF num_items>0 THEN
     UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
-        lineage = lineage || ingest.feature_asis_assign(q_file_id)
+        lineage = lineage || ingest.feature_asis_assign(q_file_id) || 
+        jsonb_build_object('num_itens_stat',jsonb_build_object('originals',num_items,
+                          'duplicates' ,num_items_del,
+                          'aggregates' ,num_items_ins,
+                          'feature_asis',num_items-num_items_del+num_items_ins))
     WHERE id=q_file_id;
   END IF;
 
@@ -1146,7 +1150,11 @@ CREATE FUNCTION ingest.osm_load(
   IF num_items>0 THEN
     UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
-        lineage = lineage || ingest.feature_asis_assign(q_file_id)
+        lineage = lineage || ingest.feature_asis_assign(q_file_id) || 
+        jsonb_build_object('num_itens_stat',jsonb_build_object('originals',num_items,
+                          'duplicates' ,num_items_del,
+                          'aggregates' ,num_items_ins,
+                          'feature_asis',num_items-num_items_del+num_items_ins))
     WHERE id=q_file_id;
   END IF;
 
