@@ -21,6 +21,7 @@ pg_datalake_uri := $(pg_uri_root)/$(pg_datalake)
 countries       := "'BR','CL','CO','EC','PE','VE'"  # em uso e conforme data/jurisdiction.csv
 
 gits_basepath   := /var/gits
+sbx_path        := /tmp/sandbox
 
 DB_TEST         := $(shell psql $(pg_uri_root) -c "\l" | grep $(pg_db) | cut -d'|' -f1 | tr -d ' ')
 
@@ -289,9 +290,9 @@ jurisdiction_iso_test:
 
 ## ## ## ##
 ## -- ADMIN FIX TOOLS --
-fix_permissions: pgio
+fix_permissions: pgio sdbox
 	@echo "... Fixing standard permissions, as sudor:"
-	sudo bash fixaPermissoes.sh /var/gits /tmp/pg_io /var/www /tmp/sandbox
+	sudo bash fixaPermissoes.sh $(gits_basepath) $(pg_io) /var/www $(sbx_path)
 
 fix_usergroup:
 	@echo "... Adding standard usergroups, as sudor:"
@@ -307,5 +308,7 @@ endif
 ## -- AUXILIAR TARGETS, snippet code for reuse --
 pgio:
 	mkdir -p $(pg_io)
+sdbox:
+	mkdir -p $(sbx_path)
 lck:
 	mkdir -p $(lockpath)
