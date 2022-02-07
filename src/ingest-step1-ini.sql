@@ -874,7 +874,10 @@ CREATE or replace FUNCTION ingest.any_load(
         INSERT INTO ingest.feature_asis
            SELECT file_id, gid,
                   properties,
-                  ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
+                  CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1])
+                  WHEN 'point' THEN ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001)
+                  ELSE ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001)
+                  END AS geom
            FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom) AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
         RETURNING 1
       )
@@ -888,6 +891,8 @@ CREATE or replace FUNCTION ingest.any_load(
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
+    q_file_id,
+    p_pck_id,
     p_pck_id,
     p_pck_id
   );
@@ -1080,7 +1085,10 @@ CREATE FUNCTION ingest.osm_load(
         INSERT INTO ingest.feature_asis
            SELECT file_id, gid,
                   properties,
-                  ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
+                  CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1])
+                  WHEN 'point' THEN ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001)
+                  ELSE ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001)
+                  END AS geom
            FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom) AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
         RETURNING 1
       )
@@ -1093,6 +1101,8 @@ CREATE FUNCTION ingest.osm_load(
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
+    q_file_id,
+    p_pck_id,
     p_pck_id,
     p_pck_id
   );
