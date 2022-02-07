@@ -876,7 +876,7 @@ CREATE or replace FUNCTION ingest.any_load(
                   properties,
                   CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1])
                   WHEN 'point' THEN ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001)
-                  ELSE ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001)
+                  ELSE ST_SimplifyPreserveTopology(ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001),0.00000001)
                   END AS geom
            FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom) AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
         RETURNING 1
@@ -1087,7 +1087,7 @@ CREATE FUNCTION ingest.osm_load(
                   properties,
                   CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1])
                   WHEN 'point' THEN ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001)
-                  ELSE ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001)
+                  ELSE ST_SimplifyPreserveTopology(ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001),0.00000001)
                   END AS geom
            FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom) AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
         RETURNING 1
