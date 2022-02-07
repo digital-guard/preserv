@@ -796,7 +796,7 @@ CREATE or replace FUNCTION ingest.feature_asis_similarity(
         CASE (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype) 
         WHEN 'line' THEN (SELECT array_agg(ST_FrechetDistance(p_geom, n)) FROM unnest(p_geoms) AS n) END AS geom_cmp_frechet,
         CASE (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype) 
-        WHEN 'poly' THEN (SELECT array_agg( 2*ST_Area(ST_INTERSECTION(p_geom, n))/(ST_Area(p_geom)+ST_Area(n))) FROM unnest(p_geoms) AS n) END AS geom_cmp_intersec
+        WHEN 'poly' THEN (SELECT array_agg( 2*ST_Area(ST_INTERSECTION(p_geom, n),true)/(ST_Area(p_geom,true)+ST_Area(n,true))) FROM unnest(p_geoms) AS n) END AS geom_cmp_intersec
   ) t;
 $f$ LANGUAGE SQL;
   
