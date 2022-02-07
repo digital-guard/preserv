@@ -15,15 +15,15 @@
 	GROUP BY 1) t \
 	LEFT JOIN $(view) r \
 	ON t.geom = r.geom ;"
-
-	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent \
-	SET proc_step=6, kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(ghs, info->>'val') FROM $(view)_adjusted)) \
-	WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') ;"
 {{/geoaddress}}
 
 	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view){{^geoaddress}}_adjusted{{/geoaddress}}','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2, (info->''area_km2'')::float AS area_km2', NULL, NULL, $(pretty_opt), 5);"
 
 {{^geoaddress}}
+	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent \
+	SET proc_step=6, kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(ghs, info->>'val') FROM $(view)_adjusted)) \
+	WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') ;"
+
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view)_adjusted CASCADE;"
 {{/geoaddress}}
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
