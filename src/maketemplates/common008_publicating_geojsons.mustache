@@ -5,7 +5,7 @@
 	@echo "--- Gerando geomosaico em $(folder) ---"
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
 	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\",\"area_km2\":\"val\",\"area\":\"val\"}  '::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
-{{^geoaddress}}
+{{^isGeoaddress}}
 	psql $(pg_uri_db) -c "CREATE VIEW $(view)_adjusted AS SELECT r.ghs, (r.info || jsonb_build_object('val', n, 'val_density_km2', (n::float/(info->'area_km2')::float))) AS info, t.geom \
 	FROM ( \
 	SELECT p.geom, COUNT(*) AS n \
@@ -15,15 +15,15 @@
 	GROUP BY 1) t \
 	LEFT JOIN $(view) r \
 	ON t.geom = r.geom ;"
-{{/geoaddress}}
+{{/isGeoaddress}}
 
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view){{^geoaddress}}_adjusted{{/geoaddress}}','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2, (info->''area_km2'')::float AS area_km2', NULL, NULL, $(pretty_opt), 5);"
+	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view){{^isGeoaddress}}_adjusted{{/isGeoaddress}}','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2, (info->''area_km2'')::float AS area_km2', NULL, NULL, $(pretty_opt), 5);"
 
-{{^geoaddress}}
+{{^isGeoaddress}}
 	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent \
 	SET proc_step=6, kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(ghs, info->>'val') FROM $(view)_adjusted)) \
 	WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') ;"
 
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view)_adjusted CASCADE;"
-{{/geoaddress}}
+{{/isGeoaddress}}
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
