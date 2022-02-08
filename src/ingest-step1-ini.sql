@@ -900,9 +900,8 @@ CREATE or replace FUNCTION ingest.any_load(
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
+    p_pck_id,
     q_file_id,
-    p_pck_id,
-    p_pck_id,
     p_pck_id
   );
   q_query_cad := format(
@@ -1119,9 +1118,8 @@ CREATE FUNCTION ingest.osm_load(
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
+    p_pck_id,
     q_file_id,
-    p_pck_id,
-    p_pck_id,
     p_pck_id
   );
 
