@@ -1090,15 +1090,24 @@ CREATE FUNCTION ingest.osm_load(
             FROM %s %s
           ) t
       ),
+      mask AS (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
       ins AS (
         INSERT INTO ingest.feature_asis
            SELECT file_id, gid,
                   properties,
                   CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1])
-                  WHEN 'point' THEN ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001)
-                  ELSE ST_SimplifyPreserveTopology(ST_ReducePrecision(ST_Intersection(geom, (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s)),0.000001),0.00000001)
-                  END AS geom
-           FROM scan WHERE geom IS NOT NULL AND ST_IsValid(geom) AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
+                    WHEN 'point' THEN ST_ReducePrecision( ST_Intersection(geom,(SELECT geom FROM mask)), 0.000001 )
+                    ELSE ST_SimplifyPreserveTopology( -- remove collinear points 
+			    ST_ReducePrecision(       -- round decimal degrees of SRID 4326, ~1 meter
+			      ST_Intersection( geom, (SELECT geom FROM mask) )
+			      ,0.000001
+		            ),
+			    0.00000001
+		    )
+	          END AS geom
+           FROM scan
+	   WHERE geom IS NOT NULL AND NOT(ST_IsEmpty(geom)) AND ST_IsSimple(geom) AND ST_IsValid(geom)
+	      AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
         RETURNING 1
       )
       SELECT COUNT(*) FROM ins
