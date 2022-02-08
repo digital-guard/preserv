@@ -873,12 +873,14 @@ CREATE or replace FUNCTION ingest.any_load(
       mask AS (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
       ins AS (
         INSERT INTO ingest.feature_asis
+        SELECT *
+        FROM (
            SELECT file_id, gid,
                   properties,
                   CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1])
                     WHEN 'point' THEN ST_ReducePrecision( ST_Intersection(geom,(SELECT geom FROM mask)), 0.000001 )
                     ELSE ST_SimplifyPreserveTopology( -- remove collinear points 
-			    ST_ReducePrecision(       -- round decimal degrees of SRID 4326, ~1 meter
+			    ST_ReducePrecision( -- round decimal degrees of SRID 4326, ~1 meter
 			      ST_Intersection( geom, (SELECT geom FROM mask) )
 			      ,0.000001
 		            ),
@@ -886,8 +888,13 @@ CREATE or replace FUNCTION ingest.any_load(
 		    )
 	          END AS geom
            FROM scan
-	   WHERE geom IS NOT NULL AND NOT(ST_IsEmpty(geom)) AND ST_IsSimple(geom) AND ST_IsValid(geom)
-	      AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
+           WHERE ST_IsSimple(geom)
+                AND ST_IsValid(geom)
+                AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
+           ) t
+	    WHERE geom IS NOT NULL 
+            AND CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) > 5 WHEN 'line' THEN ST_Length(geom,true) > 2 ELSE TRUE END
+            AND NOT(ST_IsEmpty(geom)) 
         RETURNING 1
       )
       SELECT COUNT(*) FROM ins
@@ -902,7 +909,8 @@ CREATE or replace FUNCTION ingest.any_load(
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
     p_pck_id,
     q_file_id,
-    p_pck_id
+    p_pck_id,
+    q_file_id
   );
   q_query_cad := format(
       $$
@@ -1092,12 +1100,14 @@ CREATE FUNCTION ingest.osm_load(
       mask AS (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
       ins AS (
         INSERT INTO ingest.feature_asis
+        SELECT *
+        FROM (
            SELECT file_id, gid,
                   properties,
                   CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1])
                     WHEN 'point' THEN ST_ReducePrecision( ST_Intersection(geom,(SELECT geom FROM mask)), 0.000001 )
                     ELSE ST_SimplifyPreserveTopology( -- remove collinear points 
-			    ST_ReducePrecision(       -- round decimal degrees of SRID 4326, ~1 meter
+			    ST_ReducePrecision( -- round decimal degrees of SRID 4326, ~1 meter
 			      ST_Intersection( geom, (SELECT geom FROM mask) )
 			      ,0.000001
 		            ),
@@ -1105,8 +1115,13 @@ CREATE FUNCTION ingest.osm_load(
 		    )
 	          END AS geom
            FROM scan
-	   WHERE geom IS NOT NULL AND NOT(ST_IsEmpty(geom)) AND ST_IsSimple(geom) AND ST_IsValid(geom)
-	      AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
+           WHERE ST_IsSimple(geom)
+                AND ST_IsValid(geom)
+                AND ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))
+           ) t
+	    WHERE geom IS NOT NULL 
+            AND CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) > 5 WHEN 'line' THEN ST_Length(geom,true) > 2 ELSE TRUE END
+            AND NOT(ST_IsEmpty(geom)) 
         RETURNING 1
       )
       SELECT COUNT(*) FROM ins
@@ -1120,7 +1135,8 @@ CREATE FUNCTION ingest.osm_load(
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
     p_pck_id,
     q_file_id,
-    p_pck_id
+    p_pck_id,
+    q_file_id
   );
 
   EXECUTE q_query INTO num_items;
