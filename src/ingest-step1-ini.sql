@@ -1290,7 +1290,7 @@ BEGIN
         WHEN 'metric' THEN
         ROW_NUMBER() OVER(ORDER BY properties->>'via_name', to_bigint(properties->>'house_number'))
         WHEN 'bh-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', NULLIF(regexp_replace(properties->>'house_number', '\D', '', 'g'), '')::bigint, regexp_replace(properties->>'house_number', '[^[:alpha:]]', '', 'g') )
+        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', to_bigint(regexp_replace(properties->>'house_number', '\D', '', 'g')), regexp_replace(properties->>'house_number', '[^[:alpha:]]', '', 'g') )
         WHEN 'street-metric' THEN
         ROW_NUMBER() OVER(ORDER BY properties->>'via_name', regexp_replace(properties->>'house_number', '[^[:alnum:]]', '', 'g'))
         WHEN 'block-metric' THEN
