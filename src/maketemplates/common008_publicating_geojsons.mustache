@@ -21,7 +21,7 @@
 
 {{^isGeoaddress}}
 	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent \
-	SET proc_step=6, kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(ghs, info->>'val') FROM $(view)_adjusted)) \
+	SET proc_step=6, kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(ghs, (info->>'val')::int) FROM $(view)_adjusted)) \
 	WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') ;"
 
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view)_adjusted CASCADE;"
