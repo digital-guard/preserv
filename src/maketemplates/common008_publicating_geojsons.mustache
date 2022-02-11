@@ -11,7 +11,7 @@
 	SELECT p.geom, COUNT(*) AS n \
 	FROM $(view) p \
 	LEFT JOIN ingest.feature_asis f \
-	ON ST_Contains(p.geom,ST_PointOnSurface(f.geom)) AND f.file_id=1 \
+	ON ST_Contains(p.geom,ST_PointOnSurface(f.geom)) AND f.file_id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') \
 	GROUP BY 1) t \
 	LEFT JOIN $(view) r \
 	ON t.geom = r.geom ;"
