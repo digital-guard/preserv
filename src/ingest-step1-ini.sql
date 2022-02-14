@@ -1678,9 +1678,20 @@ BEGIN
         
         RAISE NOTICE 'layer : %, method: %', key, method;
 
+        -- id_profile_params default values
         IF NOT dict->'layers'->key?'id_profile_params'
         THEN
-            dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb(1));
+            CASE key
+            WHEN 'geoaddress'  THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb(1));
+            WHEN 'via'         THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb(5));
+            --WHEN 'block'       THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb());
+            --WHEN 'building'    THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb());
+            --WHEN 'genericvia'  THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb());
+            --WHEN 'nsvia'       THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb());
+            --WHEN 'parcel'      THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb());
+            ELSE
+                dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb(5));
+            END CASE;
         END IF;
         
         codec_desc := codec_desc0;
