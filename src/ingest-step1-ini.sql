@@ -364,7 +364,7 @@ COMMENT ON VIEW ingest.vw02simple_feature_asis
 
 DROP VIEW IF EXISTS ingest.vw02full_donated_packfilevers CASCADE;
 CREATE or replace VIEW ingest.vw02full_donated_packfilevers AS
-  SELECT pf.*, j.isolabel_ext, j.geom, regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS path
+  SELECT pf.*, j.isolabel_ext, j.geom, '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS path
   FROM ingest.fdw_donated_packfilevers pf
   LEFT JOIN ingest.fdw_donated_PackTpl pt
     ON pf.pack_id=pt.id

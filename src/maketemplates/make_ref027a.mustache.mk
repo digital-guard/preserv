@@ -61,11 +61,6 @@ block: makedirs $(orig)/{{sha256file}}
 block-clean:
 {{>common006_clean}}
 
-publicating_geojsons_block: isolabel   = {{isolabel_ext}}
-publicating_geojsons_block: folder     = $(sandbox)/{{path_root}}
-publicating_geojsons_block: pretty_opt = 3
-publicating_geojsons_block: view       = vw{{file}}_{{tabname}}_publicating
-publicating_geojsons_block:
 {{>common008_publicating_geojsons}}
 {{/block}}
 
@@ -80,11 +75,6 @@ building: makedirs $(orig)/{{sha256file}}
 building-clean:
 {{>common006_clean}}
 
-publicating_geojsons_building: isolabel   = {{isolabel_ext}}
-publicating_geojsons_building: folder     = $(sandbox)/{{path_root}}
-publicating_geojsons_building: pretty_opt = 3
-publicating_geojsons_building: view       = vw{{file}}_{{tabname}}_publicating
-publicating_geojsons_building:
 {{>common008_publicating_geojsons}}
 {{/building}}
 
@@ -123,11 +113,6 @@ genericvia: makedirs $(orig)/{{sha256file}}
 genericvia-clean:
 {{>common006_clean}}
 
-publicating_geojsons_genericvia: isolabel   = {{isolabel_ext}}
-publicating_geojsons_genericvia: folder     = $(sandbox)/{{path_root}}
-publicating_geojsons_genericvia: pretty_opt = 3
-publicating_geojsons_genericvia: view       = vw{{file}}_{{tabname}}_publicating
-publicating_geojsons_genericvia:
 {{>common008_publicating_geojsons}}
 {{/genericvia}}
 
@@ -145,11 +130,6 @@ geoaddress: makedirs $(orig)/{{sha256file}}
 geoaddress-clean:
 {{>common006_clean}}
 
-publicating_geojsons_geoaddress: isolabel   = {{isolabel_ext}}
-publicating_geojsons_geoaddress: folder     = $(sandbox)/{{path_root}}
-publicating_geojsons_geoaddress: pretty_opt = 3
-publicating_geojsons_geoaddress: view       = vw{{file}}_{{tabname}}_publicating
-publicating_geojsons_geoaddress:
 {{>common008_publicating_geojsons}}
 {{/geoaddress}}
 
@@ -164,11 +144,6 @@ nsvia: makedirs $(orig)/{{sha256file}}
 nsvia-clean:
 {{>common006_clean}}
 
-publicating_geojsons_nsvia: isolabel   = {{isolabel_ext}}
-publicating_geojsons_nsvia: folder     = $(sandbox)/{{path_root}}
-publicating_geojsons_nsvia: pretty_opt = 3
-publicating_geojsons_nsvia: view       = vw{{file}}_{{tabname}}_publicating
-publicating_geojsons_nsvia:
 {{>common008_publicating_geojsons}}
 {{/nsvia}}
 
@@ -183,11 +158,6 @@ parcel: makedirs $(orig)/{{sha256file}}
 parcel-clean:
 {{>common006_clean}}
 
-publicating_geojsons_parcel: isolabel   = {{isolabel_ext}}
-publicating_geojsons_parcel: folder     = $(sandbox)/{{path_root}}
-publicating_geojsons_parcel: pretty_opt = 3
-publicating_geojsons_parcel: view       = vw{{file}}_{{tabname}}_publicating
-publicating_geojsons_parcel:
 {{>common008_publicating_geojsons}}
 {{/parcel}}
 
@@ -205,11 +175,6 @@ via: makedirs $(orig)/{{sha256file}}
 via-clean:
 {{>common006_clean}}
 
-publicating_geojsons_via: isolabel   = {{isolabel_ext}}
-publicating_geojsons_via: folder     = $(sandbox)/{{path_root}}
-publicating_geojsons_via: pretty_opt = 3
-publicating_geojsons_via: view       = vw{{file}}_{{tabname}}_publicating
-publicating_geojsons_via:
 {{>common008_publicating_geojsons}}
 {{/via}}
 {{/layers}}
