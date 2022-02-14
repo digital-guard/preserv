@@ -46,6 +46,6 @@ change_parameters_{{layername_root}}: threshold_sum = 1000000
 change_parameters_{{layername_root}}: threshold     = 100000
 change_parameters_{{layername_root}}: heuristic     = 3
 change_parameters_{{layername_root}}:
-	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent SET lineage = jsonb_set(lineage, '{hcode_distribution_parameters}', '{"p_heuristic": $(heuristic), "p_threshold": $(threshold), "p_threshold_sum": $(threshold_sum)}', TRUE) WHERE packvers_id = (SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}');
+	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent SET lineage = jsonb_set(lineage, '{hcode_distribution_parameters}', '{\"p_heuristic\": $(heuristic), \"p_threshold\": $(threshold), \"p_threshold_sum\": $(threshold_sum)}', TRUE) WHERE packvers_id = (SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}');"
 
 	make publicating_geojsons_{{layername_root}}
