@@ -2,4 +2,4 @@ id_profile_params,hcode_distribution_parameters,hcode_signature_parameters,comme
 1,p_heuristic:3;p_threshold:750;p_threshold_sum:8000,p_percentile:0.75;p_heuristic:1,'default'
 2,p_heuristic:3;p_threshold:650;p_threshold_sum:10000,p_percentile:0.75;p_heuristic:1,'BR/_pk0004.01'
 3,p_heuristic:3;p_threshold:650;p_threshold_sum:13500,p_percentile:0.75;p_heuristic:1,'BR/_pk0022.01'
-5,p_heuristic:3;p_threshold:750000;p_threshold_sum:2097152,p_percentile:0.75;p_heuristic:1,'viaBR/_pk0018.01'
+5,p_heuristic:3;p_threshold:100000;p_threshold_sum:2097152,p_percentile:0.75;p_heuristic:1,'viaBR/_pk0018.01'
