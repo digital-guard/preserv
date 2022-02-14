@@ -1,4 +1,5 @@
 	mkdir -m777 -p $(folder)
+	@rm -rf $(folder)
 	@echo "--- Gerando arquivos de pontos em $(folder) ---"
 	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)');"
 

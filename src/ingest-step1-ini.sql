@@ -1430,7 +1430,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
     	(SELECT lineage->'hcode_distribution_parameters' FROM ingest.donated_PackComponent WHERE id= p_file_id)
     ) t
   ;
-  SELECT pg_catalog.pg_file_unlink(p_fileref || '/pts_*.geojson');
+  SELECT pg_catalog.pg_file_unlink(p_fileref || '/'|| (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) || '_*.geojson') FROM ingest.vw03full_layer_file WHERE id=$1;
 
   UPDATE ingest.publicating_geojsons_p3exprefix
   SET prefix=t4.prefix
@@ -1461,10 +1461,11 @@ CREATE FUNCTION ingest.publicating_geojsons_p4(
 	p_fileref text
 ) RETURNS text  AS $f$
 
-  WITH prefs AS ( SELECT DISTINCT prefix FROM ingest.publicating_geojsons_p3exprefix ORDER BY 1 )
+  WITH prefs AS ( SELECT DISTINCT prefix FROM ingest.publicating_geojsons_p3exprefix ORDER BY 1 ),
+  geomprefix AS (SELECT CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END AS geomprefix FROM ingest.vw03full_layer_file WHERE id=$1)
    SELECT write_geojsonb_Features(
     format('SELECT * FROM ingest.publicating_geojsons_p3exprefix WHERE prefix=%L ORDER BY gid',prefix),
-    format('%s/pts_%s.geojson',p_fileref,prefix),
+    format('%s/%s_%s.geojson',p_fileref,(SELECT geomprefix FROM geomprefix),prefix),
     't1.geom',
     'info::jsonb',
     NULL,  -- p_cols_orderby
@@ -1472,7 +1473,7 @@ CREATE FUNCTION ingest.publicating_geojsons_p4(
     2
   ) FROM prefs;
   DELETE FROM ingest.publicating_geojsons_p3exprefix;  -- limpa
-  SELECT 'Arquivos de file_id='|| p_file_id::text || ' publicados em ' || p_file_id::text || '/pts_*.geojson'
+  SELECT 'Arquivos de file_id='|| p_file_id::text || ' publicados em ' || p_file_id::text || '/' || (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) ||'_*.geojson' FROM ingest.vw03full_layer_file WHERE id=$1
   ;
 $f$ language SQL VOLATILE; -- fim p4
 
