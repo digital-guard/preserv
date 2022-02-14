@@ -34,6 +34,8 @@ publicating_geojsons_{{layername_root}}:
 {{/isGeoaddress}}
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
 
+	make audit-geojsons_{{layername_root}} pg_db=$(pg_db)
+
 audit-geojsons_{{layername_root}}: folder = {{path_root}}
 audit-geojsons_{{layername_root}}:
 	@ls -lS   $(folder)/*.geojson | awk 'BEGIN {print "-- MÉDIA:"} $$5 {n=n+1;s=s+$$5;} END {print "\tnum arquivos: " n; print "\ttamanho médio: " s/(1024*n) " KiB" }'
