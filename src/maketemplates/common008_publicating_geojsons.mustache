@@ -27,3 +27,9 @@
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view)_adjusted CASCADE;"
 {{/isGeoaddress}}
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
+
+audit-geojsons_{{layername_root}}: folder = $(sandbox)/BR/data/AC/RioBranco/_pk0042.01/via
+audit-geojsons_{{layername_root}}:
+	@ls -lS   $(folder)/*.geojson | awk 'BEGIN {print "-- MÉDIA:"} $$5 {n=n+1;s=s+$$5;} END {print "\tnum arquivos: " n; print "\ttamanho médio: " s/(1024*n) " KiB" }'
+	@ls -lhS  $(folder)/*.geojson | head | awk 'BEGIN {print "-- MAIORES:"} $$5 {print $$5 " | " $$9;}'
+	@ls -lhSr $(folder)/*.geojson | head | awk 'BEGIN {print "-- MENORES:"} $$5 {print $$5 " | " $$9;}'
