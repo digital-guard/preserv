@@ -42,6 +42,7 @@ audit-geojsons_{{layername_root}}:
 	@ls -lhS  $(folder)/*.geojson | head | awk 'BEGIN {print "-- MAIORES:"} $$5 {print $$5 " | " $$9;}'
 	@ls -lhSr $(folder)/*.geojson | head | awk 'BEGIN {print "-- MENORES:"} $$5 {print $$5 " | " $$9;}'
 
+change_parameters_{{layername_root}}: isolabel      = {{isolabel_ext}}
 change_parameters_{{layername_root}}: threshold_sum = 1000000
 change_parameters_{{layername_root}}: threshold     = 100000
 change_parameters_{{layername_root}}: heuristic     = 3
