@@ -43,7 +43,7 @@ publicating_geojsons_{{layername_root}}:
 	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent \
 	SET proc_step=6 \
 	WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') ;"
-{{^isGeoaddress}}
+{{/isGeoaddress}}
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view)_adjusted CASCADE;"
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
 	make audit-geojsons_{{layername_root}} pg_db=$(pg_db)
