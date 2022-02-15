@@ -12,7 +12,7 @@ publicating_geojsons_{{layername_root}}:
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
 	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\",\"area_km2\":\"val\",\"area\":\"val\"}  '::jsonb, (SELECT geom FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
 {{^isGeoaddress}}
-	psql $(pg_uri_db) -c "CREATE VIEW $(view)_adjusted AS SELECT r.ghs, (r.info || jsonb_build_object('val', n, 'bytes', byte, 'size', size, 'val_density_km2', round((n::float/(info->'area_km2')::float),0.01))) AS info, t.geom \
+	psql $(pg_uri_db) -c "CREATE VIEW $(view)_adjusted AS SELECT r.ghs, (r.info || jsonb_build_object('val', n, 'bytes', bytes, 'size', size, 'val_density_km2', round((n::float/(info->'area_km2')::float),0.01))) AS info, t.geom \
 	FROM ( \
 	SELECT p.geom, COUNT(*) AS n, SUM(length(St_asGeoJson(ST_Intersection( p.geom, f.geom )))) AS bytes, round((CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') WHEN 'line' THEN SUM(ST_Length(ST_Intersection( p.geom, f.geom ), true))/1000  WHEN 'poly' THEN SUM(ST_Area(ST_Intersection( p.geom, f.geom ),true))/1000000.0  END),0.01) AS size  \
 	FROM $(view) p \
