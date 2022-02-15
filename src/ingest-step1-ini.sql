@@ -1282,7 +1282,7 @@ BEGIN
   SELECT 
         t.ghs,
         t.row_id::int AS gid, 
-        CASE p_ftname WHEN 'parcel' THEN jsonb_build_object('address',address,'bytes',length(St_asGeoJson(t.geom))) ELSE jsonb_build_object('address',address) END AS info,
+        CASE p_ftname WHEN 'parcel' THEN jsonb_strip_nulls(jsonb_build_object('address',address, 'multiple_addresses', multiple_addresses, 'bytes',length(St_asGeoJson(t.geom)))) ELSE jsonb_strip_nulls(jsonb_build_object('address',address, 'multiple_addresses', multiple_addresses)) END AS info,
         t.geom
   FROM (
       SELECT file_id, fa.geom,
@@ -1300,6 +1300,7 @@ BEGIN
         --ROW_NUMBER() OVER(ORDER BY  properties->>'address')) 
         -- or (properties->>'via_name')||'#'||properties->>'house_number'
       END AS row_id,
+      CASE WHEN (properties->>'is_agg')::boolean THEN TRUE END AS multiple_addresses,
       COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
       properties->>'via_name' AS via_name,
       properties->>'house_number' AS house_number,
@@ -1310,51 +1311,38 @@ BEGIN
   ) t
   ORDER BY gid;
 
-  WHEN 'via','genericvia' THEN
-  RETURN QUERY 
-  SELECT 
-        t.ghs, 
-        t.row_id::int AS gid, 
-        jsonb_build_object('via_name',via_name,'bytes',length(St_asGeoJson(t.geom))) AS info,
-        t.geom
-  FROM (
-      SELECT fa.file_id, fa.geom,
-        ROW_NUMBER() OVER(ORDER BY fa.properties->>'via_name') AS row_id,
-        fa.properties->>'via_name' AS via_name,
-        fa.kx_ghs9 AS ghs
-      FROM ingest.feature_asis AS fa
-      WHERE fa.file_id=p_file_id
-  ) t
-  ORDER BY gid;
-
   WHEN 'nsvia' THEN
   RETURN QUERY 
   SELECT 
         t.ghs, 
         t.row_id::int AS gid, 
-        jsonb_build_object('ns_name',ns_name,'bytes',length(St_asGeoJson(t.geom))) AS info,
+        jsonb_strip_nulls(jsonb_build_object('ns_name',ns_name, 'ref', ref, 'bytes',length(St_asGeoJson(t.geom)))) AS info,
         t.geom
   FROM (
       SELECT fa.file_id, fa.geom,
         ROW_NUMBER() OVER(ORDER BY fa.properties->>'ns_name') AS row_id,
         fa.properties->>'ns_name' AS ns_name,
+        fa.properties->>'ref' AS ref,
         fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
   ) t
   ORDER BY gid;
-
-  WHEN 'block','building' THEN
+  
+  WHEN 'via', 'genericvia', 'block', 'building' THEN
   RETURN QUERY 
   SELECT 
         t.ghs, 
         t.row_id::int AS gid, 
-        jsonb_build_object('bytes',length(St_asGeoJson(t.geom))) AS info,
+        jsonb_strip_nulls(jsonb_build_object('via_name', via_name, 'name', name, 'ref', ref, 'bytes',length(St_asGeoJson(t.geom)))) AS info,
         t.geom
   FROM (
       SELECT fa.file_id, fa.geom,
         ROW_NUMBER() OVER(ORDER BY gid) AS row_id,
-        fa.kx_ghs9 AS ghs
+        fa.properties->>'via_name'      AS via_name,
+        fa.properties->>'name'          AS name,
+        fa.properties->>'ref'           AS ref,
+        fa.kx_ghs9                      AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
   ) t
@@ -1445,25 +1433,25 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
   WHERE t4.gid = publicating_geojsons_p3exprefix.gid
   ;
 
-  UPDATE ingest.publicating_geojsons_p3exprefix
-  SET info = publicating_geojsons_p3exprefix.info || t1.info
-  FROM (
-    WITH geomtype AS (
-        SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1
-    )
-    SELECT gid, jsonb_strip_nulls(jsonb_build_object('bytes', length(St_asGeoJson(intersec)), 'size',
-        CASE (SELECT geomtype FROM geomtype)
-        WHEN 'line' THEN round(ST_Length(intersec,true)/1000.0,0.01)
-        WHEN 'poly' THEN round(ST_Area(intersec,true)/1000000.0,0.01)
-        END)) AS info
-    FROM
-        (
-        SELECT gid, ST_Intersection(geom,ST_SetSRID( ST_geomFromGeohash(prefix),4326)) AS intersec
-        FROM ingest.publicating_geojsons_p3exprefix
-        ) as t
-  ) t1
-  WHERE t1.gid = publicating_geojsons_p3exprefix.gid
-  ;
+  --UPDATE ingest.publicating_geojsons_p3exprefix
+  --SET info = publicating_geojsons_p3exprefix.info || t1.info
+  --FROM (
+    --WITH geomtype AS (
+        --SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1
+    --)
+    --SELECT gid, jsonb_strip_nulls(jsonb_build_object('bytes', length(St_asGeoJson(intersec)), 'size',
+        --CASE (SELECT geomtype FROM geomtype)
+        --WHEN 'line' THEN round(ST_Length(intersec,true)/1000.0,0.01)
+        --WHEN 'poly' THEN round(ST_Area(intersec,true)/1000000.0,0.01)
+        --END)) AS info
+    --FROM
+        --(
+        --SELECT gid, ST_Intersection(geom,ST_SetSRID( ST_geomFromGeohash(prefix),4326)) AS intersec
+        --FROM ingest.publicating_geojsons_p3exprefix
+        --) as t
+  --) t1
+  --WHERE t1.gid = publicating_geojsons_p3exprefix.gid
+  --;
 
   UPDATE ingest.donated_PackComponent
   SET proc_step=5, 
