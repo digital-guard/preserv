@@ -1445,6 +1445,26 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
   WHERE t4.gid = publicating_geojsons_p3exprefix.gid
   ;
 
+  UPDATE ingest.publicating_geojsons_p3exprefix
+  SET info = publicating_geojsons_p3exprefix.info || t1.info
+  FROM (
+    WITH geomtype AS (
+        SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1
+    )
+    SELECT gid, jsonb_strip_nulls(jsonb_build_object('bytes', length(St_asGeoJson(intersec)), 'size',
+        CASE (SELECT geomtype FROM geomtype)
+        WHEN 'line' THEN round(ST_Length(intersec,true)/1000.0,0.01)
+        WHEN 'poly' THEN round(ST_Area(intersec,true)/1000000.0,0.01)
+        END)) AS info
+    FROM
+        (
+        SELECT gid, ST_Intersection(geom,ST_SetSRID( ST_geomFromGeohash(prefix),4326)) AS intersec
+        FROM ingest.publicating_geojsons_p3exprefix
+        ) as t
+  ) t1
+  WHERE t1.gid = publicating_geojsons_p3exprefix.gid
+  ;
+
   UPDATE ingest.donated_PackComponent
   SET proc_step=5, 
       kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_items) FROM ingest.publicating_geojsons_p2distrib))
