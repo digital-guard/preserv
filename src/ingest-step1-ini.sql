@@ -1282,7 +1282,7 @@ BEGIN
   SELECT 
         t.ghs,
         t.row_id::int AS gid, 
-        CASE p_ftname WHEN 'parcel' THEN jsonb_build_object('address',address,'npoints',length(St_asGeoJson(t.geom))) ELSE jsonb_build_object('address',address) END AS info,
+        CASE p_ftname WHEN 'parcel' THEN jsonb_build_object('address',address,'bytes',length(St_asGeoJson(t.geom))) ELSE jsonb_build_object('address',address) END AS info,
         t.geom
   FROM (
       SELECT file_id, fa.geom,
@@ -1315,7 +1315,7 @@ BEGIN
   SELECT 
         t.ghs, 
         t.row_id::int AS gid, 
-        jsonb_build_object('via_name',via_name,'npoints',length(St_asGeoJson(t.geom))) AS info,
+        jsonb_build_object('via_name',via_name,'bytes',length(St_asGeoJson(t.geom))) AS info,
         t.geom
   FROM (
       SELECT fa.file_id, fa.geom,
@@ -1332,7 +1332,7 @@ BEGIN
   SELECT 
         t.ghs, 
         t.row_id::int AS gid, 
-        jsonb_build_object('ns_name',ns_name,'npoints',length(St_asGeoJson(t.geom))) AS info,
+        jsonb_build_object('ns_name',ns_name,'bytes',length(St_asGeoJson(t.geom))) AS info,
         t.geom
   FROM (
       SELECT fa.file_id, fa.geom,
@@ -1349,7 +1349,7 @@ BEGIN
   SELECT 
         t.ghs, 
         t.row_id::int AS gid, 
-        jsonb_build_object('npoints',length(St_asGeoJson(t.geom))) AS info,
+        jsonb_build_object('bytes',length(St_asGeoJson(t.geom))) AS info,
         t.geom
   FROM (
       SELECT fa.file_id, fa.geom,
