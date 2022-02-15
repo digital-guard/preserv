@@ -22,17 +22,30 @@ publicating_geojsons_{{layername_root}}:
 	LEFT JOIN $(view) r \
 	ON t.geom = r.geom ;"
 {{/isGeoaddress}}
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view){{^isGeoaddress}}_adjusted{{/isGeoaddress}}','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2, (info->''area_km2'')::float AS area_km2, (info->''size'') AS size, (info->''bytes'') AS bytes', NULL, NULL, $(pretty_opt), 5);"
-
+{{#isGeoaddress}}
+	psql $(pg_uri_db) -c "CREATE VIEW $(view)_adjusted AS SELECT r.ghs, (r.info || jsonb_build_object('val', n, 'bytes', bytes)) AS info, t.geom \
+	FROM ( \
+	SELECT p.geom, COUNT(*) AS n, SUM(length(St_asGeoJson( f.geom ))) AS bytes  \
+	FROM $(view) p \
+	LEFT JOIN ingest.feature_asis f \
+	ON ST_Contains(p.geom,f.geom) AND f.file_id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') \
+	GROUP BY 1) t \
+	LEFT JOIN $(view) r \
+	ON t.geom = r.geom ;"
+{{/isGeoaddress}}
+	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)_adjusted','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''val'')::int AS val, (info->''lghs'')::int AS lghs, (info->''val_density_km2'')::float AS val_density_km2, (info->''area_km2'')::float AS area_km2, {{^isGeoaddress}}(info->''size'') AS size, {{/isGeoaddress}}(info->''bytes'') AS bytes', NULL, NULL, $(pretty_opt), 5);"
 {{^isGeoaddress}}
 	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent \
 	SET proc_step=6, kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(ghs, (info->>'val')::int) FROM $(view)_adjusted)) \
 	WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') ;"
-
-	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view)_adjusted CASCADE;"
 {{/isGeoaddress}}
+{{#isGeoaddress}}
+	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent \
+	SET proc_step=6 \
+	WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') ;"
+{{^isGeoaddress}}
+	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view)_adjusted CASCADE;"
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
-
 	make audit-geojsons_{{layername_root}} pg_db=$(pg_db)
 
 audit-geojsons_{{layername_root}}: folder = {{path_root}}
