@@ -1275,7 +1275,7 @@ RETURNS TABLE (kx_ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS 
 DECLARE
     p_ftname text;
 BEGIN
-  p_ftname := (SELECT split_part(ftname, '_', 1) FROM ingest.fdw_feature_type WHERE ftid = (SELECT ftid FROM ingest.donated_PackComponent WHERE id=p_file_id));
+  p_ftname := (SELECT ft_info->>'class_ftname' FROM ingest.vw03full_layer_file WHERE id=p_file_id);
   CASE p_ftname
   WHEN 'geoaddress', 'parcel' THEN
   RETURN QUERY
@@ -1468,22 +1468,63 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text
 ) RETURNS text  AS $f$
-
-  WITH prefs AS ( SELECT DISTINCT prefix FROM ingest.publicating_geojsons_p3exprefix ORDER BY 1 ),
-  geomprefix AS (SELECT CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END AS geomprefix FROM ingest.vw03full_layer_file WHERE id=$1)
-   SELECT write_geojsonb_Features(
+DECLARE
+    q_copy text;
+BEGIN
+   PERFORM write_geojsonb_Features(
     format('SELECT kx_ghs9, prefix, gid, info - ''bytes'' AS info, geom FROM ingest.publicating_geojsons_p3exprefix WHERE prefix=%L ORDER BY gid',prefix),
-    format('%s/%s_%s.geojson',p_fileref,(SELECT geomprefix FROM geomprefix),prefix),
+    format('%s/%s_%s.geojson',p_fileref,(SELECT CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END AS geomprefix FROM ingest.vw03full_layer_file WHERE id=$1),prefix),
     't1.geom',
     'info::jsonb',
     NULL,  -- p_cols_orderby
     NULL, -- col_id
     2
-  ) FROM prefs;
+  ) FROM ( SELECT DISTINCT prefix FROM ingest.publicating_geojsons_p3exprefix ORDER BY 1 ) AS t;
+
+  q_copy := $$
+        COPY (
+            SELECT name, string_agg(prefix, ' ')
+            FROM
+            (
+                SELECT DISTINCT %s, p3.prefix
+                FROM ingest.publicating_geojsons_p3exprefix p3
+                LEFT JOIN ingest.feature_asis fa
+                ON p3.kx_ghs9 = fa.kx_ghs9 AND fa.file_id=%s
+                ORDER BY %s, p3.prefix
+            ) AS t
+            GROUP BY name
+            ) TO '%s' CSV HEADER
+    $$;
+
+  CASE (SELECT ft_info->>'class_ftname' FROM ingest.vw03full_layer_file WHERE id=p_file_id)
+  WHEN 'geoaddress', 'parcel', 'via' THEN
+    EXECUTE format(q_copy,
+    $$fa.properties->>'via_name' AS name$$,
+    p_file_id,
+    $$fa.properties->>'via_name'$$,
+    p_fileref || '/distrib_viaName_ghs.csv'
+    );
+  WHEN 'nsvia' THEN
+    EXECUTE format(q_copy,
+    $$fa.properties->>'ns_name' AS name$$,
+    p_file_id,
+    $$fa.properties->>'ns_name'$$,
+    p_fileref || '/distrib_name_ghs.csv'
+    );
+  WHEN 'genericvia', 'block', 'building' THEN
+    EXECUTE format(q_copy,
+    $$fa.properties->>'name' AS name$$,
+    p_file_id,
+    $$fa.properties->>'name'$$,
+    p_fileref || '/distrib_name_ghs.csv'
+    );
+  END CASE;
+
   DELETE FROM ingest.publicating_geojsons_p3exprefix;  -- limpa
-  SELECT 'Arquivos de file_id='|| p_file_id::text || ' publicados em ' || p_file_id::text || '/' || (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) ||'_*.geojson' FROM ingest.vw03full_layer_file WHERE id=$1
+  RETURN (SELECT 'Arquivos de file_id='|| p_file_id::text || ' publicados em ' || p_file_id::text || '/' || (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) ||'_*.geojson' FROM ingest.vw03full_layer_file WHERE id=$1)
   ;
-$f$ language SQL VOLATILE; -- fim p4
+END
+$f$ language PLpgSQL; -- fim p4
 
 CREATE FUNCTION ingest.publicating_geojsons(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
