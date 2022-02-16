@@ -1463,7 +1463,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
   SELECT 'p3';
 $f$ language SQL VOLATILE; --fim p3
 
-CREATE FUNCTION ingest.publicating_geojsons_p4(
+CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text
@@ -1472,7 +1472,7 @@ CREATE FUNCTION ingest.publicating_geojsons_p4(
   WITH prefs AS ( SELECT DISTINCT prefix FROM ingest.publicating_geojsons_p3exprefix ORDER BY 1 ),
   geomprefix AS (SELECT CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END AS geomprefix FROM ingest.vw03full_layer_file WHERE id=$1)
    SELECT write_geojsonb_Features(
-    format('SELECT * FROM ingest.publicating_geojsons_p3exprefix WHERE prefix=%L ORDER BY gid',prefix),
+    format('SELECT kx_ghs9, prefix, gid, info - ''bytes'' AS info, geom FROM ingest.publicating_geojsons_p3exprefix WHERE prefix=%L ORDER BY gid',prefix),
     format('%s/%s_%s.geojson',p_fileref,(SELECT geomprefix FROM geomprefix),prefix),
     't1.geom',
     'info::jsonb',
