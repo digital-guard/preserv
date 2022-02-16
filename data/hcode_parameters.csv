@@ -1,4 +1,5 @@
 id_profile_params,hcode_distribution_parameters,hcode_signature_parameters,comments
-1,p_heuristic:3;p_threshold:750;p_threshold_sum:8000,p_percentile:0.75;p_heuristic:1,'default'
+1,p_heuristic:3;p_threshold:750;p_threshold_sum:8000,p_percentile:0.75;p_heuristic:1,'default_geoaddress'
 2,p_heuristic:3;p_threshold:650;p_threshold_sum:10000,p_percentile:0.75;p_heuristic:1,'BR/_pk0004.01'
-5,p_heuristic:3;p_threshold:100000;p_threshold_sum:2097152,p_percentile:0.75;p_heuristic:1,'viaBR/_pk0018.01'
+4,p_heuristic:3;p_threshold:400000;p_threshold_sum:4000000,p_percentile:0.75;p_heuristic:1,'nsvia_pk0018.01'
+5,p_heuristic:3;p_threshold:100000;p_threshold_sum:2097152,p_percentile:0.75;p_heuristic:1,'default_lines_pols'
