@@ -1483,7 +1483,7 @@ BEGIN
 
   q_copy := $$
         COPY (
-            SELECT name, string_agg(prefix, ' ')
+            SELECT name, string_agg(prefix, ' ') as ghs
             FROM
             (
                 SELECT DISTINCT %s, p3.prefix
