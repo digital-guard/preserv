@@ -1007,16 +1007,15 @@ CREATE or replace FUNCTION ingest.any_load(
         E'From file_id=%s inserted type=%s\nin feature_asis %s items.\nRemoved %s duplicates and inserted %s aggregated duplicates.\nResulting in %s items at feature_asis. Invalid geometry type: %s items. ',
         q_file_id, p_ftname, num_items, num_items_del, num_items_ins,num_items-num_items_del+num_items_ins,num_items_invalid_type
     );
-  END IF;
 
-  IF num_items>0 THEN
     UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
         lineage = lineage || ingest.feature_asis_assign(q_file_id) || 
         jsonb_build_object('num_itens_stat',jsonb_build_object('originals',num_items,
                           'duplicates' ,num_items_del,
                           'aggregates' ,num_items_ins,
-                          'feature_asis',num_items-num_items_del+num_items_ins))
+                          'feature_asis',num_items-num_items_del+num_items_ins,
+                          'invalid_geom_type',num_items_invalid_type))
     WHERE id=q_file_id;
   END IF;
 
