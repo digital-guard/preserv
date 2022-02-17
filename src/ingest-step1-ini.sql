@@ -820,6 +820,7 @@ CREATE or replace FUNCTION ingest.any_load(
     use_tabcols boolean;
     msg_ret text;
     num_items bigint;
+    num_items_invalid_type bigint;
     num_items_ins bigint;
     num_items_del bigint;
   BEGIN
@@ -871,8 +872,8 @@ CREATE or replace FUNCTION ingest.any_load(
           ) t
       ),
       mask AS (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
-      ins AS (
-        INSERT INTO ingest.feature_asis
+
+      ins_pre AS (
         SELECT *
         FROM (
            SELECT file_id, gid,
@@ -895,9 +896,20 @@ CREATE or replace FUNCTION ingest.any_load(
 	    WHERE geom IS NOT NULL 
             AND CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) > 5 WHEN 'line' THEN ST_Length(geom,true) > 2 ELSE TRUE END
             AND NOT(ST_IsEmpty(geom)) 
+      ),
+      ins_gid AS (
+        SELECT gid
+        FROM ins_pre t
+	    WHERE GeometryType(geom) NOT IN %s
+      ),
+      ins AS (
+        INSERT INTO ingest.feature_asis
+        SELECT *
+        FROM ins_pre t
+	    WHERE gid NOT IN (SELECT * FROM ins_gid)
         RETURNING 1
       )
-      SELECT COUNT(*) FROM ins
+      SELECT (SELECT COUNT(*) FROM ins_gid) AS invalid_type, COUNT(*) FROM ins
     $$,
     q_file_id,
     iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
@@ -910,7 +922,12 @@ CREATE or replace FUNCTION ingest.any_load(
     p_pck_id,
     q_file_id,
     p_pck_id,
-    q_file_id
+    q_file_id,
+    (CASE (SELECT (ingest.donated_PackComponent_geomtype(q_file_id))[1]) 
+        WHEN 'point' THEN $$('POINT')$$ 
+        WHEN 'poly'  THEN $$('POLYGON'   ,'MULTIPOLYGON')$$ 
+        WHEN 'line'  THEN $$('LINESTRING','MULTILINESTRING')$$
+        END)
   );
   q_query_cad := format(
       $$
@@ -941,11 +958,11 @@ CREATE or replace FUNCTION ingest.any_load(
   IF (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower(p_ftname))<20 THEN -- feature_type id
     EXECUTE q_query_cad INTO num_items;
   ELSE
-    EXECUTE q_query INTO num_items;
+    EXECUTE q_query INTO num_items_invalid_type, num_items;
   END IF;
   msg_ret := format(
-    E'From file_id=%s inserted type=%s\nin feature_asis %s items.',
-    q_file_id, p_ftname, num_items
+    E'From file_id=%s inserted type=%s\nin feature_asis %s items. Invalid geometry type: %s items.',
+    q_file_id, p_ftname, num_items, num_items_invalid_type
   );
 
   IF num_items>0 AND (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower(p_ftname))>=20 THEN
@@ -987,8 +1004,8 @@ CREATE or replace FUNCTION ingest.any_load(
     EXECUTE q_query INTO num_items_ins, num_items_del;
 
     msg_ret := format(
-        E'From file_id=%s inserted type=%s\nin feature_asis %s items.\nRemoved %s duplicates and inserted %s aggregated duplicates.\nResulting in %s items at feature_asis. ',
-        q_file_id, p_ftname, num_items, num_items_del, num_items_ins,num_items-num_items_del+num_items_ins
+        E'From file_id=%s inserted type=%s\nin feature_asis %s items.\nRemoved %s duplicates and inserted %s aggregated duplicates.\nResulting in %s items at feature_asis. Invalid geometry type: %s items. ',
+        q_file_id, p_ftname, num_items, num_items_del, num_items_ins,num_items-num_items_del+num_items_ins,num_items_invalid_type
     );
   END IF;
 
