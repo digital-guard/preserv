@@ -880,7 +880,7 @@ CREATE or replace FUNCTION ingest.any_load(
         FROM scan
       ),
       b AS (
-        SELECT file_id, gid, properties, geom, (error_mask | ( B'00000' || (GeometryType(geom) NOT IN %s)::int::bit || (geom IS NULL)::int::bit || (NOT(CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) > 5 WHEN 'line' THEN ST_Length(geom,true) > 2 ELSE TRUE END))::int::bit || (ST_IsEmpty(geom))::int::bit || B'000' )) AS error_mask
+        SELECT file_id, gid, properties, geom, (error_mask | ( B'00000' || (GeometryType(geom) NOT IN %s)::int::bit || (geom IS NULL)::int::bit || (NOT(CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) > 5 WHEN 'line' THEN ST_Length(geom,true) > 2 ELSE FALSE END))::int::bit || (ST_IsEmpty(geom))::int::bit || B'000' )) AS error_mask
         FROM (
            SELECT file_id, gid,
                   properties,
@@ -896,6 +896,7 @@ CREATE or replace FUNCTION ingest.any_load(
 	          END AS geom,
 	          error_mask
            FROM a
+           WHERE bit_count(error_mask) = 0
            ) t
       ),
       stats AS (
@@ -909,7 +910,7 @@ CREATE or replace FUNCTION ingest.any_load(
             (COUNT(gid) filter (WHERE get_bit(error_mask,6) = 1))::bigint, -- null
             (COUNT(gid) filter (WHERE get_bit(error_mask,7) = 1))::bigint  -- invalid_type
             ]
-        FROM b
+        FROM ((SELECT * FROM b ) UNION (SELECT * FROM a WHERE gid NOT IN (SELECT gid FROM b) )) t
       ),
       ins_asis AS (
         INSERT INTO ingest.feature_asis
@@ -921,7 +922,7 @@ CREATE or replace FUNCTION ingest.any_load(
       ins_asis_discarded AS (
         INSERT INTO ingest.feature_asis_discarded
         SELECT file_id, gid, properties || jsonb_build_object('error_mask',error_mask), geom
-        FROM b t
+        FROM ((SELECT * FROM b ) UNION (SELECT * FROM a WHERE gid NOT IN (SELECT gid FROM b) )) t
 	    WHERE  bit_count(error_mask) <> 0 
         RETURNING 1
       )
@@ -1027,9 +1028,6 @@ CREATE or replace FUNCTION ingest.any_load(
             INSERT INTO ingest.feature_asis_discarded (file_id, feature_id, properties, geom)
             SELECT file_id, feature_id, ( properties || jsonb_build_object('error_mask', error_mask) ) AS properties, geom
             FROM dup_mask t
-            --ON CONFLICT (file_id, feature_id)
-            --DO UPDATE 
-            --SET properties = ingest.feature_asis_discarded.properties || jsonb_build_object('error_mask', B'000100000000' | (ingest.feature_asis_discarded.properties->>'error_mask')::bit(12))
             RETURNING 1
         ),
         del AS (
@@ -1361,7 +1359,8 @@ BEGIN
   SELECT 
         t.ghs,
         t.row_id::int AS gid, 
-        CASE p_ftname WHEN 'parcel' THEN jsonb_strip_nulls(jsonb_build_object('address',address, 'error_code', error_code, 'bytes',length(St_asGeoJson(t.geom)))) ELSE jsonb_strip_nulls(jsonb_build_object('address',address, 'error_code', error_code)) END AS info,
+        CASE p_ftname
+        WHEN 'parcel' THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'bytes',length(St_asGeoJson(t.geom))) || address ) ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code) || address) END AS info,
         t.geom
   FROM (
       SELECT file_id, fa.geom,
@@ -1379,11 +1378,15 @@ BEGIN
         --ROW_NUMBER() OVER(ORDER BY  properties->>'address')) 
         -- or (properties->>'via_name')||'#'||properties->>'house_number'
       END AS row_id,
-      CASE WHEN (properties->>'is_agg')::boolean THEN TRUE END AS error_code,
+      CASE WHEN (properties->>'is_agg')::boolean THEN 100 END AS error_code,
       COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
       properties->>'via_name' AS via_name,
       properties->>'house_number' AS house_number,
-      COALESCE((properties->>'via_name') || ', ' || (properties->>'house_number'), properties->>'via_name', properties->>'house_number') AS address,
+      --COALESCE((properties->>'via_name') || ', ' || (properties->>'house_number'), properties->>'via_name', properties->>'house_number') AS address,
+      CASE WHEN (properties->>'via_name' IS NULL) OR (properties->>'house_number' IS NULL) 
+      THEN jsonb_strip_nulls(jsonb_build_object('via_name',properties->>'via_name', 'house_number', properties->>'house_number'))
+      ELSE jsonb_build_object('address',(properties->>'via_name') || ', ' || (properties->>'house_number'))
+      END AS address,
       fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
