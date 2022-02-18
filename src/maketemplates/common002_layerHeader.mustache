@@ -10,7 +10,9 @@
 	@echo "Run with tmux and sudo! (DANGER: seems not idempotent on psql)"
 	@whoami
 	@echo "Above user is root? If not, you have permissions for all paths?"
+ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+endif
 {{#isCsv}}
 	psql $(pg_uri_db) -c "DROP FOREIGN TABLE IF EXISTS {{tabname}}"
 {{/isCsv}}
