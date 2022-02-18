@@ -1825,7 +1825,13 @@ BEGIN
                 dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb(5));
             END CASE;
         END IF;
-        
+
+        -- buffer_type default: 1 small buffer. 0 no buffer, 2 big buffer.
+        IF NOT dict->'layers'->key?'buffer_type'
+        THEN
+            dict := jsonb_set( dict, array['layers',key,'buffer_type'], to_jsonb(1));
+        END IF;
+
         codec_desc := codec_desc0;
         codec_desc_default := codec_desc_default0;
         codec_desc_sobre := codec_desc_sobre0;
