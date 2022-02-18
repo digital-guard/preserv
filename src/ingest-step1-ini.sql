@@ -1078,7 +1078,7 @@ CREATE or replace FUNCTION ingest.any_load(
     SET proc_step=2,   -- if insert process occurs after q_query.
         lineage = lineage || ingest.feature_asis_assign(q_file_id) || 
         jsonb_build_object('statistics',(stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) )
-       
+
     WHERE id=q_file_id;
   END IF;
 
