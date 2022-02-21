@@ -219,6 +219,20 @@ COMMENT ON VIEW ingest.vw01full_jurisdiction_geom
   IS 'Add geom to ingest.fdw_jurisdiction.'
 ;
 
+CREATE OR REPLACE FUNCTION ingest.buffer_geom(geom geometry, buffer_type integer )
+RETURNS geometry AS $f$
+    SELECT
+        CASE
+        WHEN buffer_type=0 THEN geom                   -- no buffer
+        WHEN buffer_type=1 THEN ST_Buffer(geom,0.0005) --  ~50m
+        WHEN buffer_type=2 THEN ST_Buffer(geom,0.005)  -- ~500m
+        ELSE geom                                      -- no buffer
+        END
+$f$ LANGUAGE SQL IMMUTABLE;
+COMMENT ON FUNCTION ingest.buffer_geom(geometry,integer)
+  IS 'Add standardized buffer to geometries.'
+;
+
 CREATE FOREIGN TABLE ingest.fdw_donor (
  id integer,
  country_id integer,
@@ -819,6 +833,7 @@ CREATE or replace FUNCTION ingest.any_load(
     p_pck_fileref_sha256 text,
     p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
     p_id_profile_params int DEFAULT 1,
+    buffer_type int DEFAULT 1,
     p_geom_name text DEFAULT 'geom',
     p_to4326 boolean DEFAULT true -- on true converts SRID to 4326 .
 ) RETURNS text AS $f$
@@ -874,7 +889,7 @@ CREATE or replace FUNCTION ingest.any_load(
             FROM %s %s
           ) t
       ),
-      mask AS (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
+      mask AS (SELECT ingest.buffer_geom(geom,%s) FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
       a AS (
         SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))))::int::bit ) AS error_mask
         FROM scan
@@ -936,6 +951,7 @@ CREATE or replace FUNCTION ingest.any_load(
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
+    buffer_type
     p_pck_id,
     p_pck_id,
         (CASE (SELECT (ingest.donated_PackComponent_geomtype(q_file_id))[1]) 
@@ -1090,7 +1106,7 @@ CREATE or replace FUNCTION ingest.any_load(
   RETURN msg_ret;
   END;
 $f$ LANGUAGE PLpgSQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],int,text,boolean)
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],int,int,text,boolean)
   IS 'Load (into ingest.feature_asis) shapefile or any other non-GeoJSON, of a separated table.'
 ;
 -- posto ipiranga logo abaixo..  sorvetorua.
@@ -1105,12 +1121,13 @@ CREATE or replace FUNCTION ingest.any_load(
     p_pck_fileref_sha256 text,   -- 6
     p_tabcols text[] DEFAULT NULL,   -- 7. lista de atributos, ou só geometria
     p_id_profile_params int DEFAULT 1,
+    buffer_type int DEFAULT 1,
     p_geom_name text DEFAULT 'geom', -- 8
     p_to4326 boolean DEFAULT true    -- 9. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9,$10)
+   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9, $10, $11)
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],int,text,boolean)
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],int,int,text,boolean)
   IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
 ;
 
@@ -1483,7 +1500,8 @@ $f$ language SQL VOLATILE; --fim p2
 CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
-	p_fileref text        --
+	p_fileref text,       --
+	p_buffer_type int DEFAULT 1
 ) RETURNS text  AS $f$
 
   DELETE FROM ingest.publicating_geojsons_p2distrib;
@@ -1611,11 +1629,12 @@ $f$ language PLpgSQL; -- fim p4
 CREATE FUNCTION ingest.publicating_geojsons(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
-	p_fileref text
+	p_fileref text,
+	p_buffer_type int DEFAULT 1
 ) RETURNS text  AS $f$
   SELECT ingest.publicating_geojsons_p1($1,$2);
   SELECT ingest.publicating_geojsons_p2($1,$2,(SELECT CASE geomtype WHEN 'point' THEN false ELSE true END FROM ingest.vw03full_layer_file WHERE id=$1));
-  SELECT ingest.publicating_geojsons_p3($1,$2,$3);
+  SELECT ingest.publicating_geojsons_p3($1,$2,$3,$4);
   SELECT ingest.publicating_geojsons_p4($1,$2,$3);
   SELECT 'fim';
 $f$ language SQL VOLATILE; -- need be a sequential PLpgSQL to neatly COMMIT?
@@ -1625,11 +1644,12 @@ $f$ language SQL VOLATILE; -- need be a sequential PLpgSQL to neatly COMMIT?
 CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_ftname text,       -- e.g. 'geoaddress'
 	p_isolabel_ext text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
-	p_fileref text       -- e.g. 
+	p_fileref text,      -- e.g. 
+	p_buffer_type int DEFAULT 1
 ) RETURNS text AS $wrap$
-  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1)),$2,$3);
+  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1)),$2,$3,$4);
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text)
+COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int)
   IS 'Wrap to ingest.publicating_geojsons'
 ;
 -- SELECT ingest.publicating_geojsons('geoaddress','BR-MG-BeloHorizonte','folder');
@@ -1826,7 +1846,7 @@ BEGIN
             END CASE;
         END IF;
 
-        -- buffer_type default: 1 small buffer. 0 no buffer, 2 big buffer.
+        -- buffer_type default: 1 small buffer (50 m). 0 no buffer, 2 big buffer (500 m).
         IF NOT dict->'layers'->key?'buffer_type'
         THEN
             dict := jsonb_set( dict, array['layers',key,'buffer_type'], to_jsonb(1));

@@ -6,7 +6,7 @@ publicating_geojsons_{{layername_root}}:
 	mkdir -m777 -p $(folder)
 	@rm -rf $(folder)/*.geojson
 	@echo "--- Gerando arquivos de pontos em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)');"
+	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)','{{buffer_type}}');"
 
 	@echo "--- Gerando geomosaico em $(folder) ---"
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
