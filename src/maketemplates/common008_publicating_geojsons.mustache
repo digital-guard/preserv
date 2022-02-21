@@ -33,7 +33,7 @@ publicating_geojsons_{{layername_root}}:
 	LEFT JOIN $(view) r \
 	ON t.geom = r.geom ;"
 {{/isGeoaddress}}
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)_adjusted','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''ghs_items'')::int AS ghs_items, (info->''ghs_len'')::int AS ghs_len, (info->''ghs_itemsDensity'')::float AS ghs_itemsDensity, (info->''ghs_area'')::float AS ghs_area, {{^isGeoaddress}}(info->''size'') AS size, (info->''size_unit'') AS size_unit, (info->''size_unitDensity'') AS size_unitDensity, {{/isGeoaddress}}(info->''bytes'') AS ghs_bytes', NULL, NULL, $(pretty_opt), 5);"
+	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)_adjusted','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''ghs_items'')::int AS ghs_items, (info->''ghs_len'')::int AS ghs_len, (info->''ghs_itemsDensity'')::float AS ghs_itemsDensity, (info->''ghs_area'')::float AS ghs_area, {{^isGeoaddress}}(info->''size'') AS size, (info->''size_unit'') AS size_unit, (info->''size_unitDensity'') AS size_unitDensity, 'ghsval_unit','ghs_bytes',{{/isGeoaddress}}{{#isGeoaddress}}'ghsval_unit','ghs_items',{{/isGeoaddress}}(info->''ghs_bytes'') AS ghs_bytes', NULL, NULL, $(pretty_opt), 5);"
 {{^isGeoaddress}}
 	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent \
 	SET proc_step=6, kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(ghs, (info->>'ghs_items')::int) FROM $(view)_adjusted)) \
