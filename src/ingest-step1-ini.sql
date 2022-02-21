@@ -895,6 +895,7 @@ CREATE or replace FUNCTION ingest.any_load(
         FROM scan
       ),
       b AS (
+        (
         SELECT file_id, gid, properties, geom, (error_mask | ( B'00000' || (GeometryType(geom) NOT IN %s)::int::bit || (geom IS NULL)::int::bit || (CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) < 5 WHEN 'line' THEN ST_Length(geom,true) < 2 ELSE FALSE END)::int::bit || (ST_IsEmpty(geom))::int::bit || B'000' )) AS error_mask
         FROM (
            SELECT file_id, gid,
@@ -913,31 +914,36 @@ CREATE or replace FUNCTION ingest.any_load(
            FROM a
            WHERE bit_count(error_mask) = 0
            ) t
+        )
+        UNION
+        (
+            SELECT * FROM a WHERE bit_count(error_mask) <> 0
+        )
       ),
       stats AS (
       SELECT ARRAY [
-            (SELECT COUNT(gid) FROM scan)::bigint,
-            (COUNT(gid) filter (WHERE get_bit(error_mask,1) = 1))::bigint, -- intersects
-            (COUNT(gid) filter (WHERE get_bit(error_mask,2) = 1))::bigint, -- invalid
-            (COUNT(gid) filter (WHERE get_bit(error_mask,3) = 1))::bigint, -- simple
-            (COUNT(gid) filter (WHERE get_bit(error_mask,4) = 1))::bigint, -- empty
-            (COUNT(gid) filter (WHERE get_bit(error_mask,5) = 1))::bigint, -- small
-            (COUNT(gid) filter (WHERE get_bit(error_mask,6) = 1))::bigint, -- null
-            (COUNT(gid) filter (WHERE get_bit(error_mask,7) = 1))::bigint  -- invalid_type
+            (SELECT COUNT(*) FROM scan)::bigint,
+            (COUNT(*) filter (WHERE get_bit(error_mask,11) = 1))::bigint, -- intersects
+            (COUNT(*) filter (WHERE get_bit(error_mask,10) = 1))::bigint, -- invalid
+            (COUNT(*) filter (WHERE get_bit(error_mask, 9) = 1))::bigint, -- simple
+            (COUNT(*) filter (WHERE get_bit(error_mask, 8) = 1))::bigint, -- empty
+            (COUNT(*) filter (WHERE get_bit(error_mask, 7) = 1))::bigint, -- small
+            (COUNT(*) filter (WHERE get_bit(error_mask, 6) = 1))::bigint, -- null
+            (COUNT(*) filter (WHERE get_bit(error_mask, 5) = 1))::bigint  -- invalid_type
             ]
-        FROM ((SELECT * FROM b ) UNION (SELECT * FROM a WHERE gid NOT IN (SELECT gid FROM b) )) t
+        FROM b
       ),
       ins_asis AS (
         INSERT INTO ingest.feature_asis
         SELECT file_id, gid, properties, geom
-        FROM b t
+        FROM b
 	    WHERE  bit_count(error_mask) = 0 
         RETURNING 1
       ),
       ins_asis_discarded AS (
         INSERT INTO ingest.feature_asis_discarded
         SELECT file_id, gid, properties || jsonb_build_object('error_mask',error_mask), geom
-        FROM ((SELECT * FROM b ) UNION (SELECT * FROM a WHERE gid NOT IN (SELECT gid FROM b) )) t
+        FROM b
 	    WHERE  bit_count(error_mask) <> 0 
         RETURNING 1
       )
@@ -996,7 +1002,7 @@ CREATE or replace FUNCTION ingest.any_load(
     num_items := stats[9];
     msg_ret := format(
         E'From file_id=%s inserted type=%s.\nStatistics:\n
-        %s',
+        %s\n',
         q_file_id, p_ftname, format(
         E'Originals: %s items.\n
         Not Intersecs: %s items.\n
