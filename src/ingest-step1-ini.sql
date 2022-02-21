@@ -951,7 +951,7 @@ CREATE or replace FUNCTION ingest.any_load(
     CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
-    buffer_type
+    buffer_type,
     p_pck_id,
     p_pck_id,
         (CASE (SELECT (ingest.donated_PackComponent_geomtype(q_file_id))[1]) 
