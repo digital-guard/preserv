@@ -224,8 +224,8 @@ RETURNS geometry AS $f$
     SELECT
         CASE
         WHEN buffer_type=0 THEN geom                   -- no buffer
-        WHEN buffer_type=1 THEN ST_Buffer(geom,0.0005) --  ~50m
-        WHEN buffer_type=2 THEN ST_Buffer(geom,0.005)  -- ~500m
+        WHEN buffer_type=1 THEN ST_Buffer(geom,0.001) --  ~100m
+        WHEN buffer_type=2 THEN ST_Buffer(geom,0.05)   -- ~5000m
         ELSE geom                                      -- no buffer
         END
 $f$ LANGUAGE SQL IMMUTABLE;
