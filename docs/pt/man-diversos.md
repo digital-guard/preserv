@@ -29,7 +29,7 @@ Dado um conjunto de geometrias:
 
 2. Para as geometrias onde [ST_IsSimple](https://postgis.net/docs/ST_IsSimple.html), [ST_IsValid](https://postgis.net/docs/ST_IsValid.html) e [ST_Intersects](https://postgis.net/docs/ST_Intersects.html) [^1] são verdadeiras, são aplicadas as funções [ST_Intersection](https://postgis.net/docs/ST_Intersection.html) [^1], [ST_ReducePrecision](https://postgis.net/docs/ST_ReducePrecision.html) [^2] e, para geometrias diferentes de ponto, [ST_SimplifyPreserveTopology](https://postgis.net/docs/ST_SimplifyPreserveTopology.html) [^3].
 
-3. São ingeridas, em `feature_asis`, as geometrias que não são nulas (IS NOT NULL) e que não são vazias, utilizando [ST_IsEmpty](https://postgis.net/docs/ST_IsEmpty.html). Além disso, são ingeridos apenas polígonos com [ST_Area](https://postgis.net/docs/ST_Area.html) > 5 e linhas com [ST_Length](https://postgis.net/docs/ST_Length.html) > 2.
+3. São ingeridas, em `feature_asis`, as geometrias que não são nulas (IS NOT NULL) e que não são vazias, utilizando [ST_IsEmpty](https://postgis.net/docs/ST_IsEmpty.html). Além disso, são ingeridos apenas polígonos com [ST_Area](https://postgis.net/docs/ST_Area.html) >= 5 e linhas com [ST_Length](https://postgis.net/docs/ST_Length.html) >= 2.
 
 4. Às geometrias ingeridas, independentemente do tipo, são aplicadas as funções [ST_PointOnSurface](https://postgis.net/docs/ST_PointOnSurface.html) e [ST_Geohash](https://postgis.net/docs/ST_GeoHash.html) com  `maxchars=9`, para obter _geohash_ com 9 caracteres.
 
@@ -41,9 +41,11 @@ Dado um conjunto de geometrias:
       5.4. `geom_cmp_frechet`: array contendo o resultado de [ST_FrechetDistance](https://postgis.net/docs/ST_FrechetDistance.html) entre o representante e os agregados. Apenas para geometrias do tipo linha;
       5.5. `geom_cmp_intersec`: array contendo medida de similaridade [^4] entre polígono represente e os agregados. Apenas para geometrias do tipo polígono.
 
+6. Geometrias que não atendam algum dos critérios acima possuem `error_mask` com algum bit diferente de zero. Essas geometrias ficam disponíveis em `feature_asis_discarded`, tabela idêntica à `feature_asis`, execto por o jsonb `properties` possuir a chave `error_mask` indicando os critérios não atendidos.
+
 Esse processo é realizado pela função `any_load` no _schema_ `ingest`.
 
-O processo de ingestão utiliza uma sequencia de 12 bits para indicar erros encontrados.
+O processo de ingestão utiliza uma sequencia de 12 bits, em `error_mask`, para indicar erros encontrados.
 
 No inicio do processo a sequencia de bits de um item é:
 
@@ -61,7 +63,7 @@ Dá direita para esquerda, um bit igual a 1 representa:
 - Item duplicado. Dois items são duplicados se seus geohash de tamanho 9 são iguais;
 - Os 3 bits mais à esquerda estão reservados para eventuais usos futuros e, por hora, são sempre zero.
 
-[^1]: com a geometria da respectiva jurisdição, obtida do OpenStreetMap.
+[^1]: com a geometria da respectiva jurisdição, obtida do OpenStreetMap, com um `buffer_type` = 1 por default.
 [^2]: sendo utilizado  `gridsize = 0.000001`, para precisão ~1m, conforme [Decimal_degrees#Precision](https://en.wikipedia.org/wiki/Decimal_degrees#Precision).
 [^3]: sendo utilizado `tolerance = 0.00000001`, com a intensão do algoritmo [Douglas-Peucker](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) remover apenas pontos colineares.
 [^4]: As medidas de similaridade são calculadas pela função `feature_asis_similarity`no _schema_ `ingest`.
