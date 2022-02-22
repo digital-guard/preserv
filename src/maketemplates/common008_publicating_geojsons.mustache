@@ -5,7 +5,7 @@ publicating_geojsons_{{layername_root}}: view       = vw{{file}}_{{tabname}}_pub
 publicating_geojsons_{{layername_root}}:
 	mkdir -m777 -p $(folder)
 	@rm -rf $(folder)/*.geojson
-	@echo "--- Gerando arquivos de pontos em $(folder) ---"
+	@echo "--- Gerando arquivos em $(folder) ---"
 	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)','{{buffer_type}}');"
 
 	@echo "--- Gerando geomosaico em $(folder) ---"

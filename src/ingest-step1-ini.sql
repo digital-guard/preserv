@@ -889,7 +889,7 @@ CREATE or replace FUNCTION ingest.any_load(
             FROM %s %s
           ) t
       ),
-      mask AS (SELECT ingest.buffer_geom(geom,%s) FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
+      mask AS (SELECT ingest.buffer_geom(geom,%s) AS geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
       a AS (
         SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM mask))))::int::bit ) AS error_mask
         FROM scan
