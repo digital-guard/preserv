@@ -1,6 +1,8 @@
 	@echo
 	@echo "------------------------------------------"
 	@echo "------ Join entre {{layer}} e {{cadLayer}} ------"
+ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+endif
 	psql $(pg_uri_db) -c "SELECT ingest.join('{{layer}}','{{{layerColumn}}}','{{layerFile}}','{{cadLayer}}','{{{cadLayerColumn}}}','{{cadLayerFile}}')"
 	@echo "Confira os resultados na tabela ingest.feature_asis".

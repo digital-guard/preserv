@@ -416,6 +416,34 @@ CREATE VIEW ingest.vw03full_layer_file AS
   ORDER BY j.isolabel_ext
 ;
 
+DROP VIEW IF EXISTS ingest.vw03publication CASCADE;
+CREATE VIEW ingest.vw03publication AS
+  SELECT j.isolabel_ext, dn.legalname, dn.vat_id, dn.url, dn.wikidata_id, 
+  INITCAP(pt.user_resp) AS user_resp, 
+  ft.info->>'class_ftname' as class_ftname, 
+  ft.info->>'shortname_pt' as shortname,
+  ft.info->>'description_pt' as description,
+  pf.hashedfname, 
+  substring(pf.hashedfname, '^([0-9a-f]{64,64})\.[a-z0-9]+$') AS hashedfname_without_ext, 
+  substring(pf.hashedfname, '^([0-9a-f]{7}).+$') || '...' || substring(pf.hashedfname, '^.+\.([a-z0-9]+)$') AS hashedfname_7_ext,
+  regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS path_preserv,
+  to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS pack_number,
+  'preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS path_cutgeo
+  --, dn.kx_scope_label, pc.*, ft.ftname, ft.geomtype, ft.need_join, ft.description, ft.info AS ft_info
+  FROM ingest.donated_PackComponent pc
+  INNER JOIN ingest.vw01info_feature_type ft
+    ON pc.ftid=ft.ftid
+  LEFT JOIN ingest.fdw_donated_packfilevers pf
+    ON pc.packvers_id=pf.id
+  LEFT JOIN ingest.fdw_donated_PackTpl pt
+    ON pf.pack_id=pt.id
+  LEFT JOIN ingest.fdw_donor dn
+    ON pt.donor_id=dn.id
+  LEFT JOIN ingest.vw01full_jurisdiction_geom j
+    ON dn.scope_osm_id=j.osm_id
+  ORDER BY j.isolabel_ext
+;
+
 CREATE VIEW ingest.vw03dup_feature_asis AS
  SELECT v.ftname, v.geomtype, t.*, round(100.0*n_ghs/n::float, 2)::text || '%' as n_ghs_perc
  FROM (
@@ -912,7 +940,7 @@ CREATE or replace FUNCTION ingest.any_load(
 	          END AS geom,
 	          error_mask
            FROM a
-           WHERE bit_count(error_mask) = 0
+           WHERE bit_count(error_mask) = 0 
            ) t
         )
         UNION
@@ -937,7 +965,7 @@ CREATE or replace FUNCTION ingest.any_load(
         INSERT INTO ingest.feature_asis
         SELECT file_id, gid, properties, geom
         FROM b
-	    WHERE  bit_count(error_mask) = 0 
+	    WHERE  bit_count(error_mask) = 0
         RETURNING 1
       ),
       ins_asis_discarded AS (

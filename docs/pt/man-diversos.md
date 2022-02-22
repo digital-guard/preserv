@@ -72,9 +72,11 @@ Dá direita para esquerda, um bit igual a 1 representa:
 
 Para rodar um _target_ sem serem solicitadas confirmações do usuário, utilizar `nointeraction=y`.
 
-Por exemplo, `make block nointeraction=y` faz a ingestão dos dados sem solicitar confirmações do usuário.
+Por exemplo, `make block nointeraction=y` faz a ingestão dos dados sem solicitar confirmações do usuário.[^5]
 
 Essa variável só produz efeito em _target_ `layer` ou `publicating_geojsons_layer`. Para os demais, não.
+
+[^5]: _Layer_ com `method` que utiliza o _ogr2ogr_ via docker pode solicitar a senha do usuário.
 
 ## Buffer em geometrias jurisdicionais:
 
