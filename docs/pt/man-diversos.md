@@ -65,3 +65,11 @@ Dá direita para esquerda, um bit igual a 1 representa:
 [^2]: sendo utilizado  `gridsize = 0.000001`, para precisão ~1m, conforme [Decimal_degrees#Precision](https://en.wikipedia.org/wiki/Decimal_degrees#Precision).
 [^3]: sendo utilizado `tolerance = 0.00000001`, com a intensão do algoritmo [Douglas-Peucker](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) remover apenas pontos colineares.
 [^4]: As medidas de similaridade são calculadas pela função `feature_asis_similarity`no _schema_ `ingest`.
+
+## make layer sem interação com usuário:
+
+Para rodar um _target_ sem serem solicitadas confirmações do usuário, utilizar `nointeraction=y`.
+
+Por exemplo, `make block nointeraction=y` faz a ingestão dos dados sem solicitar confirmações do usuário.
+
+Essa variável só produz efeito em _target_ `layer` ou `publicating_geojsons_layer`. Para os demais, não.
