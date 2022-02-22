@@ -43,6 +43,23 @@ Dado um conjunto de geometrias:
 
 Esse processo é realizado pela função `any_load` no _schema_ `ingest`.
 
+O processo de ingestão utiliza uma sequencia de 12 bits para indicar erros encontrados.
+
+No inicio do processo a sequencia de bits de um item é:
+
+`error_mask=000000000000`
+
+Dá direita para esquerda, um bit igual a 1 representa:
+
+- Item não intersecta a geometria da jurisdição;
+- Item não tem geometria válida;
+- Item não tem geometria simples;
+- Item tem geometria vazia;
+- Item tem área ou comprimeto menor que 5 ou 2, respectivamente;
+- Item tem geometria nula;
+- Item tem geometria com tipo diferente do estabelecido para o layer em feature_type;
+- Item duplicado. Dois items são duplicados se seus geohash de tamanho 9 são iguais;
+- Os 3 bits mais à esquerda estão reservados para eventuais usos futuros e, por hora, são sempre zero.
 
 [^1]: com a geometria da respectiva jurisdição, obtida do OpenStreetMap.
 [^2]: sendo utilizado  `gridsize = 0.000001`, para precisão ~1m, conforme [Decimal_degrees#Precision](https://en.wikipedia.org/wiki/Decimal_degrees#Precision).
