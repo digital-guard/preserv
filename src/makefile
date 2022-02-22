@@ -149,6 +149,9 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
 
+load_optim_csv:
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step2-ini.sql
+
 build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=name
 	@echo "DROP FOREIGN TABLE IF EXISTS $(fdwName);"
 	@echo "CREATE FOREIGN TABLE $(fdwName) ("
