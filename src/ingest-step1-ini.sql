@@ -891,7 +891,7 @@ CREATE or replace FUNCTION ingest.any_load(
       ),
       mask AS (SELECT ingest.buffer_geom(geom,%s) FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
       a AS (
-        SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s))))::int::bit ) AS error_mask
+        SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM mask))))::int::bit ) AS error_mask
         FROM scan
       ),
       b AS (
@@ -958,7 +958,6 @@ CREATE or replace FUNCTION ingest.any_load(
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
     buffer_type,
-    p_pck_id,
     p_pck_id,
         (CASE (SELECT (ingest.donated_PackComponent_geomtype(q_file_id))[1]) 
         WHEN 'point' THEN $$('POINT')$$ 

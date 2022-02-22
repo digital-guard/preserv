@@ -75,3 +75,12 @@ Para rodar um _target_ sem serem solicitadas confirmações do usuário, utiliza
 Por exemplo, `make block nointeraction=y` faz a ingestão dos dados sem solicitar confirmações do usuário.
 
 Essa variável só produz efeito em _target_ `layer` ou `publicating_geojsons_layer`. Para os demais, não.
+
+## Buffer em geometrias jurisdicionais:
+
+Foi adotada a aplicação de um buffer, por _default_, nas geometrias de jurisdição. Atualmente essa valor é de 50 metros.
+Esse comportamento pode ser alterado utilizando a chave buffer_type em layer do make_conf. Os valores possíveis para essa chave são:
+
+- `buffer_type: 1`, valor default, aplica um buffer de aproximadamente 50 metros. Não é necessário informá-lo no _make_conf.yaml_. É inserido automaticamente pela função `jsonb_mustache_prepare` caso não seja informado. 
+- `buffer_type: 0`, sem buffer. Para utilizá-lo, deve-se informá-lo no _make_conf.yaml_
+- `buffer_type: 2`, aplica um buffer de aproximadamente 500 metros. Para utilizá-lo, deve-se informá-lo no respectivo layer do _make_conf.yaml_
