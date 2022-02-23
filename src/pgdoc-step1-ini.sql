@@ -28,18 +28,18 @@ CREATE TABLE pgdoc.assert (
 -- -- -- -- -- --
 -- -- Functions
 
-
 CREATE or replace FUNCTION pgdoc.doc_UDF_show_simple_asJSONb(
     p_schema_name text,    -- schema choice
     p_regex_or_like text,   -- name filter
     p_include_udf_pubid boolean DEFAULT false
-) RETURNS jsonb AS $f$
+) RETURNS SETOF jsonb AS $f$
 
   SELECT to_jsonb(t)
   FROM  (
     SELECT p_include_udf_pubid AS include_udf_pubid,
-           u.*,
-           array_to_string(arguments_simplified,', ') as str_args,
+           u.*, -- reduzir, eliminando arguments
+           array_to_string(arguments_simplified,', ') AS str_args,
+           CASE WHEN arguments!=array_to_string(arguments_simplified,', ') THEN arguments ELSE NULL END AS str_fullargs,
            a.examples
            -- CASE WHEN a.udf_pubid IS NOT NULL THEN '<p>'||queries_xhtml||'</p>' ELSE '' END AS if_examples
     FROM doc_UDF_show_simple(p_schema_name,p_regex_or_like) u
@@ -60,10 +60,11 @@ CREATE or replace FUNCTION pgdoc.doc_UDF_show_simple_asXHTML(
     p_regex_or_like text,   -- name filter
     p_include_udf_pubid boolean DEFAULT false
 ) RETURNS xml AS $f$
+
   SELECT xmlelement(
            name table,
            xmlattributes('pgdoc_tab' as class),
-           '<tr><td> Function / Description / Example </td></tr>'::xml,
+           concat('<tr>', CASE WHEN p_include_udf_pubid THEN '<td> ID </td>' ELSE '' END, '<td> Function / Description / Example </td></tr>')::xml,
     
            xmlagg( jsonb_mustache_render(
               $$<tr>
@@ -71,19 +72,21 @@ CREATE or replace FUNCTION pgdoc.doc_UDF_show_simple_asXHTML(
                 <td>
                   <b><code>{{name}}(</code></b>{{#str_args}}<i>{{.}}</i>{{/str_args}}<b><code>)</code> → </b> <i>{{return_type}}</i>
                   {{#comment}}  <p class="pgdoc_comment">{{.}}</p>  {{/comment}}
-                  {{#arguments}}  <p class="pgdoc_args">{{.}}</p>  {{/arguments}}
+                  {{#str_fullargs}}  <p class="pgdoc_args">Argument names: <i>{{.}}</i></p>  {{/str_fullargs}}
                   {{#examples}}  <p class="pgdoc_examples">{{{.}}}</p>  {{/examples}}
                 </td>
               </tr>$$,
              
-              pgdoc.doc_UDF_show_simple_asJSONb(p_schema_name, p_regex_or_like, p_include_udf_pubid)
+              template_input
              
            )::xml )
     
-         );
+         )
+     FROM pgdoc.doc_UDF_show_simple_asJSONb(p_schema_name,p_regex_or_like,p_include_udf_pubid) t(template_input)
+     
 $f$  LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION pgdoc.doc_UDF_show_simple_asXHTML
   IS 'Generates a XHTML table with standard UFD documentation.'
 ;
 -- SELECT volat_file_write( '/tmp/lix.md', pgdoc.doc_UDF_show_simple_asXHTML( 'public', '^(iif|round|round|minutes|trunc_bin)$', false)::text );
--- SELECT xml_pretty( pgdoc.doc_UDF_show_simple_asXHTML( 'public', '^(iif|round|round|minutes|trunc_bin)$', true)  )  );
+-- SELECT xml_pretty( pgdoc.doc_UDF_show_simple_asXHTML( 'public', '^(iif|round|round|minutes|trunc_bin)$', true)  );
