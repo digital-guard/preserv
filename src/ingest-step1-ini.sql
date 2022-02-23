@@ -917,12 +917,17 @@ CREATE or replace FUNCTION ingest.any_load(
             FROM %s %s
           ) t
       ),
-      mask AS (SELECT ingest.buffer_geom(geom,%s) AS geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
       a AS (
-        SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM mask))))::int::bit ) AS error_mask
+        SELECT *
         FROM scan
+        WHERE ST_IsClosed(geom) = TRUE
       ),
+      mask AS (SELECT ingest.buffer_geom(geom,%s) AS geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
       b AS (
+        SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM mask))))::int::bit ) AS error_mask
+        FROM a
+      ),
+      c AS (
         (
         SELECT file_id, gid, properties, geom, (error_mask | ( B'00000' || (GeometryType(geom) NOT IN %s)::int::bit || (geom IS NULL)::int::bit || (CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) < 5 WHEN 'line' THEN ST_Length(geom,true) < 2 ELSE FALSE END)::int::bit || (ST_IsEmpty(geom))::int::bit || B'000' )) AS error_mask
         FROM (
@@ -939,13 +944,17 @@ CREATE or replace FUNCTION ingest.any_load(
 		    )
 	          END AS geom,
 	          error_mask
-           FROM a
+           FROM b
            WHERE bit_count(error_mask) = 0 
            ) t
         )
         UNION
         (
-            SELECT * FROM a WHERE bit_count(error_mask) <> 0
+            SELECT * FROM b WHERE bit_count(error_mask) <> 0
+        )
+        UNION
+        (
+            SELECT file_id, gid, properties, ST_MakeValid(geom) AS geom, B'000100000000' AS error_mask FROM scan WHERE ST_IsClosed(geom) = FALSE
         )
       ),
       stats AS (
@@ -957,21 +966,23 @@ CREATE or replace FUNCTION ingest.any_load(
             (COUNT(*) filter (WHERE get_bit(error_mask, 8) = 1))::bigint, -- empty
             (COUNT(*) filter (WHERE get_bit(error_mask, 7) = 1))::bigint, -- small
             (COUNT(*) filter (WHERE get_bit(error_mask, 6) = 1))::bigint, -- null
-            (COUNT(*) filter (WHERE get_bit(error_mask, 5) = 1))::bigint  -- invalid_type
+            (COUNT(*) filter (WHERE get_bit(error_mask, 5) = 1))::bigint, -- invalid_type
+                                                                          -- bit 4 é reservado para duplicados
+            (COUNT(*) filter (WHERE get_bit(error_mask, 3) = 1))::bigint  -- is_closed
             ]
-        FROM b
+        FROM c
       ),
       ins_asis AS (
         INSERT INTO ingest.feature_asis
         SELECT file_id, gid, properties, geom
-        FROM b
+        FROM c
 	    WHERE  bit_count(error_mask) = 0
         RETURNING 1
       ),
       ins_asis_discarded AS (
         INSERT INTO ingest.feature_asis_discarded
         SELECT file_id, gid, properties || jsonb_build_object('error_mask',error_mask), geom
-        FROM b
+        FROM c
 	    WHERE  bit_count(error_mask) <> 0 
         RETURNING 1
       )
@@ -1026,7 +1037,7 @@ CREATE or replace FUNCTION ingest.any_load(
     msg_ret := format(E'From file_id=%s inserted type=%s\nin cadastral_asis %s items.', q_file_id, p_ftname, num_items);
   ELSE
     EXECUTE q_query INTO stats;
-    num_items := stats[9];
+    num_items := stats[10];
     msg_ret := format(
         E'From file_id=%s inserted type=%s.\nStatistics:\n
         %s\n',
@@ -1039,6 +1050,7 @@ CREATE or replace FUNCTION ingest.any_load(
         Small: %s items.\n
         Null: %s items.\n
         Invalid geometry type: %s items.\n
+        Not closed: %s items.\n
         Inserted feature_asis: %s items.\n
         Inserted feature_asis_discarded: %s items.\n',
         VARIADIC stats
@@ -1058,7 +1070,7 @@ CREATE or replace FUNCTION ingest.any_load(
             ORDER BY 1,2
         ),
         dup_mask AS (
-        SELECT *, B'00010000000' AS error_mask
+        SELECT *, B'000010000000' AS error_mask
         FROM ingest.feature_asis
         WHERE (file_id, kx_ghs9) IN ( SELECT file_id, kx_ghs9 FROM dup)
         ),
@@ -1110,6 +1122,7 @@ CREATE or replace FUNCTION ingest.any_load(
         Small: %s items.\n
         Null: %s items.\n
         Invalid geometry type: %s items.\n
+        Not closed: %s items.\n
         Inserted in feature_asis: %s items.\n
         Inserted in feature_asis_discarded: %s items.\n\n
         After deduplication:\n
