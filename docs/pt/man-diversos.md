@@ -27,13 +27,15 @@ Dado um conjunto de geometrias:
 
 1. Inicialmente se garante que [SRID](https://en.wikipedia.org/wiki/Spatial_reference_system#Identifiers) das geometrias será 4326.
 
-2. Para as geometrias onde [ST_IsSimple](https://postgis.net/docs/ST_IsSimple.html), [ST_IsValid](https://postgis.net/docs/ST_IsValid.html) e [ST_Intersects](https://postgis.net/docs/ST_Intersects.html) [^1] são verdadeiras, são aplicadas as funções [ST_Intersection](https://postgis.net/docs/ST_Intersection.html) [^1], [ST_ReducePrecision](https://postgis.net/docs/ST_ReducePrecision.html) [^2] e, para geometrias diferentes de ponto, [ST_SimplifyPreserveTopology](https://postgis.net/docs/ST_SimplifyPreserveTopology.html) [^3].
+2. Em seguida, são selecionadas as geometrias onde a função [ST_IsClosed](https://postgis.net/docs/ST_IsClosed.html) é verdadeira ou forem linhas.
 
-3. São ingeridas, em `feature_asis`, as geometrias que não são nulas (IS NOT NULL) e que não são vazias, utilizando [ST_IsEmpty](https://postgis.net/docs/ST_IsEmpty.html). Além disso, são ingeridos apenas polígonos com [ST_Area](https://postgis.net/docs/ST_Area.html) >= 5 e linhas com [ST_Length](https://postgis.net/docs/ST_Length.html) >= 2.
+3. Para as geometrias onde [ST_IsSimple](https://postgis.net/docs/ST_IsSimple.html), [ST_IsValid](https://postgis.net/docs/ST_IsValid.html) e [ST_Intersects](https://postgis.net/docs/ST_Intersects.html) [^1] são verdadeiras, são aplicadas as funções [ST_Intersection](https://postgis.net/docs/ST_Intersection.html) [^1], [ST_ReducePrecision](https://postgis.net/docs/ST_ReducePrecision.html) [^2] e, para geometrias diferentes de ponto, [ST_SimplifyPreserveTopology](https://postgis.net/docs/ST_SimplifyPreserveTopology.html) [^3].
 
-4. Às geometrias ingeridas, independentemente do tipo, são aplicadas as funções [ST_PointOnSurface](https://postgis.net/docs/ST_PointOnSurface.html) e [ST_Geohash](https://postgis.net/docs/ST_GeoHash.html) com  `maxchars=9`, para obter _geohash_ com 9 caracteres.
+4. São ingeridas, em `feature_asis`, as geometrias que não são nulas (IS NOT NULL) e que não são vazias, utilizando [ST_IsEmpty](https://postgis.net/docs/ST_IsEmpty.html). Além disso, são ingeridos apenas polígonos com [ST_Area](https://postgis.net/docs/ST_Area.html) >= 5 e linhas com [ST_Length](https://postgis.net/docs/ST_Length.html) >= 2.
 
-5. Geometrias com _geohash_ iguais são consideradas iguais, sendo agrupadas e representadas pela geometria que possuir o menor `feature_id`. Isso significa que as repetidas são removidas de `feature_asis` e o representante é inserido, contendo:
+5. Às geometrias ingeridas, independentemente do tipo, são aplicadas as funções [ST_PointOnSurface](https://postgis.net/docs/ST_PointOnSurface.html) e [ST_Geohash](https://postgis.net/docs/ST_GeoHash.html) com  `maxchars=9`, para obter _geohash_ com 9 caracteres.
+
+6. Geometrias com _geohash_ iguais são consideradas iguais, sendo agrupadas e representadas pela geometria que possuir o menor `feature_id`. Isso significa que as repetidas são removidas de `feature_asis` e o representante é inserido, contendo:
 
       5.1. `is_agg`: flag para indicar que é um `feature_id` agregado;
       5.2. `properties_agg`: array contendo `properties` dos `feature_id` agregados;
@@ -41,7 +43,7 @@ Dado um conjunto de geometrias:
       5.4. `geom_cmp_frechet`: array contendo o resultado de [ST_FrechetDistance](https://postgis.net/docs/ST_FrechetDistance.html) entre o representante e os agregados. Apenas para geometrias do tipo linha;
       5.5. `geom_cmp_intersec`: array contendo medida de similaridade [^4] entre polígono represente e os agregados. Apenas para geometrias do tipo polígono.
 
-6. Geometrias que não atendam algum dos critérios acima possuem `error_mask` com algum bit diferente de zero. Essas geometrias ficam disponíveis em `feature_asis_discarded`, tabela idêntica à `feature_asis`, execto por o jsonb `properties` possuir a chave `error_mask` indicando os critérios não atendidos.
+7. Geometrias que não atendam algum dos critérios acima possuem `error_mask` com algum bit diferente de zero. Essas geometrias ficam disponíveis em `feature_asis_discarded`, tabela idêntica à `feature_asis`, exceto por o jsonb `properties` possuir a chave `error_mask` indicando os critérios não atendidos. Às geometrias que não são fechadas ou não são linhas é aplicada a função [ST_MakeValid](https://postgis.net/docs/ST_MakeValid.html), para possibilitar o uso da função [ST_PointOnSurface](https://postgis.net/docs/ST_PointOnSurface.html) antes da aplicação da [ST_Geohash](https://postgis.net/docs/ST_GeoHash.html) no momento em que o _geohash_ é obtido.
 
 Esse processo é realizado pela função `any_load` no _schema_ `ingest`.
 
@@ -61,6 +63,7 @@ Dá direita para esquerda, um bit igual a 1 representa:
 - Item tem geometria nula;
 - Item tem geometria com tipo diferente do estabelecido para o layer em feature_type;
 - Item duplicado. Dois items são duplicados se seus geohash de tamanho 9 são iguais;
+- Item com geometria não fechada (em se tratando de polígonos);
 - Os 3 bits mais à esquerda estão reservados para eventuais usos futuros e, por hora, são sempre zero.
 
 [^1]: com a geometria da respectiva jurisdição, obtida do OpenStreetMap, com um `buffer_type` = 1 por default.
