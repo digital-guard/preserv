@@ -28,28 +28,14 @@ CREATE TABLE pgdoc.assert (
 -- -- -- -- -- --
 -- -- Functions
 
-CREATE or replace FUNCTION pgdoc.doc_UDF_show_simple_asXHTML(
+
+CREATE or replace FUNCTION pgdoc.doc_UDF_show_simple_asJSONb(
     p_schema_name text,    -- schema choice
     p_regex_or_like text,   -- name filter
     p_include_udf_pubid boolean DEFAULT false
-) RETURNS xml AS $f$
+) RETURNS jsonb AS $f$
 
-  SELECT xmlelement(
-           name table,
-           '<tr><td> Function / Description / Example </td></tr>'::xml,
-           xmlagg( jsonb_mustache_render(
-              $$<tr>
-                {{#include_udf_pubid}}<td>{{id}}</td>{{/include_udf_pubid}}
-                <td>
-                  <b><code>{{name}}(</code></b>{{#str_args}}<i>{{.}}</i>{{/str_args}}<b><code>)</code> → </b> <i>{{return_type}}</i>
-                  {{#comment}}  <p class="pgdoc_comment">{{.}}</p>  {{/comment}}
-                  {{#examples}}  <p class="pgdoc_examples">{{{.}}}</p>  {{/examples}}
-                </td>
-              </tr>$$,
-              to_jsonb(t)
-           )::xml )
-         )
-
+  SELECT to_jsonb(t)
   FROM  (
     SELECT p_include_udf_pubid AS include_udf_pubid,
            u.*,
@@ -66,6 +52,35 @@ CREATE or replace FUNCTION pgdoc.doc_UDF_show_simple_asXHTML(
          ON u.id=a.udf_pubid
   ) t;
 
+$f$  LANGUAGE SQL IMMUTABLE;
+-- SELECT pgdoc.doc_UDF_show_simple_asJSONb( 'public', '^(iif|round|round|minutes|trunc_bin)$' );
+
+CREATE or replace FUNCTION pgdoc.doc_UDF_show_simple_asXHTML(
+    p_schema_name text,    -- schema choice
+    p_regex_or_like text,   -- name filter
+    p_include_udf_pubid boolean DEFAULT false
+) RETURNS xml AS $f$
+  SELECT xmlelement(
+           name table,
+           xmlattributes('pgdoc_tab' as class),
+           '<tr><td> Function / Description / Example </td></tr>'::xml,
+    
+           xmlagg( jsonb_mustache_render(
+              $$<tr>
+                {{#include_udf_pubid}}<td>{{id}}</td>{{/include_udf_pubid}}
+                <td>
+                  <b><code>{{name}}(</code></b>{{#str_args}}<i>{{.}}</i>{{/str_args}}<b><code>)</code> → </b> <i>{{return_type}}</i>
+                  {{#comment}}  <p class="pgdoc_comment">{{.}}</p>  {{/comment}}
+                  {{#arguments}}  <p class="pgdoc_args">{{.}}</p>  {{/arguments}}
+                  {{#examples}}  <p class="pgdoc_examples">{{{.}}}</p>  {{/examples}}
+                </td>
+              </tr>$$,
+             
+              pgdoc.doc_UDF_show_simple_asJSONb(p_schema_name, p_regex_or_like, p_include_udf_pubid)
+             
+           )::xml )
+    
+         );
 $f$  LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION pgdoc.doc_UDF_show_simple_asXHTML
   IS 'Generates a XHTML table with standard UFD documentation.'
