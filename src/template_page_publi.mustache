@@ -24,6 +24,7 @@
 	</tr>
 	</thead>
 	<tbody>
+        {{#layers}}
 		<tr>
 			<td class="dataselector" onclick="alert('Avisa que é o mapa ativo, layer geoaddress')">
 <!-- 			<td class="dataselector" onclick="alert('Muda o mapa, mostra mosaico de navegação do layer via')" -->
@@ -33,12 +34,14 @@
 			<td>
 				<a title="SHA256 {{hashedfname_without_ext}}"
 					href="http://dl.digital-guard.org/{{hashedfname}}"><code>{{hashedfname_7_ext}}</code></a>
+					{{#publication_summary}}
 					({{bytes}} bytes • 40,84 <abbr title="mebibyte">MiB</abbr>)<br />
-					690681 pontos; densidade média de 2650 pontos/km².</td>
-<!--					(2637788 bytes • 2,52 <abbr title="mebibyte">MiB</abbr>)
-					<br /> 16224 segmentos	totalizando 4877 <abbr title="quilômetro">km</abbr> de vias;<br/>densidade média de xx km_via/km².</td>-->
-			<td>{{description}}<br><code>make {{layer_root}}</code></td>
+					{{itens}} pontos{{^isGeoaddress}}totalizando {{size}} <abbr title="{{geom_unit_ext}}">{{size_unit}}</abbr> de {{geom_type}}{{/isGeoaddress}};<br/> densidade média de {{avg_density}} pontos/km².</td>
+{{!-- 					<br /> 16224 segmentos	totalizando 4877 <abbr title="quilômetro">km</abbr> de vias;<br/>densidade média de xx km_via/km².</td> --}}
+					{{/publication_summary}}
+			<td>{{description}}<br><code>make {{class_ftname}}</code></td>
 		</tr>
+		{{/layers}}
 	</tbody>
 </table>
 

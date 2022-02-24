@@ -418,14 +418,53 @@ CREATE VIEW ingest.vw03full_layer_file AS
 
 DROP VIEW IF EXISTS ingest.vw03publication CASCADE;
 CREATE VIEW ingest.vw03publication AS
+SELECT isolabel_ext, jsonb_build_object(
+    'isolabel_ext', isolabel_ext,
+    'legalname', legalname,
+    'vat_id', vat_id,
+    'url', url,
+    'wikidata_id', wikidata_id,
+    'user_resp', user_resp,
+    'path_preserv', path_preserv,
+    'pack_number', pack_number,
+    'path_cutgeo', path_cutgeo,
+    'layers',  jsonb_agg(jsonb_build_object(
+                'class_ftname', class_ftname,
+                'shortname', shortname,
+                'description', description,
+                'hashedfname_without_ext', hashedfname_without_ext,
+                'hashedfname_7_ext', hashedfname_7_ext,
+                'publication_summary', publication_summary/*,
+                'bytes2', bytes2*/
+                ))
+    ) AS page
+FROM (
   SELECT j.isolabel_ext, dn.legalname, dn.vat_id, dn.url, dn.wikidata_id, 
   INITCAP(pt.user_resp) AS user_resp, 
+  
   ft.info->>'class_ftname' as class_ftname, 
-  ft.info->>'shortname_pt' as shortname,
-  ft.info->>'description_pt' as description,
+  ft.info->'class_info'->>'shortname_pt' as shortname,
+  ft.info->'class_info'->>'description_pt' as description,
   pf.hashedfname, 
   substring(pf.hashedfname, '^([0-9a-f]{64,64})\.[a-z0-9]+$') AS hashedfname_without_ext, 
   substring(pf.hashedfname, '^([0-9a-f]{7}).+$') || '...' || substring(pf.hashedfname, '^.+\.([a-z0-9]+)$') AS hashedfname_7_ext,
+  pc.kx_profile->'publication_summary' || jsonb_build_object(
+        'geom_type',CASE ft.geomtype
+            WHEN 'poly'  THEN 'polígonos'
+            WHEN 'line'  THEN 'segmentos'
+            WHEN 'point' THEN 'pontos'
+            END,
+        'geom_unit_abr',CASE ft.geomtype
+            WHEN 'poly'  THEN 'km2'
+            WHEN 'line'  THEN 'km'
+            ELSE  ''
+            END,
+        'geom_unit_ext',CASE ft.geomtype
+            WHEN 'poly'  THEN 'quilômetros quadrados'
+            WHEN 'line'  THEN 'quilômetros'
+            ELSE  ''
+            END
+  )AS publication_summary,
   regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS path_preserv,
   to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS pack_number,
   'preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS path_cutgeo
@@ -441,9 +480,20 @@ CREATE VIEW ingest.vw03publication AS
     ON pt.donor_id=dn.id
   LEFT JOIN ingest.vw01full_jurisdiction_geom j
     ON dn.scope_osm_id=j.osm_id
-  ORDER BY j.isolabel_ext
+  ORDER BY j.isolabel_ext, ft.info->>'class_ftname'
+) t
+GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv, pack_number, path_cutgeo
 ;
-
+      
+CREATE or replace FUNCTION ingest.publicating_page(
+	p_isolabel_ext  text, -- e.g. 'BR-AC-RioBranco'
+	p_fileref text
+) RETURNS text  AS $f$
+  SELECT volat_file_write($2, (SELECT jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), (SELECT page FROM ingest.vw03publication WHERE isolabel_ext=$1))));
+  --SELECT 'fim';
+$f$ language SQL VOLATILE;
+-- SELECT ingest.publicating_page('BR-AC-RioBranco','/home/claiton/id.html');
+             
 CREATE VIEW ingest.vw03dup_feature_asis AS
  SELECT v.ftname, v.geomtype, t.*, round(100.0*n_ghs/n::float, 2)::text || '%' as n_ghs_perc
  FROM (
