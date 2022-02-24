@@ -13,7 +13,7 @@
 
 <h1>{{isolabel_ext}} • Dados filtrados do pacote {{pack_number}}</h1>
 <p>Dados doados por <a rel="external" target="_doador" href="{{url}}">{{donor_name}}</a> (<small>{{vat_id}} • Wikidtata <a rel="external" target="_doador" href="https://www.wikidata.org/wiki/Q{{wikidata_id}}">Q{{wikidata_id}}</a></small>).</p>
-<p>Pacote obtido por e-mail e <i>download</i> em <b>2020-03-19</b>, sob testemunho e tutela de {{user_resp}} (avaliação técnica) e Thierry (representação institucional), que confirmaram com Fulano a <a rel="external" target="_doador" href="https://creativecommons.org/publicdomain/zero/1.0/deed.pt_BR">licença livre<b>CC0</b></a> e as evidências de integridade da origem conforme abaixo:</p>
+<p>Pacote obtido por e-mail e <i>download</i> em <b>2020-03-19</b>, sob testemunho e tutela de {{user_resp}} (avaliação técnica) e Thierry (representação institucional), que confirmaram com Fulano a <a rel="external" target="_doador" href="https://creativecommons.org/publicdomain/zero/1.0/deed.pt_BR">licença livre <b>CC0</b></a> e as evidências de integridade da origem conforme abaixo:</p>
 
 <table class="styled-table dataselector" align="center" width="90%">
 	<thead>
@@ -26,8 +26,7 @@
 	<tbody>
         {{#layers}}
 		<tr>
-			<td class="dataselector" onclick="alert('Avisa que é o mapa ativo, layer geoaddress')">
-<!-- 			<td class="dataselector" onclick="alert('Muda o mapa, mostra mosaico de navegação do layer via')" -->
+			<td class="dataselector" onclick="alert('{{#isFirst}}Avisa que é o mapa ativo,{{/isFirst}}{{^isFirst}}Muda o mapa, mostra mosaico de navegação do{{/isFirst}} layer {{class_ftname}}')">
 				<img alt="Marcador de mapa." src="https://raw.githubusercontent.com/digital-guard/preserv/main/docs/assets/layerIcon-{{class_ftname}}.png">
 				<strong>{{class_ftname}}</strong> ({{shortname}})
 			</td>
@@ -35,9 +34,8 @@
 				<a title="SHA256 {{hashedfname_without_ext}}"
 					href="http://dl.digital-guard.org/{{hashedfname}}"><code>{{hashedfname_7_ext}}</code></a>
 					{{#publication_summary}}
-					({{bytes}} bytes • 40,84 <abbr title="mebibyte">MiB</abbr>)<br />
-					{{itens}} pontos{{^isGeoaddress}}totalizando {{size}} <abbr title="{{geom_unit_ext}}">{{size_unit}}</abbr> de {{geom_type}}{{/isGeoaddress}};<br/> densidade média de {{avg_density}} pontos/km².</td>
-{{!-- 					<br /> 16224 segmentos	totalizando 4877 <abbr title="quilômetro">km</abbr> de vias;<br/>densidade média de xx km_via/km².</td> --}}
+					({{bytes}} bytes • {{bytes_mb}} <abbr title="mebibyte">MiB</abbr>)<br />
+					{{itens}} {{geom_type}}{{^isGeoaddress}}, totalizando {{size}} <abbr title="{{geom_unit_ext}}">{{geom_unit_abr}}</abbr> de {{geom_type}};<br/> densidade média de {{avg_density}} {{geom_type}}/km².</td>{{/isGeoaddress}}{{#isGeoaddress}}densidade média de {{avg_density}} {{geom_type}}/km². {{!--xx km_via/km²--}}</td>{{/isGeoaddress}}
 					{{/publication_summary}}
 			<td>{{description}}<br><code>make {{class_ftname}}</code></td>
 		</tr>
@@ -48,8 +46,11 @@
 <p>A extração e filtragem dos dados de cada layer descrito acima tem seu <code>makefile</code>
 	gerado conforme definições em <a target="_git" href="http://git.digital-guard.org/preserv-{{path_preserv}}/make_conf.yaml"><small>git.digital-guard.org/preserv-{{path_preserv}}/make_conf.yaml</small></a>.
 	A <a rel="external" target="_docs" href="http://git.digital-guard.org//preserv/blob/main/docs/pt/man-makeConf.md">documentação técnica</a> para execução do <code>make</code> fornece mais detalhes.
-
-	<br />A navegação no mapa abaixo faz uso direto e transparente dos dados publicados em <a target="_git" href="http://git.digital-guard.org/preservCutGeo-BR2021/tree/main/data/MG/BeloHorizonte/_pk0008.01/geoaddress"><small>git.digital-guard.org/preservCutGeo-BR2021/tree/main/data/MG/BeloHorizonte/_pk0008.01/geoaddress</small></a>.
+{{#layers}}
+{{#isFirst}}
+	<br />A navegação no mapa abaixo faz uso direto e transparente dos dados publicados em <a target="_git" href="http://git.digital-guard.org/{{path_cutgeo}}/{{class_ftname}}"><small>git.digital-guard.org/{{path_cutgeo}}/{{class_ftname}}</small></a>.
+{{/isFirst}}
+{{/layers}}
 </p>
 
 <!--  # # # -->
