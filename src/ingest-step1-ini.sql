@@ -495,8 +495,7 @@ CREATE or replace FUNCTION ingest.publicating_page(
   SELECT volat_file_write($2, (SELECT jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), (SELECT page FROM ingest.vw03publication WHERE isolabel_ext=$1))));
 $f$ language SQL VOLATILE;
 -- SELECT ingest.publicating_page('BR-AC-RioBranco','/tmp/pg_io/test.html');
-
-SELECT jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), (SELECT page FROM ingest.vw03publication WHERE isolabel_ext='BR-AC-RioBranco'));
+-- SELECT jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), (SELECT page FROM ingest.vw03publication WHERE isolabel_ext='BR-AC-RioBranco'));
 
 CREATE VIEW ingest.vw03dup_feature_asis AS
  SELECT v.ftname, v.geomtype, t.*, round(100.0*n_ghs/n::float, 2)::text || '%' as n_ghs_perc
