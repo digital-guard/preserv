@@ -42,7 +42,9 @@ me: insert_make_conf
 	@diff $(mkme_output) ./makefile || :
 	@echo "If some changes, and no error in the changes, move the script:"
 	@echo " mv $(mkme_output) ./makefile"
+ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+endif
 	mv $(mkme_output) ./makefile
 
 readme:
@@ -82,7 +84,9 @@ insert_make_conf:
 	@echo "-- Load make_conf.yaml into the database. --"
 	@echo "Usage: make insert_make_conf"
 	@echo "pack_id: $(pack_id)"
+ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+endif
 	psql $(pg_uri_db) -c "SELECT ingest.lix_insert('$(mkme_input)');"
 
 delete_file:
