@@ -66,6 +66,53 @@ Dá direita para esquerda, um bit igual a 1 representa:
 - Item com geometria não fechada (em se tratando de polígonos);
 - Os 3 bits mais à esquerda estão reservados para eventuais usos futuros e, por hora, são sempre zero.
 
+Exemplo de saída produzida após a execução de uma ingestão:
+
+```
+------------------------------------------------------------------------
+ From file_id=8 inserted type=geoaddress_full.                         +
+                                                                       +
+         Statistics:                                                   +
+ .                                                                     +
+         Before deduplication:                                         +
+                                                                       +
+         Originals: 474520 items.                                      +
+                                                                       +
+         Not Intersecs: 684 items.                                     +
+                                                                       +
+         Invalid: 0 items.                                             +
+                                                                       +
+         Not simple: 0 items.                                          +
+                                                                       +
+         Empty: 0 items.                                               +
+                                                                       +
+         Small: 0 items.                                               +
+                                                                       +
+         Null: 0 items.                                                +
+                                                                       +
+         Invalid geometry type: 0 items.                               +
+                                                                       +
+         Not closed: 0 items.                                          +
+                                                                       +
+         Inserted in feature_asis: 473836 items.                       +
+                                                                       +
+         Inserted in feature_asis_discarded: 684 items.                +
+                                                                       +
+                                                                       +
+         After deduplication:                                          +
+                                                                       +
+         Removed duplicates from feature_asis: 169477 items.           +
+                                                                       +
+         Inserted in feature_asis_discarded (duplicates): 169477 items.+
+                                                                       +
+         Inserted in feature_asis (aggregated duplicates): 79967 items.+
+                                                                       +
+         Resulting in feature_asis: 384326                             +
+ 
+(1 row)
+```
+
+
 [^1]: com a geometria da respectiva jurisdição, obtida do OpenStreetMap, com um `buffer_type` = 1 por default.
 [^2]: sendo utilizado  `gridsize = 0.000001`, para precisão ~1m, conforme [Decimal_degrees#Precision](https://en.wikipedia.org/wiki/Decimal_degrees#Precision).
 [^3]: sendo utilizado `tolerance = 0.00000001`, com a intensão do algoritmo [Douglas-Peucker](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) remover apenas pontos colineares.
@@ -77,9 +124,9 @@ Para rodar um _target_ sem serem solicitadas confirmações do usuário, utiliza
 
 Por exemplo, `make block nointeraction=y` faz a ingestão dos dados sem solicitar confirmações do usuário.[^5]
 
-Essa variável só produz efeito em _target_ `layer` ou `publicating_geojsons_layer`. Para os demais, não.
+Essa variável só produz efeito em _target_ `layer`, `publicating_geojsons_layer` ou `me`. Para os demais, não.
 
-[^5]: _Layer_ com `method` que utiliza o _ogr2ogr_ via docker pode solicitar a senha do usuário.
+[^5]: _Layer_ com `method` que utiliza o _ogr2ogr_ via docker, ou target `me`, podem solicitar a senha do usuário.
 
 ## Buffer em geometrias jurisdicionais:
 
@@ -88,4 +135,34 @@ Esse comportamento pode ser alterado utilizando a chave buffer_type em layer do 
 
 - `buffer_type: 1`, valor default, aplica um buffer de aproximadamente 100 metros. Não é necessário informá-lo no _make_conf.yaml_. É inserido automaticamente pela função `jsonb_mustache_prepare` caso não seja informado. 
 - `buffer_type: 0`, sem buffer. Para utilizá-lo, deve-se informá-lo no _make_conf.yaml_
-- `buffer_type: 2`, aplica um buffer de aproximadamente 5km metros. Para utilizá-lo, deve-se informá-lo no respectivo layer do _make_conf.yaml_
+- `buffer_type: 2`, aplica um buffer de aproximadamente 5000 metros. Para utilizá-lo, deve-se informá-lo no respectivo layer do _make_conf.yaml_
+
+## Atualizar tabelas de optim (atualmente em `dl03t_main`):
+
+Se donatedPack.csv ou donor.csv (em qualquer jurisdição) forem alterados, é necessário atualizar as tabelas do [schema optim](https://github.com/digital-guard/preserv/blob/main/src/optim-step1-ini.sql). Para isso, utilizar:
+
+```
+pushd /var/gits/_dg/preserv/src
+make load_optim_csv pg_datalake=dl03t_main
+```
+
+Notar que se as restrições das tabelas não forem respeitadas o carregamento ou atualização dos dados não acontece. Retornando erro.
+
+## Especificações mosaico:
+
+Propriedades presentes em todos os layers:
+
+* ghs_bytes: inteiro. soma da quantidade de bytes dos itens (SUM(length(St_asGeoJson(geom)))
+* ghs_area: duas casa decimais. area do ghs, em km2
+* ghs_len: inteiro. tamanho de ghs
+* ghs_items: inteiro. quantidade de itens em ghs
+* ghs_itemsDensity: duas casas decimais. densidade, ghs_items por ghs_area (itens por unidade de área).
+* ghsval_unit: nome da unidade utilizada como métrica da distribuição (tipicamente "ghs_bytes" ou "ghs_items".
+
+Propriedade que variam conforme os layers:
+* size: duas casas decimais. tamanho total dos itens em ghs, (unidade para linhas:km. unidade para polígonos: km2. não utilizada para pontos.)
+* size_unit:
+  * dim0 = pontos = não precisa de soma de métrica
+  * dim1= linhas = tem soma de métrica km  
+  * dim2 = polígonos = tem soma de km2, e densidade_km2
+* size_unitDensity

@@ -47,6 +47,7 @@ message:
 	echo " -- REPORT tools --"
 	echo " countpacks [pkdir=v]: count package-evidence files ok pkdir (e.g. preserv-BR) or its root"
 	echo " status: of databases and disk usage"
+	echo " to_report pg_db=ingest42: "
 	echo
 	echo " -- ADMIN tools --"
 	echo " fix_usergroup username=v: add standard groups to username"
@@ -57,6 +58,10 @@ message:
 	echo " publicating_geojsons: "
 	echo " build_fdwtable:"
 	echo " first_makefile: copying initial makefile in 'data/_pk*' directories"
+	echo " load_optim_csv pg_datalake=dl42t_main: update optim tables. "
+	echo " load_codec_type: update codec_type table. "
+	echo " load_hcode_parameters: update hcode_parameters table. "
+	echo " load_license_tables: create or update tmp_pack_licenses table. "
 
 ## ## ## ##
 ## -- SQL BUILDERs --
