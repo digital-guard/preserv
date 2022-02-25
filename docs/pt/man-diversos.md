@@ -139,7 +139,7 @@ Esse comportamento pode ser alterado utilizando a chave buffer_type em layer do 
 
 ## Atualizar tabelas de optim (atualmente em `dl03t_main`):
 
-Se donatedPack.csv ou donor.csv (em qualquer jurisdição) forem alterados, é necessário atualizar as tabelas do [schema optim](https://github.com/digital-guard/preserv/blob/main/src/optim-step1-ini.sql). Para isso, utilizar:
+Se donatedPack.csv ou donor.csv (em qualquer jurisdição) forem alterados ou um novo _make_conf.yaml_ for criado (se não existia e passou a existir), é necessário atualizar as tabelas do [schema optim](https://github.com/digital-guard/preserv/blob/main/src/optim-step1-ini.sql). Para isso, utilizar:
 
 ```
 pushd /var/gits/_dg/preserv/src
