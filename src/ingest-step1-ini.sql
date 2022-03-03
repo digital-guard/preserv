@@ -388,7 +388,7 @@ COMMENT ON VIEW ingest.vw02simple_feature_asis
 
 DROP VIEW IF EXISTS ingest.vw02full_donated_packfilevers CASCADE;
 CREATE or replace VIEW ingest.vw02full_donated_packfilevers AS
-  SELECT pf.*, j.isolabel_ext, j.geom, '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS path
+  SELECT pf.*, j.isolabel_ext, j.geom, '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path
   FROM ingest.fdw_donated_packfilevers pf
   LEFT JOIN ingest.fdw_donated_PackTpl pt
     ON pf.pack_id=pt.id
@@ -468,9 +468,9 @@ FROM (
             'isGeoaddress', iif(ft.info->>'class_ftname'='geoaddress','true'::jsonb,'false'::jsonb),
         'bytes_mb', (pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0
   ) || (pc.kx_profile->'publication_summary') AS publication_summary,
-  regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS path_preserv,
-  to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS pack_number,
-  'preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pf.kx_pack_item_version,'fm00') AS path_cutgeo
+  regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv,
+  to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS pack_number,
+  'preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_cutgeo
   --, dn.kx_scope_label, pc.*, ft.ftname, ft.geomtype, ft.need_join, ft.description, ft.info AS ft_info
   FROM ingest.donated_PackComponent pc
   INNER JOIN ingest.vw01info_feature_type ft
