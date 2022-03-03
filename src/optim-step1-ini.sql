@@ -278,7 +278,7 @@ BEGIN
 END;
 $f$ LANGUAGE PLpgSQL;
 CREATE TRIGGER generate_id_PackFileVers
-    BEFORE INSERT OR UPDATE ON optim.donated_PackFileVers
+    BEFORE INSERT ON optim.donated_PackFileVers
     FOR EACH ROW EXECUTE PROCEDURE optim.input_donated_PackFileVers()
 ;
 
