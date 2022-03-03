@@ -380,7 +380,10 @@ BEGIN
   q := $$
     -- popula optim.donor a partir de tmp_orig.fdw_donor
     INSERT INTO optim.donor (country_id, local_serial, scope_osm_id, kx_scope_label, shortname, vat_id, legalname, wikidata_id, url)
-    SELECT (SELECT jurisd_base_id FROM optim.jurisdiction WHERE osm_id = scope_osm_id) AS country_id, tmp_orig.fdw_donor%s.*
+    SELECT (
+        SELECT jurisd_base_id
+        FROM optim.jurisdiction
+        WHERE osm_id = scope_osm_id) AS country_id, tmp_orig.fdw_donor%s.*
     FROM tmp_orig.fdw_donor%s
     --WHERE kx_scope_label <> 'INT' -- verificar escopo INT
     ON CONFLICT (country_id,local_serial)
@@ -393,7 +396,19 @@ BEGIN
   q := $$
     -- popula optim.donated_PackTpl a partir de tmp_orig.fdw_donatedPack
     INSERT INTO optim.donated_PackTpl (donor_id, user_resp, pk_count, original_tpl, make_conf_tpl)
-    SELECT (SELECT jurisd_base_id*1000000+donor_id FROM optim.jurisdiction WHERE osm_id = (SELECT scope_osm_id FROM optim.donor WHERE donor_id = local_serial AND country_id = (SELECT jurisd_base_id FROM optim.jurisdiction WHERE admin_level = 2 AND lower(abbrev) = lower('%s'))) ), lower(user_resp), pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(escopo, donor_id, pack_count))), yamlfile_to_jsonb(optim.format_filepath(escopo, donor_id, pack_count)) as make_conf_tpl
+    SELECT (
+        SELECT jurisd_base_id*1000000+donor_id
+        FROM optim.jurisdiction
+        WHERE osm_id = (
+            SELECT scope_osm_id
+            FROM optim.donor
+            WHERE donor_id = local_serial AND country_id = (
+                SELECT jurisd_base_id
+                FROM optim.jurisdiction
+                WHERE admin_level = 2 AND lower(abbrev) = lower('%s')
+                )
+            )
+        ), lower(user_resp), pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(escopo, donor_id, pack_count))), yamlfile_to_jsonb(optim.format_filepath(escopo, donor_id, pack_count)) as make_conf_tpl
     FROM tmp_orig.fdw_donatedpack%s
     WHERE file_exists(optim.format_filepath(escopo, donor_id, pack_count)) -- verificar make_conf.yaml ausentes
     ON CONFLICT (donor_id,pk_count)
@@ -405,17 +420,31 @@ BEGIN
 
   q := $$
     -- popula optim.donated_PackFileVers a partir de optim.donated_PackTpl
-    -- falta pack_item_accepted_date
     INSERT INTO optim.donated_PackFileVers (hashedfname, pack_id, pack_item, pack_item_accepted_date, user_resp)
-    SELECT j->>'file'::text AS hashedfname, pack_id , (j->>'p')::int AS pack_item, '1970-01-01'::date, lower(user_resp::text) AS user_resp
-    FROM (SELECT id AS pack_id, user_resp, jsonb_array_elements(make_conf_tpl->'files')::jsonb AS j FROM optim.donated_packtpl WHERE donor_id IN (SELECT id FROM optim.donor WHERE country_id = (SELECT jurisd_base_id FROM optim.jurisdiction WHERE admin_level = 2 AND lower(abbrev) = lower('%s'))) ) AS t 
+    SELECT j->>'file'::text AS hashedfname, t.pack_id , (j->>'p')::int AS pack_item, accepted_date::date AS pack_item_accepted_date, lower(t.user_resp::text) AS user_resp
+    FROM (
+        SELECT pt.id AS pack_id, pt.user_resp, fpt.accepted_date, jsonb_array_elements(pt.make_conf_tpl->'files')::jsonb AS j
+        FROM optim.donated_packtpl pt
+        LEFT JOIN optim.donor d
+        ON pt.donor_id = d.id
+        LEFT JOIN tmp_orig.fdw_donatedpack%s fpt
+        ON d.local_serial = fpt.donor_id AND pt.pk_count = fpt.pack_count
+        WHERE pt.donor_id IN (
+                SELECT id FROM optim.donor
+                WHERE country_id = (
+                    SELECT jurisd_base_id
+                    FROM optim.jurisdiction
+                    WHERE admin_level = 2 AND lower(abbrev) = lower('%s')
+                    )
+                ) 
+        ) AS t 
     WHERE j->'file' IS NOT NULL -- verificar hash null
     ON CONFLICT (hashedfname)
     DO UPDATE 
     SET pack_id=EXCLUDED.pack_id, pack_item=EXCLUDED.pack_item, pack_item_accepted_date=EXCLUDED.pack_item_accepted_date, user_resp=EXCLUDED.user_resp;
   $$;
   
-  EXECUTE format( q, jurisdiction ) ;
+  EXECUTE format( q, jurisdiction, jurisdiction ) ;
 
   RETURN (SELECT 'OK, inserted new itens at jurisdiction, donor and donatedPack. ');
 END;
