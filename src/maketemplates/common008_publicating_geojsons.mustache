@@ -47,6 +47,7 @@ publicating_geojsons_{{layername_root}}:
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view)_adjusted CASCADE;"
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
 	make audit-geojsons_{{layername_root}} pg_db=$(pg_db)
+	cd /var/gits/_dg/preserv/src; sudo bash fixaPermissoes.sh $(folder)
 
 audit-geojsons_{{layername_root}}: folder = {{path_root}}
 audit-geojsons_{{layername_root}}:
