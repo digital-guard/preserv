@@ -33,25 +33,25 @@ all:
 {{#layers}}
 	@printf "Targets de publicação de layers:\n"
 {{#block}}
-	@printf "publicating_geojsons_block audit-geojsons_block change_parameters_block\n"
+	@printf "\tpublicating_geojsons_block audit-geojsons_block change_parameters_block\n"
 {{/block}}
 {{#building}}
-	@printf "publicating_geojsons_building audit-geojsons_building change_parameters_building\n"
+	@printf "\tpublicating_geojsons_building audit-geojsons_building change_parameters_building\n"
 {{/building}}
 {{#genericvia}}
-	@printf "publicating_geojsons_genericvia audit-geojsons_genericvia change_parameters_genericvia\n"
+	@printf "\tpublicating_geojsons_genericvia audit-geojsons_genericvia change_parameters_genericvia\n"
 {{/genericvia}}
 {{#geoaddress}}
-	@printf "publicating_geojsons_geoaddress audit-geojsons_geoaddress change_parameters_geoaddress\n"
+	@printf "\tpublicating_geojsons_geoaddress audit-geojsons_geoaddress change_parameters_geoaddress\n"
 {{/geoaddress}}
 {{#nsvia}}
-	@printf "publicating_geojsons_nsvia audit-geojsons_nsvia change_parameters_nsvia\n"
+	@printf "\tpublicating_geojsons_nsvia audit-geojsons_nsvia change_parameters_nsvia\n"
 {{/nsvia}}
 {{#parcel}}
-	@printf "publicating_geojsons_parcel audit-geojsons_parcel change_parameters_parcel\n"
+	@printf "\tpublicating_geojsons_parcel audit-geojsons_parcel change_parameters_parcel\n"
 {{/parcel}}
 {{#via}}
-	@printf "publicating_geojsons_via audit-geojsons_via change_parameters_via\n"
+	@printf "\tpublicating_geojsons_via audit-geojsons_via change_parameters_via\n"
 {{/via}}
 {{/layers}}
 
