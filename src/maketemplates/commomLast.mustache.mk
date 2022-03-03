@@ -28,6 +28,7 @@ conf_output   = $(pg_io)/make_conf_$(country)$(pack_id)
 info:
 	@echo "=== Targets ==="
 	@printf "me: gera makefile para ingestão dos dados, a partir de make_conf.yaml.\n"
+	@printf "info: exibe resumo de targes implementados.\n"
 	@printf "readme: gera rascunho de Readme.md para conjunto de dados.\n"
 	@printf "insert_size: Insere tamanho em bytes em files no arquivo make_conf.yaml.\n"
 	@printf "insert_license: Insere detalhes sobre licenças no arquivo make_conf.yaml.\n"

@@ -21,11 +21,39 @@ pg_uri_db         = $(pg_uri)/$(pg_db)
 all:
 	@echo "=== Resumo deste makefile de recuperação de dados preservados ==="
 	@printf "Targets para a geração de layers:\n\tall_layers {{#layers_keys}}{{.}} {{/layers_keys}}\n"
+{{#openstreetmap}}
+	@printf "Target para carregar dados do OpenStreetMap: openstreetmap.\n"
+	@printf "ATENÇÂO. Execute make openstreetmap antes de fazer a ingestão dos layers.\n"
+{{/openstreetmap}}
 {{#joins}}
 	@printf "Targets para join de layers:\n\tall_joins {{#joins_keys}}{{.}} {{/joins_keys}}\n"
 {{/joins}}
 	@printf "Demais targets implementados:\n\tmakedirs clean clean_sandbox wget_files me readme delete_file\n"
 	@echo "A geração de layers requer os seguintes comandos e versões:\n\t$(need_commands)"
+{{#layers}}
+	@printf "Targets de publicação de layers:\n"
+{{#block}}
+	@printf "publicating_geojsons_block audit-geojsons_block change_parameters_block\n"
+{{/block}}
+{{#building}}
+	@printf "publicating_geojsons_building audit-geojsons_building change_parameters_building\n"
+{{/building}}
+{{#genericvia}}
+	@printf "publicating_geojsons_genericvia audit-geojsons_genericvia change_parameters_genericvia\n"
+{{/genericvia}}
+{{#geoaddress}}
+	@printf "publicating_geojsons_geoaddress audit-geojsons_geoaddress change_parameters_geoaddress\n"
+{{/geoaddress}}
+{{#nsvia}}
+	@printf "publicating_geojsons_nsvia audit-geojsons_nsvia change_parameters_nsvia\n"
+{{/nsvia}}
+{{#parcel}}
+	@printf "publicating_geojsons_parcel audit-geojsons_parcel change_parameters_parcel\n"
+{{/parcel}}
+{{#via}}
+	@printf "publicating_geojsons_via audit-geojsons_via change_parameters_via\n"
+{{/via}}
+{{/layers}}
 
 all_layers: {{#layers_keys}}{{.}} {{/layers_keys}}
 	@echo "--ALL LAYERS--"
