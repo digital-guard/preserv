@@ -425,6 +425,7 @@ SELECT isolabel_ext, jsonb_build_object(
     'url', url,
     'wikidata_id', wikidata_id,
     'user_resp', user_resp,
+    'accepted_date', pack_item_accepted_date,
     'path_preserv', path_preserv,
     'pack_number', pack_number,
     'path_cutgeo', path_cutgeo,
@@ -440,7 +441,7 @@ SELECT isolabel_ext, jsonb_build_object(
                 ))
     ) AS page
 FROM (
-  SELECT j.isolabel_ext, dn.legalname, dn.vat_id, dn.url, dn.wikidata_id, 
+  SELECT j.isolabel_ext, dn.legalname, dn.vat_id, dn.url, dn.wikidata_id, pf.pack_item_accepted_date,
   INITCAP(pt.user_resp) AS user_resp, 
   row_number() OVER (PARTITION BY j.isolabel_ext ORDER BY ft.info->'class_ftname' ASC ) AS row_num,
   ft.info->>'class_ftname' as class_ftname, 
@@ -485,7 +486,7 @@ FROM (
     ON dn.scope_osm_id=j.osm_id
   ORDER BY j.isolabel_ext, ft.info->>'class_ftname'
 ) t
-GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv, pack_number, path_cutgeo
+GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv, pack_number, path_cutgeo, pack_item_accepted_date
 ;
 
 CREATE or replace FUNCTION ingest.publicating_page(
