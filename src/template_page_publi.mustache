@@ -79,7 +79,7 @@
 <script src="assets/tablesort/tablesort.min.js"></script>
 <script src="assets/tablesort/sorts/tablesort.number.min.js"></script>
 {{#layer}}
-<script>baseURL = "https://raw.githubusercontent.com/digital-guard/{{path_cutgeo_notree}}/{{class_ftname}}/"; prefix = "{{geom_type_abbr}}"</script>
+<script>baseURL = "https://raw.githubusercontent.com/digital-guard/{{path_cutgeo_notree}}/{{class_ftname}}/"; {{#publication_summary}}prefix = "{{geom_type_abbr}}"{{/publication_summary}}</script>
 {{/layer}}
 <script src="main.js"></script>
 </body>
