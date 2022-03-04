@@ -439,7 +439,7 @@ SELECT isolabel_ext, jsonb_build_object(
                 'hashedfname_7_ext', hashedfname_7_ext,
                 'isFirst', iif(row_num=1,'true'::jsonb,'false'::jsonb),
                 'publication_summary', publication_summary,
-                'url_page', lower(isolabel_ext) || '_' || class_ftname
+                'url_page', lower(isolabel_ext) || '_' || class_ftname || '.html'
                 ))
     ) AS page
 FROM (
