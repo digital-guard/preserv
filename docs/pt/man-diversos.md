@@ -19,7 +19,14 @@ Se o download for realizado em /var/www/preserv.addressforall.org/download utili
 
 `make parcel  pg_db=ingestXX`
 
-uma vez que esse 
+uma vez que o valor default de orig é /var/www/preserv.addressforall.org/download.
+
+Observação: atualmente, [common002_layerHeader.mustache](https://github.com/digital-guard/preserv/blob/main/src/maketemplates/common002_layerHeader.mustache#L18) interage com o usuário solicitando a confirmação de download de dl.digital-guard.org ou o fornecimento do valor correto de orig. Caso o download seja realizado, o arquivo estará localizado na respectiva sandbox do layer. Notar que se `nointeraction=y` não haverá interação com o usuário e o download será feito.
+
+## Clean sandbox
+
+O processo de ingestão utiliza subpastas no caminho informado em `sandbox`, cujo valor default é informado no _commomFirst.yaml_.
+Antes na execução da ingestão de cada layer, o target `makedirs` cria ou limpa a subpasta utilizada pelo layer. Após a execução, o target `clean-sandbox` remove a subpasta, evitando que arquivos não mais necessários permanecem no sistema de arquivos.
 
 ## Resumo do tratamento aplicado às geometrias no processo de ingestão:
 
