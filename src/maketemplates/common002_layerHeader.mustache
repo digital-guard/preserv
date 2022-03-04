@@ -17,16 +17,14 @@ endif
 
 ifeq (,$(wildcard $(orig)/{{sha256file}}))
 	@echo " File {{sha256file}} not exists in orig=$(orig)"
-	@echo " Download file {{sha256file}} to $(sandbox) from dl.digital-guard.org?"
+	@echo " Download file {{sha256file}} to $(orig) from dl.digital-guard.org?"
 	@echo " If it doesn't download, inform the correct value of the orig variable."
 ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to download or Ctrl+C to quit or inform orig]" _press_enter_
 endif
 	@echo " Downloading file..."
-	@[ -f $(sandbox)/{{sha256file}} ] && rm $(sandbox)/{{sha256file}} || true
-	wget -P $(sandbox) http://dl.digital-guard.org/{{sha256file}}
+	wget -P $(orig) http://dl.digital-guard.org/{{sha256file}} && chown postgres:www-data $(orig)/{{sha256file}} && chmod 664 $(orig)/{{sha256file}}
 	@echo " Download completed."
-	$(eval orig=$(sandbox))
 endif
 
 {{#isCsv}}
