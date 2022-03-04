@@ -438,7 +438,8 @@ SELECT isolabel_ext, jsonb_build_object(
                 'hashedfname_without_ext', hashedfname_without_ext,
                 'hashedfname_7_ext', hashedfname_7_ext,
                 'isFirst', iif(row_num=1,'true'::jsonb,'false'::jsonb),
-                'publication_summary', publication_summary
+                'publication_summary', publication_summary,
+                'url_page', lower(isolabel_ext) || '_' || class_ftname
                 ))
     ) AS page
 FROM (
@@ -501,12 +502,11 @@ CREATE or replace FUNCTION ingest.publicating_page(
 ) RETURNS text  AS $f$
   SELECT volat_file_write($2 || '/' || s.name, s.page)
   FROM (
-    SELECT  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), r.page) AS page,
-            lower(isolabel_ext) || '_' ||(page->'layer'->>'class_ftname') AS name
+    SELECT (page->'layer'->>'url_page') AS name, jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), r.page) AS page
     FROM (
-        SELECT isolabel_ext, page || jsonb_build_object('layer',jsonb_array_elements(page->'layers')) AS page
+        SELECT page || jsonb_build_object('layer',jsonb_array_elements(page->'layers')) AS page
         FROM ingest.vw03publication
-        WHERE isolabel_ext='BR-AC-RioBranco') r
+        WHERE isolabel_ext=$1) r
     ) s;
 $f$ language SQL VOLATILE;
 -- SELECT ingest.publicating_page('BR-AC-RioBranco','/tmp/pg_io');
