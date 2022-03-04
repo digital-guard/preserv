@@ -46,9 +46,9 @@
 <p>A extração e filtragem dos dados de cada layer descrito acima tem seu <code>makefile</code>
 	gerado conforme definições em <a target="_git" href="http://git.digital-guard.org/preserv-{{path_preserv}}/make_conf.yaml"><small>git.digital-guard.org/preserv-{{path_preserv}}/make_conf.yaml</small></a>.
 	A <a rel="external" target="_docs" href="http://git.digital-guard.org//preserv/blob/main/docs/pt/man-makeConf.md">documentação técnica</a> para execução do <code>make</code> fornece mais detalhes.
-{{#layers}}
+{{#layer}}
 	<br />A navegação no mapa abaixo faz uso direto e transparente dos dados publicados em <a target="_git" href="http://git.digital-guard.org/{{path_cutgeo}}/{{class_ftname}}"><small>git.digital-guard.org/{{path_cutgeo}}/{{class_ftname}}</small></a>.
-{{/layers}}
+{{/layer}}
 </p>
 
 <!--  # # # -->
@@ -82,7 +82,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.2/chroma.min.js" integrity="sha512-8TVPS0EFkkmtT6yPb5K4csnSt3tjbKRrs0F8gvTNKv2OxOcwDO7+Klkz86gMVrzfqtZos5N2a+k+r9D+hlccmQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="assets/tablesort/tablesort.min.js"></script>
 <script src="assets/tablesort/sorts/tablesort.number.min.js"></script>
+{{#layer}}
 <script>const baseURL = "https://raw.githubusercontent.com/digital-guard/{{path_cutgeo}}/{{class_ftname}}";</script>
+{{/layer}}
 <script src="main.js"></script>
 </body>
 </html>

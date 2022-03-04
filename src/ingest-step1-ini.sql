@@ -493,9 +493,17 @@ CREATE or replace FUNCTION ingest.publicating_page(
 	p_isolabel_ext  text, -- e.g. 'BR-AC-RioBranco'
 	p_fileref text
 ) RETURNS text  AS $f$
-  SELECT volat_file_write($2, (SELECT jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), (SELECT page FROM ingest.vw03publication WHERE isolabel_ext=$1))));
+  SELECT volat_file_write($2 || '/' || s.name, s.page)
+  FROM (
+    SELECT  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), r.page) AS page,
+            lower(isolabel_ext) || '_' ||(page->'layer'->>'class_ftname') AS name
+    FROM (
+        SELECT isolabel_ext, page || jsonb_build_object('layer',jsonb_array_elements(page->'layers')) AS page
+        FROM ingest.vw03publication
+        WHERE isolabel_ext='BR-AC-RioBranco') r
+    ) s;
 $f$ language SQL VOLATILE;
--- SELECT ingest.publicating_page('BR-AC-RioBranco','/tmp/pg_io/test.html');
+-- SELECT ingest.publicating_page('BR-AC-RioBranco','/tmp/pg_io');
 -- SELECT jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), (SELECT page FROM ingest.vw03publication WHERE isolabel_ext='BR-AC-RioBranco'));
 
 CREATE VIEW ingest.vw03dup_feature_asis AS
