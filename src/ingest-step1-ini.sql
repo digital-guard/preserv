@@ -457,6 +457,11 @@ FROM (
             WHEN 'line'  THEN 'segmentos'
             WHEN 'point' THEN 'pontos'
             END,
+        'geom_type_abbr',CASE ft.geomtype
+            WHEN 'poly'  THEN 'pols'
+            WHEN 'line'  THEN 'lns'
+            WHEN 'point' THEN 'pts'
+            END,
         'geom_unit_abr',CASE ft.geomtype
             WHEN 'poly'  THEN 'km2'
             WHEN 'line'  THEN 'km'
