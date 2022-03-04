@@ -4,6 +4,8 @@ publicating_geojsons_{{layername_root}}: pretty_opt = 3
 publicating_geojsons_{{layername_root}}: view       = vw{{file}}_{{tabname}}_publicating
 publicating_geojsons_{{layername_root}}:
 	mkdir -m777 -p $(folder)
+	@echo " Save ls $(folder) before changes in $(pg_io)/$(isolabel)_{{layername_root}}_ls_before.txt ---"
+	@ls -1 $(folder) > $(pg_io)/$(isolabel)_{{layername_root}}_ls_before.txt
 	@rm -rf $(folder)/*.geojson
 	@echo "--- Gerando arquivos em $(folder) ---"
 	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)','{{buffer_type}}');"
@@ -48,6 +50,10 @@ publicating_geojsons_{{layername_root}}:
 	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
 	make audit-geojsons_{{layername_root}} pg_db=$(pg_db)
 	cd /var/gits/_dg/preserv/src; sudo bash fixaPermissoes.sh $(folder)
+	@echo " Save ls $(folder) after changes in $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt ---"
+	@ls -1 $(folder) > $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt
+	@echo "--- Check DIFF in $(pg_io)/$(isolabel)_{{layername_root}}_ls_diff.txt ---"
+	@diff $(pg_io)/$(isolabel)_{{layername_root}}_ls_before.txt $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt > $(pg_io)/$(isolabel)_{{layername_root}}_ls_diff.txt
 
 audit-geojsons_{{layername_root}}: folder = {{path_root}}
 audit-geojsons_{{layername_root}}:
