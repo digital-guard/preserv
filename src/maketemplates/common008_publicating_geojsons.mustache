@@ -53,7 +53,7 @@ publicating_geojsons_{{layername_root}}:
 	@echo " Save ls $(folder) after changes in $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt ---"
 	@ls -1 $(folder) > $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt
 	@echo "--- Check DIFF in $(pg_io)/$(isolabel)_{{layername_root}}_ls_diff.txt ---"
-	@diff $(pg_io)/$(isolabel)_{{layername_root}}_ls_before.txt $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt > $(pg_io)/$(isolabel)_{{layername_root}}_ls_diff.txt
+	@diff $(pg_io)/$(isolabel)_{{layername_root}}_ls_before.txt $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt > $(pg_io)/$(isolabel)_{{layername_root}}_ls_diff.txt || true
 
 audit-geojsons_{{layername_root}}: folder = {{path_root}}
 audit-geojsons_{{layername_root}}:

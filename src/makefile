@@ -62,6 +62,7 @@ message:
 	echo " load_codec_type: update codec_type table. "
 	echo " load_hcode_parameters: update hcode_parameters table. "
 	echo " load_license_tables: create or update tmp_pack_licenses table. "
+	echo " generate_pages: create html pages for layers. "
 
 ## ## ## ##
 ## -- SQL BUILDERs --
@@ -164,6 +165,10 @@ build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=n
 	@echo ") SERVER foreign_server"
 	@echo "  OPTIONS (schema_name '$(fdwOrigSchema)', table_name '$(fdwOrigName)');"
 	@echo
+
+generate_pages:
+	@echo "--- Save html pages in $(folder) ---"
+	@psql $(pg_db_uri) -c "SELECT ingest.publicating_page('$(isolabel)','$(folder)');"
 
 first_makefile:
 	@echo "--- Copying initial makefile in 'data/_pk*' directories   ---"
