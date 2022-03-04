@@ -68,7 +68,7 @@ all_joins: {{#joins_keys}}join-{{.}} {{/joins_keys}}
 {{#layers}}
 {{#address}}
 address: tabname = {{tabname}}
-address: makedirs $(orig)/{{sha256file}}
+address: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -80,7 +80,7 @@ address-clean:
 
 {{#block}}
 block: tabname = {{tabname}}
-block: makedirs $(orig)/{{sha256file}}
+block: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -94,7 +94,7 @@ block-clean:
 
 {{#building}}
 building: tabname = {{tabname}}
-building: makedirs $(orig)/{{sha256file}}
+building: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -108,7 +108,7 @@ building-clean:
 
 {{#cadparcel}}
 cadparcel: tabname = {{tabname}}
-cadparcel: makedirs $(orig)/{{sha256file}}
+cadparcel: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -120,7 +120,7 @@ cadparcel-clean:
 
 {{#cadvia}}
 cadvia: tabname = {{tabname}}
-cadvia: makedirs $(orig)/{{sha256file}}
+cadvia: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -132,7 +132,7 @@ cadvia-clean:
 
 {{#genericvia}}
 genericvia: tabname = {{tabname}}
-genericvia: makedirs $(orig)/{{sha256file}}
+genericvia: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -146,7 +146,7 @@ genericvia-clean:
 
 {{#geoaddress}}
 geoaddress: tabname = {{tabname}}
-geoaddress: makedirs $(orig)/{{sha256file}}
+geoaddress: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
@@ -163,7 +163,7 @@ geoaddress-clean:
 
 {{#nsvia}}
 nsvia: tabname = {{tabname}}
-nsvia: makedirs $(orig)/{{sha256file}}
+nsvia: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -177,7 +177,7 @@ nsvia-clean:
 
 {{#parcel}}
 parcel: tabname = {{tabname}}
-parcel: makedirs $(orig)/{{sha256file}}
+parcel: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{>common001_pgAny_load}}
@@ -191,7 +191,7 @@ parcel-clean:
 
 {{#via}}
 via: tabname = {{tabname}}
-via: makedirs $(orig)/{{sha256file}}
+via: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
