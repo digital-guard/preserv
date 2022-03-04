@@ -26,7 +26,7 @@
 	<tbody>
         {{#layers}}
 		<tr>
-			<td class="dataselector" onclick="alert('{{#isFirst}}Avisa que é o mapa ativo,{{/isFirst}}{{^isFirst}}Muda o mapa, mostra mosaico de navegação do{{/isFirst}} layer {{class_ftname}}')">
+			<td class="dataselector" >
 				<img alt="Marcador de mapa." src="https://raw.githubusercontent.com/digital-guard/preserv/main/docs/assets/layerIcon-{{class_ftname}}.png">
 				<strong>{{class_ftname}}</strong> ({{shortname}})
 			</td>
@@ -47,9 +47,7 @@
 	gerado conforme definições em <a target="_git" href="http://git.digital-guard.org/preserv-{{path_preserv}}/make_conf.yaml"><small>git.digital-guard.org/preserv-{{path_preserv}}/make_conf.yaml</small></a>.
 	A <a rel="external" target="_docs" href="http://git.digital-guard.org//preserv/blob/main/docs/pt/man-makeConf.md">documentação técnica</a> para execução do <code>make</code> fornece mais detalhes.
 {{#layers}}
-{{#isFirst}}
 	<br />A navegação no mapa abaixo faz uso direto e transparente dos dados publicados em <a target="_git" href="http://git.digital-guard.org/{{path_cutgeo}}/{{class_ftname}}"><small>git.digital-guard.org/{{path_cutgeo}}/{{class_ftname}}</small></a>.
-{{/isFirst}}
 {{/layers}}
 </p>
 
@@ -84,6 +82,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.2/chroma.min.js" integrity="sha512-8TVPS0EFkkmtT6yPb5K4csnSt3tjbKRrs0F8gvTNKv2OxOcwDO7+Klkz86gMVrzfqtZos5N2a+k+r9D+hlccmQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="assets/tablesort/tablesort.min.js"></script>
 <script src="assets/tablesort/sorts/tablesort.number.min.js"></script>
+<script>const baseURL = "https://raw.githubusercontent.com/digital-guard/{{path_cutgeo}}/{{class_ftname}}";</script>
 <script src="main.js"></script>
 </body>
 </html>
