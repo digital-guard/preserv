@@ -1,6 +1,7 @@
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the {{layername_root}} datatype
 	@echo
 	@echo "------------------------------------------"
+	@echo "------ {{isolabel_ext}}  ------"
 	@echo "------ Layer tipo {{layername}}  ------"
 	@echo "-- Incluindo dados do arquivo-{{file}} do package-{{fullPkID}} na base $(pg_db) --"
 	@echo " Nome-hash do arquivo-{{file}}: {{sha256file}}"
