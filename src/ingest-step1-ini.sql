@@ -429,6 +429,7 @@ SELECT isolabel_ext, jsonb_build_object(
     'path_preserv', path_preserv,
     'pack_number', pack_number,
     'path_cutgeo', path_cutgeo,
+    'path_cutgeo_notree', replace(path_cutgeo,'tree/',''),
     'layers',  jsonb_agg(jsonb_build_object(
                 'class_ftname', class_ftname,
                 'shortname', shortname,
