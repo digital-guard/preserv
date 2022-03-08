@@ -62,7 +62,7 @@ message:
 	echo " load_codec_type: update codec_type table. "
 	echo " load_hcode_parameters: update hcode_parameters table. "
 	echo " load_license_tables: create or update tmp_pack_licenses table. "
-	echo " generate_pages: create html pages for layers. "
+	echo " generate_pages pg_datalake=dl42t_main: create html pages for layers. "
 	echo
 	echo " to_donated_packcomponent pg_db=ingest42 pg_datalake=dl42t_main: copy ingest.donated_packcomponent to optim.donated_PackComponent_not_approved in DL03t_main. "
 	echo " approved_donated_packcomponent id=42 pg_datalake=dl42t_main: approved packcomponent from optim.donated_PackComponent_not_approved to optim.donated_PackComponent. "
@@ -160,6 +160,7 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction_geom-04-02-22.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step2-ini.sql
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step3-publication.sql
 	@echo "--- Running API SQL templates ---"
 	@echo "!nao fazendo ainda, futuro"
 	#psql $(pg_datalake_uri) < step00-iniApi.sql
@@ -184,7 +185,8 @@ build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=n
 
 generate_pages:
 	@echo "--- Save html pages in $(folder) ---"
-	@psql $(pg_db_uri) -c "SELECT ingest.publicating_page('$(isolabel)','$(folder)');"
+	@echo "--- PG deve ter permissão de escrita em $(folder) ---"
+	@psql $(pg_datalake_uri) -c "SELECT optim.publicating_page('$(isolabel)','$(folder)');"
 
 first_makefile:
 	@echo "--- Copying initial makefile in 'data/_pk*' directories   ---"

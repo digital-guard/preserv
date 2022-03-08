@@ -239,6 +239,36 @@ SELECT isolabel_ext, ftname
 FROM optim.vw01report
 ;
 
+
+DROP VIEW IF EXISTS optim.vw01info_feature_type CASCADE;
+CREATE VIEW optim.vw01info_feature_type AS
+  SELECT ftid, ftname, geomtype, need_join, description,
+       COALESCE(f.info,'{}'::jsonb) || (
+         SELECT to_jsonb(t2) FROM (
+           SELECT c.ftid as class_ftid, c.ftname as class_ftname,
+                  c.description as class_description,
+                  c.info as class_info
+           FROM optim.feature_type c
+           WHERE c.geomtype='class' AND c.ftid = 10*round(f.ftid/10)
+         ) t2
+       ) AS info
+  FROM optim.feature_type f
+  WHERE f.geomtype!='class'
+;
+COMMENT ON VIEW optim.vw01info_feature_type
+  IS 'Adds class_ftname, class_description and class_info to optim.feature_type.info.'
+;
+
+CREATE VIEW optim.vw01full_jurisdiction_geom AS
+    SELECT j.*, g.geom
+    FROM optim.jurisdiction j
+    LEFT JOIN optim.jurisdiction_geom g
+    ON j.osm_id = g.osm_id
+;
+COMMENT ON VIEW optim.vw01full_jurisdiction_geom
+  IS 'Add geom to optim.jurisdiction.'
+;
+
 CREATE TABLE optim.housenumber_system_type (
   hstid smallint PRIMARY KEY NOT NULL,
   hstname text NOT NULL CHECK(lower(hstname)=hstname), -- hslabel
