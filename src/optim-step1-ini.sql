@@ -186,9 +186,23 @@ CREATE TABLE optim.donated_PackComponent(
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
 
+CREATE TABLE optim.donated_PackComponent_not_approved(
+  -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
+  id bigserial NOT NULL PRIMARY KEY,  -- layerfile_id
+  packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
+  ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
+  is_evidence boolean default false,
+  proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
+  lineage jsonb NOT NULL,
+  lineage_md5 text NOT NULL,
+  kx_profile jsonb,
+  UNIQUE(packvers_id,ftid,lineage_md5)
+  --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
+);
+
 CREATE TABLE optim.report(
   id bigint,
-  packvers_id bigint NOT NULL REFERENCES optim.donated_PackFileVers(id),
+  packvers_id bigint NOT NULL, --REFERENCES optim.donated_PackFileVers(id),
   ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
   is_evidence boolean default false,
   proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
@@ -447,5 +461,28 @@ BEGIN
   EXECUTE format( q, jurisdiction, jurisdiction ) ;
 
   RETURN (SELECT 'OK, inserted new itens at jurisdiction, donor and donatedPack. ');
+END;
+$f$ LANGUAGE PLpgSQL;
+
+CREATE or replace FUNCTION optim.approved_packcomponent(
+    p_id bigint
+) RETURNS text AS $f$
+DECLARE
+  q text;
+BEGIN
+  q := $$
+    INSERT INTO optim.donated_PackComponent (packvers_id, ftid, is_evidence, proc_step, lineage, lineage_md5, kx_profile)
+    SELECT packvers_id, ftid, is_evidence, proc_step, lineage, lineage_md5, coalesce(kx_profile,'{}'::jsonb) || jsonb_build_object( 'date_aprroved', (date_trunc('second',NOW())) )
+    FROM optim.donated_PackComponent_not_approved
+    WHERE id=%s
+    ON CONFLICT (packvers_id,ftid,lineage_md5)
+    DO UPDATE
+    SET (is_evidence, proc_step, lineage, kx_profile) = (EXCLUDED.is_evidence, EXCLUDED.proc_step, EXCLUDED.lineage, EXCLUDED.kx_profile);
+    DELETE FROM optim.donated_PackComponent_not_approved WHERE id=%s
+  $$;
+
+  EXECUTE format( q, p_id, p_id ) ;
+
+  RETURN (SELECT 'OK, approved.');
 END;
 $f$ LANGUAGE PLpgSQL;

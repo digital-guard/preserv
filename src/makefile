@@ -47,7 +47,7 @@ message:
 	echo " -- REPORT tools --"
 	echo " countpacks [pkdir=v]: count package-evidence files ok pkdir (e.g. preserv-BR) or its root"
 	echo " status: of databases and disk usage"
-	echo " to_report pg_db=ingest42: "
+	echo " to_report pg_db=ingest42 pg_datalake=dl42t_main: "
 	echo
 	echo " -- ADMIN tools --"
 	echo " fix_usergroup username=v: add standard groups to username"
@@ -63,7 +63,9 @@ message:
 	echo " load_hcode_parameters: update hcode_parameters table. "
 	echo " load_license_tables: create or update tmp_pack_licenses table. "
 	echo " generate_pages: create html pages for layers. "
-
+	echo
+	echo " to_donated_packcomponent pg_db=ingest42 pg_datalake=dl42t_main: copy ingest.donated_packcomponent to optim.donated_PackComponent_not_approved in DL03t_main. "
+	echo " approved_donated_packcomponent id=42 pg_datalake=dl42t_main: approved packcomponent from optim.donated_PackComponent_not_approved to optim.donated_PackComponent. "
 ## ## ## ##
 ## -- SQL BUILDERs --
 
@@ -123,9 +125,23 @@ to_report:
 	pg_dump --inserts -t ingest.donated_packcomponent $(pg_db_uri) > $(pg_io)/dump_component_$(pg_db).sql
 	@echo "--- Preparing $(pg_io)/dump_component_$(pg_db).sql ---"
 	bash to_report.bash $(pg_io)/dump_component_$(pg_db).sql
-	@echo "--- INSERT $(pg_io)/dump_component_$(pg_db).sql INTO DL03t_main optim.report ---"
-	grep "INSERT INTO" $(pg_io)/dump_component_$(pg_db).sql | psql postgres://postgres@localhost/dl03t_main
-	@echo "--- See optim.report in DL03t_main ---"
+	@echo "--- INSERT $(pg_io)/dump_component_$(pg_db).sql INTO $(pg_datalake) optim.report ---"
+	grep "INSERT INTO" $(pg_io)/dump_component_$(pg_db).sql | psql $(pg_datalake_uri)
+	@echo "--- See optim.report in $(pg_datalake) ---"
+
+to_donated_packcomponent:
+	@echo "--- DUMP ingest.donated_packcomponent to $(pg_io)/dump_component_$(pg_db).sql ---"
+	pg_dump --inserts -t ingest.donated_packcomponent $(pg_db_uri) > $(pg_io)/dump_component_$(pg_db).sql
+	@echo "--- Preparing $(pg_io)/dump_component_$(pg_db).sql ---"
+	bash to_donated_packcomponent.bash $(pg_io)/dump_component_$(pg_db).sql
+	@echo "--- INSERT $(pg_io)/dump_component_$(pg_db).sql INTO $(pg_datalake) optim.donated_PackComponent_not_approved ---"
+	grep "INSERT INTO" $(pg_io)/dump_component_$(pg_db).sql | psql $(pg_datalake_uri)
+	@echo "--- See optim.donated_PackComponent_not_approved in $(pg_datalake) ---"
+
+approved_donated_packcomponent:
+	@echo "Usage: make approved_donated_packcomponent id=<id from optim.donated_PackComponent_not_approved>"
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+	@[ "${id}" ] && psql $(pg_datalake_uri) -c "SELECT optim.approved_packcomponent($(id))" || ( echo "Unknown id.")
 
 ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_datalake)"
