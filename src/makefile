@@ -47,7 +47,6 @@ message:
 	echo " -- REPORT tools --"
 	echo " countpacks [pkdir=v]: count package-evidence files ok pkdir (e.g. preserv-BR) or its root"
 	echo " status: of databases and disk usage"
-	echo " to_report pg_db=ingest42 pg_datalake=dl42t_main: "
 	echo
 	echo " -- ADMIN tools --"
 	echo " fix_usergroup username=v: add standard groups to username"
@@ -119,15 +118,6 @@ load_license_tables: pgio
 	SELECT id_label, name, family, url_report AS url, 'no' AS license_is_explicit FROM tmp_implieds) AS l \
 	ON lower(d.license) = l.id_label AND d.license_is_explicit = l.license_is_explicit;\
 	DROP FOREIGN TABLE IF EXISTS tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_donatedPack;"
-
-to_report:
-	@echo "--- DUMP ingest.donated_packcomponent to $(pg_io)/dump_component_$(pg_db).sql ---"
-	pg_dump --inserts -t ingest.donated_packcomponent $(pg_db_uri) > $(pg_io)/dump_component_$(pg_db).sql
-	@echo "--- Preparing $(pg_io)/dump_component_$(pg_db).sql ---"
-	bash to_report.bash $(pg_io)/dump_component_$(pg_db).sql
-	@echo "--- INSERT $(pg_io)/dump_component_$(pg_db).sql INTO $(pg_datalake) optim.report ---"
-	grep "INSERT INTO" $(pg_io)/dump_component_$(pg_db).sql | psql $(pg_datalake_uri)
-	@echo "--- See optim.report in $(pg_datalake) ---"
 
 to_donated_packcomponent:
 	@echo "--- DUMP ingest.donated_packcomponent to $(pg_io)/dump_component_$(pg_db).sql ---"

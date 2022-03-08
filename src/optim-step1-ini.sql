@@ -200,25 +200,13 @@ CREATE TABLE optim.donated_PackComponent_not_approved(
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
 
-CREATE TABLE optim.report(
-  id bigint,
-  packvers_id bigint NOT NULL, --REFERENCES optim.donated_PackFileVers(id),
-  ftid smallint NOT NULL REFERENCES optim.feature_type(ftid),
-  is_evidence boolean default false,
-  proc_step int DEFAULT 1,  -- current status of the "processing steps", 1=started, 2=loaded, ...=finished
-  lineage jsonb NOT NULL,
-  lineage_md5 text NOT NULL,
-  kx_profile jsonb,
-  UNIQUE(packvers_id,ftid,lineage_md5)
-);
-
 CREATE or replace VIEW optim.vw01report AS
 SELECT isolabel_ext, legalName, vat_id, "ID de pack_componente", ftname, ftid, step, data_feito, n_items, size
 FROM (
   SELECT jg.isolabel_ext, dn.legalName, dn.vat_id, packvers_id, idcomp AS "ID de pack_componente",ft.ftname, t.ftid,step, data_feito, (j->>'n')||' '||(j->>'n_unit') AS n_items,  (j->>'size')||' '||(j->>'size_unit') AS size
   FROM (
     SELECT packvers_id, replace(lib.id_format('packfilevers',packvers_id), '076.00','br') AS idcomp, ftid, proc_step AS step, substr(lineage->'file_meta'->>'modification',1,10) AS data_feito, lineage->'feature_asis_summary' AS j
-    FROM optim.report AS r
+    FROM optim.donated_PackComponent AS r
     ORDER BY 1) t 
   INNER JOIN optim.feature_type ft
     ON ft.ftid=t.ftid
@@ -238,7 +226,6 @@ CREATE or replace VIEW optim.vw02report_simple AS
 SELECT isolabel_ext, ftname
 FROM optim.vw01report
 ;
-
 
 DROP VIEW IF EXISTS optim.vw01info_feature_type CASCADE;
 CREATE VIEW optim.vw01info_feature_type AS
