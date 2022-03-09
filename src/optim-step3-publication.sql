@@ -1,6 +1,6 @@
 DROP VIEW IF EXISTS optim.vw03publication CASCADE;
 CREATE VIEW optim.vw03publication AS
-SELECT isolabel_ext, jsonb_build_object(
+SELECT isolabel_ext, local_serial, pk_count, jsonb_build_object(
     'isolabel_ext', isolabel_ext,
     'legalname', legalname,
     'vat_id', vat_id,
@@ -20,63 +20,58 @@ SELECT isolabel_ext, jsonb_build_object(
                 'hashedfname_without_ext', hashedfname_without_ext,
                 'hashedfname_7_ext', hashedfname_7_ext,
                 'isFirst', iif(row_num=1,'true'::jsonb,'false'::jsonb),
+                'geom_type_abbr', geom_type_abbr,
                 'publication_summary', publication_summary,
-                'url_page', lower(isolabel_ext) || '_' || class_ftname || '.html'
+                'url_page', lower(isolabel_ext) || '_pk' || pack_number || '_' ||  class_ftname || '.html'
                 ))
     ) AS page
 FROM (
-  SELECT j.isolabel_ext, dn.legalname, dn.vat_id, dn.url, dn.wikidata_id, pf.pack_item_accepted_date,
-  INITCAP(pt.user_resp) AS user_resp, 
-  row_number() OVER (PARTITION BY j.isolabel_ext, dn.local_serial, pt.pk_count ORDER BY ft.info->'class_ftname' ASC ) AS row_num,
-  ft.info->>'class_ftname' as class_ftname, 
-  ft.info->'class_info'->>'shortname_pt' as shortname,
-  ft.info->'class_info'->>'description_pt' as description,
-  pt.make_conf_tpl->'license_evidences' AS license_evidences,
+  SELECT pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.local_serial, pf.pk_count,
+  INITCAP(pf.user_resp) AS user_resp,
+  row_number() OVER (PARTITION BY pf.isolabel_ext, pf.local_serial, pf.pk_count ORDER BY pf.ftype_info->'class_ftname' ASC ) AS row_num,
+  pf.ftype_info->>'class_ftname' as class_ftname,
+  pf.ftype_info->'class_info'->>'shortname_pt' as shortname,
+  pf.ftype_info->'class_info'->>'description_pt' as description,
+  pf.make_conf_tpl->'license_evidences' AS license_evidences,
   pf.hashedfname, 
   substring(pf.hashedfname, '^([0-9a-f]{64,64})\.[a-z0-9]+$') AS hashedfname_without_ext, 
   substring(pf.hashedfname, '^([0-9a-f]{7}).+$') || '...' || substring(pf.hashedfname, '^.+\.([a-z0-9]+)$') AS hashedfname_7_ext,
+  CASE pf.geomtype
+            WHEN 'poly'  THEN 'pols'
+            WHEN 'line'  THEN 'lns'
+            WHEN 'point' THEN 'pts'
+            END AS geom_type_abbr,
   jsonb_build_object(
-        'geom_type',CASE ft.geomtype
+        'geom_type',CASE pf.geomtype
             WHEN 'poly'  THEN 'polígonos'
             WHEN 'line'  THEN 'segmentos'
             WHEN 'point' THEN 'pontos'
             END,
-        'geom_type_abbr',CASE ft.geomtype
-            WHEN 'poly'  THEN 'pols'
-            WHEN 'line'  THEN 'lns'
-            WHEN 'point' THEN 'pts'
-            END,
-        'geom_unit_abr',CASE ft.geomtype
+        'geom_unit_abr',CASE pf.geomtype
             WHEN 'poly'  THEN 'km2'
             WHEN 'line'  THEN 'km'
             ELSE  ''
             END,
-        'geom_unit_ext',CASE ft.geomtype
+        'geom_unit_ext',CASE pf.geomtype
             WHEN 'poly'  THEN 'quilômetros quadrados'
             WHEN 'line'  THEN 'quilômetros'
             ELSE  ''
             END,
-            'isGeoaddress', iif(ft.info->>'class_ftname'='geoaddress','true'::jsonb,'false'::jsonb),
+            'isGeoaddress', iif(pf.ftype_info->>'class_ftname'='geoaddress','true'::jsonb,'false'::jsonb),
         'bytes_mb', (pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0
   ) || (pc.kx_profile->'publication_summary') AS publication_summary,
-  regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv,
-  to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS pack_number,
-  'preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_cutgeo
-  --, dn.kx_scope_label, pc.*, ft.ftname, ft.geomtype, ft.need_join, ft.description, ft.info AS ft_info
-  FROM optim.donated_PackComponent pc
-  INNER JOIN optim.vw01info_feature_type ft
-    ON pc.ftid=ft.ftid
-  LEFT JOIN optim.donated_packfilevers pf
-    ON pc.packvers_id=pf.id
-  LEFT JOIN optim.donated_PackTpl pt
-    ON pf.pack_id=pt.id
-  LEFT JOIN optim.donor dn
-    ON pt.donor_id=dn.id
-  LEFT JOIN optim.vw01full_jurisdiction_geom j
-    ON dn.scope_osm_id=j.osm_id
-  ORDER BY j.isolabel_ext, ft.info->>'class_ftname'
+  regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS path_preserv,
+  to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS pack_number,
+  'preservCutGeo-' || regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS path_cutgeo
+
+  FROM optim.vw01full_packfilevers_ftype pf
+  INNER JOIN optim.donated_PackComponent pc
+  ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
+
+  WHERE pf.ftid > 19
+  ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
 ) t
-GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv, pack_number, path_cutgeo, pack_item_accepted_date
+GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv, pack_number, path_cutgeo, pack_item_accepted_date, local_serial, pk_count
 ;
 
 CREATE or replace FUNCTION optim.publicating_page(

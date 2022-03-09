@@ -200,32 +200,7 @@ CREATE TABLE optim.donated_PackComponent_not_approved(
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
 
-CREATE or replace VIEW optim.vw01report AS
-SELECT isolabel_ext, legalName, vat_id, "ID de pack_componente", ftname, ftid, step, data_feito, n_items, size
-FROM (
-  SELECT jg.isolabel_ext, dn.legalName, dn.vat_id, packvers_id, idcomp AS "ID de pack_componente",ft.ftname, t.ftid,step, data_feito, (j->>'n')||' '||(j->>'n_unit') AS n_items,  (j->>'size')||' '||(j->>'size_unit') AS size
-  FROM (
-    SELECT packvers_id, replace(lib.id_format('packfilevers',packvers_id), '076.00','br') AS idcomp, ftid, proc_step AS step, substr(lineage->'file_meta'->>'modification',1,10) AS data_feito, lineage->'feature_asis_summary' AS j
-    FROM optim.donated_PackComponent AS r
-    ORDER BY 1) t 
-  INNER JOIN optim.feature_type ft
-    ON ft.ftid=t.ftid
-  INNER JOIN optim.donated_packfilevers pf
-    ON packvers_id=pf.id
-  INNER JOIN optim.donated_PackTpl pt
-    ON pf.pack_id=pt.id
-  INNER JOIN optim.donor dn
-    ON pt.donor_id=dn.id
-  INNER JOIN optim.jurisdiction_geom jg
-    ON dn.scope_osm_id=jg.osm_id
-  ORDER BY jg.isolabel_ext
-) AS g
-;
-
-CREATE or replace VIEW optim.vw02report_simple AS
-SELECT isolabel_ext, ftname
-FROM optim.vw01report
-;
+------------------------
 
 DROP VIEW IF EXISTS optim.vw01info_feature_type CASCADE;
 CREATE VIEW optim.vw01info_feature_type AS
@@ -255,6 +230,56 @@ CREATE VIEW optim.vw01full_jurisdiction_geom AS
 COMMENT ON VIEW optim.vw01full_jurisdiction_geom
   IS 'Add geom to optim.jurisdiction.'
 ;
+
+CREATE VIEW optim.vw01full_packfilevers AS
+  SELECT pf.*,
+         pt.donor_id, pt.pk_count, pt.original_tpl, pt.make_conf_tpl, pt.kx_num_files, pt.info AS packtpl_info,
+         dn.country_id, dn.local_serial, dn.scope_osm_id, dn.kx_scope_label, dn.shortname, dn.vat_id, dn.legalName, dn.wikidata_id, dn.url, dn.info AS donor_info, dn.kx_vat_id,
+         j.osm_id, j.jurisd_base_id, j.jurisd_local_id, j.parent_id, j.admin_level, j.name, j.parent_abbrev, j.abbrev, j.wikidata_id AS jurisdiction_wikidata_id, j.lexlabel, j.isolabel_ext, j.ddd, j.housenumber_system_type, j.lex_urn, j.info AS jurisdiction_info, j.geom
+  FROM optim.donated_packfilevers pf
+  LEFT JOIN optim.donated_PackTpl pt
+    ON pf.pack_id=pt.id
+  LEFT JOIN optim.donor dn
+    ON pt.donor_id=dn.id
+  LEFT JOIN optim.vw01full_jurisdiction_geom j
+    ON dn.scope_osm_id=j.osm_id
+  ORDER BY j.isolabel_ext, dn.local_serial, pt.pk_count
+;
+
+CREATE VIEW optim.vw01full_packfilevers_ftype AS
+    SELECT pf.*, ft.ftid, ft.ftname, ft.geomtype, ft.need_join, ft.description, ft.info AS ftype_info
+    FROM (
+        SELECT *, jsonb_object_keys(make_conf_tpl->'layers') AS layer
+        FROM optim.vw01full_packfilevers
+    ) pf
+    LEFT JOIN optim.vw01info_feature_type ft
+    ON ft.ftid = ( SELECT ftid::int FROM optim.feature_type WHERE ftname=lower(layer || '_' || (make_conf_tpl->'layers'->layer->>'subtype')) ) 
+;
+
+------------------------
+
+CREATE or replace VIEW optim.vw01report AS
+SELECT isolabel_ext, legalName, vat_id, "ID de pack_componente", ftname, ftid, step, data_feito, n_items, size
+FROM (
+  SELECT pf.isolabel_ext, pf.legalName, pf.vat_id, packvers_id, idcomp AS "ID de pack_componente",ft.ftname, t.ftid,step, data_feito, (j->>'n')||' '||(j->>'n_unit') AS n_items,  (j->>'size')||' '||(j->>'size_unit') AS size
+  FROM (
+    SELECT packvers_id, replace(lib.id_format('packfilevers',packvers_id), '076.00','br') AS idcomp, ftid, proc_step AS step, substr(lineage->'file_meta'->>'modification',1,10) AS data_feito, lineage->'feature_asis_summary' AS j
+    FROM optim.donated_PackComponent AS r
+    ORDER BY 1) t 
+  INNER JOIN optim.feature_type ft
+    ON ft.ftid=t.ftid
+  INNER JOIN optim.vw01full_packfilevers pf
+    ON packvers_id=pf.id
+  ORDER BY pf.isolabel_ext
+) AS g
+;
+
+CREATE or replace VIEW optim.vw02report_simple AS
+SELECT isolabel_ext, ftname
+FROM optim.vw01report
+;
+
+------------------------
 
 CREATE TABLE optim.housenumber_system_type (
   hstid smallint PRIMARY KEY NOT NULL,
