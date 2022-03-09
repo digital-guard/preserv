@@ -31,6 +31,7 @@ FROM (
   ft.info->>'class_ftname' as class_ftname, 
   ft.info->'class_info'->>'shortname_pt' as shortname,
   ft.info->'class_info'->>'description_pt' as description,
+  pt.make_conf_tpl->'license_evidences' AS license_evidences,
   pf.hashedfname, 
   substring(pf.hashedfname, '^([0-9a-f]{64,64})\.[a-z0-9]+$') AS hashedfname_without_ext, 
   substring(pf.hashedfname, '^([0-9a-f]{7}).+$') || '...' || substring(pf.hashedfname, '^.+\.([a-z0-9]+)$') AS hashedfname_7_ext,
