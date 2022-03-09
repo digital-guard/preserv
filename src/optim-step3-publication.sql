@@ -92,3 +92,39 @@ CREATE or replace FUNCTION optim.publicating_page(
 $f$ language SQL VOLATILE;
 -- SELECT optim.publicating_page('BR-AC-RioBranco','/tmp/pg_io');
 -- SELECT jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), (SELECT page FROM optim.vw03publication WHERE isolabel_ext='BR-AC-RioBranco'));
+
+CREATE or replace FUNCTION optim.publicating_index_page(
+	p_fileref text
+) RETURNS text  AS $f$
+    SELECT volat_file_write(($1 || '/' || 'index.html'), v.page) AS output_write
+    FROM (
+        SELECT jsonb_mustache_render(pg_read_file('/var/gits/_dg/preservDataViz/src/preservCutGeo/index_page.mustache'), jsonb_build_object('pages', pages)) AS page
+        FROM
+        (
+            SELECT jsonb_agg(t.*) AS pages
+            FROM
+            (
+                SELECT *, lower(isolabel_ext) || '_pk' || pack_number || '_' ||  class_ftname || '.html' AS url_page,
+                            isolabel_ext || '/pk' || pack_number AS name
+                FROM
+                (
+                    SELECT *, row_number() OVER (PARTITION BY isolabel_ext, pack_number ORDER BY class_ftname ASC ) AS row_num
+                    FROM
+                    (
+                    SELECT pf.isolabel_ext,
+                            to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS pack_number,
+                            pf.ftype_info->>'class_ftname' as class_ftname
+                    FROM optim.vw01full_packfilevers_ftype pf
+                    INNER JOIN optim.donated_PackComponent pc
+                    ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
+
+                    WHERE pf.ftid > 19
+                    ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
+                    ) r
+                ) s
+                WHERE row_num = 1
+            ) t
+        ) u
+    ) v;
+$f$ language SQL VOLATILE;
+-- SELECT optim.publicating_index_page('/tmp/pg_io');
