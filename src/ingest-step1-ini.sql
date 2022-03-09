@@ -1527,12 +1527,13 @@ BEGIN
   SELECT 
         t.ghs, 
         t.row_id::int AS gid, 
-        jsonb_strip_nulls(jsonb_build_object('ns_name',ns_name, 'ref', ref, 'bytes',length(St_asGeoJson(t.geom)))) AS info,
+        jsonb_strip_nulls(jsonb_build_object('ns_name',ns_name,'nsvia_name',nsvia_name, 'ref', ref, 'bytes',length(St_asGeoJson(t.geom)))) AS info,
         t.geom
   FROM (
       SELECT fa.file_id, fa.geom,
         ROW_NUMBER() OVER(ORDER BY fa.properties->>'ns_name') AS row_id,
         fa.properties->>'ns_name' AS ns_name,
+        fa.properties->>'nsvia_name' AS nsvia_name,
         fa.properties->>'ref' AS ref,
         fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
