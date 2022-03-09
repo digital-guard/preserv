@@ -175,7 +175,10 @@ build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=n
 
 generate_pages:
 	@echo "--- Save html pages in $(folder) ---"
-	@echo "--- PG deve ter permissão de escrita em $(folder) ---"
+	@echo "--- Create $(folder)"
+	mkdir -p $(folder)
+	@echo "--- fix permissions $(folder)"
+	sudo bash fixaPermissoes.sh $(folder)
 	@psql $(pg_datalake_uri) -c "SELECT optim.publicating_page('$(isolabel)','$(folder)');"
 
 first_makefile:
