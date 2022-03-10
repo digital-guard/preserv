@@ -4,3 +4,4 @@ id_profile_params,hcode_distribution_parameters,hcode_signature_parameters,comme
 4,p_heuristic:3;p_threshold:400000;p_threshold_sum:4000000,p_percentile:0.75;p_heuristic:1,'nsvia_pk0018.01'
 5,p_heuristic:3;p_threshold:100000;p_threshold_sum:2097152,p_percentile:0.75;p_heuristic:1,'default_lines_pols'
 6,p_heuristic:3;p_threshold:1000000;p_threshold_sum:2097152,p_percentile:0.75;p_heuristic:1,'block/AC'
+7,p_heuristic:3;p_threshold:180000;p_threshold_sum:2097152,p_percentile:0.75;p_heuristic:1,'parcel/Niteroi'
