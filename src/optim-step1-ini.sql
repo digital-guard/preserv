@@ -279,6 +279,35 @@ SELECT isolabel_ext, ftname
 FROM optim.vw01report
 ;
 
+CREATE or replace VIEW optim.vw01report_median AS
+SELECT isolabel_ext, pack_number, class_ftname, COUNT(ghs) AS n, ( percentile_disc(0.5) WITHIN GROUP (ORDER BY size_bytes) ) / 1024 AS mdn_n
+FROM (
+    SELECT isolabel_ext, pack_number, class_ftname, ghs, (SELECT size::bigint FROM pg_stat_file(path)) AS size_bytes
+    FROM (
+        SELECT isolabel_ext, pack_number, class_ftname, ghs, path_root || pack_number || '/' || class_ftname || '/' || geom_type_abbr || '_' || ghs || '.geojson' AS path
+        FROM (
+            SELECT pf.isolabel_ext,
+                    to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS pack_number,
+                    pf.ftype_info->>'class_ftname' as class_ftname,
+                    jsonb_object_keys(pc.kx_profile->'ghs_distrib_mosaic') AS ghs,
+                    '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' AS path_root,
+                    CASE pf.geomtype
+                        WHEN 'poly'  THEN 'pols'
+                        WHEN 'line'  THEN 'lns'
+                        WHEN 'point' THEN 'pts'
+                    END AS geom_type_abbr
+            FROM optim.vw01full_packfilevers_ftype pf
+            INNER JOIN optim.donated_PackComponent pc
+            ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
+
+            WHERE pf.ftid > 19
+            ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
+        ) r
+    ) s
+) t
+GROUP BY isolabel_ext, pack_number, class_ftname
+;
+
 ------------------------
 
 CREATE TABLE optim.housenumber_system_type (
