@@ -173,3 +173,50 @@ Propriedade que variam conforme os layers:
   * dim1= linhas = tem soma de métrica km  
   * dim2 = polígonos = tem soma de km2, e densidade_km2
 * size_unitDensity
+
+## Relatórios
+
+### optim.vw01report
+
+Exemplo:
+
+```
+dl03t_main=# select * from optim.vw01report;
+ isolabel_ext  |            legalname            |         vat_id          | ID de pack_componente |     ftname      | ftid | step | data_feito |    n_items     |  size   
+---------------+---------------------------------+-------------------------+-----------------------+-----------------+------+------+------------+----------------+---------
+ BR-RJ-Niteroi | Prefeitura Municipal de Niterói | cnpj:28.521.748/0001-59 | br0016.01.3.01        | nsvia_ext       |   72 |    6 | 2020-05-22 | 65 polygons    | 133 km2
+ BR-RJ-Niteroi | Prefeitura Municipal de Niterói | cnpj:28.521.748/0001-59 | br0016.01.2.01        | via_full        |   31 |    6 | 2020-05-22 | 2538 segments  | 759 km
+ BR-RJ-Niteroi | Prefeitura Municipal de Niterói | cnpj:28.521.748/0001-59 | br0016.01.1.01        | parcel_ext      |   62 |    6 | 2020-04-20 | 74804 polygons | 62 km2
+ BR-SP-Santos  | Prefeitura Municipal de Santos  | cnpj:58.200.015/0001-83 | br0029.01.1.01        | geoaddress_full |   21 |    6 | 2018-09-18 | 43161 points   | 
+(4 rows)
+```
+
+### optim.vw02report_simple
+
+Exemplo:
+
+```
+dl03t_main=# select * from optim.vw02report_simple;
+ isolabel_ext  |     ftname
+---------------+-----------------
+ BR-RJ-Niteroi | nsvia_ext
+ BR-RJ-Niteroi | via_full
+ BR-RJ-Niteroi | parcel_ext
+ BR-SP-Santos  | geoaddress_full
+(4 rows)
+```
+
+### vw01report_median
+
+A view optim.vw01report_median (em dl03t_main) retorna a quantidade de arquivos, sua a mediana, média, mínimo e máximo em _kibibytes_. Exemplo:
+
+```
+dl03t_main=# select * from optim.vw01report_median ;
+ isolabel_ext  | pack_number | class_ftname | n  | mdn_n | avg_n | min_n | max_n
+---------------+-------------+--------------+----+-------+-------+-------+-------
+ BR-RJ-Niteroi | 0016.01     | nsvia        |  2 |   154 |   272 |   154 |   390
+ BR-RJ-Niteroi | 0016.01     | parcel       | 36 |   327 |   682 |   261 |  2765
+ BR-RJ-Niteroi | 0016.01     | via          |  6 |   199 |   232 |   154 |   331
+ BR-SP-Santos  | 0029.01     | geoaddress   | 33 |   149 |   166 |   101 |   469
+(4 rows)
+```
