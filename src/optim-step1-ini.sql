@@ -280,7 +280,12 @@ FROM optim.vw01report
 ;
 
 CREATE or replace VIEW optim.vw01report_median AS
-SELECT isolabel_ext, pack_number, class_ftname, COUNT(ghs) AS n, ( percentile_disc(0.5) WITHIN GROUP (ORDER BY size_bytes) ) / 1024 AS mdn_n
+SELECT isolabel_ext, pack_number, class_ftname,
+       COUNT(ghs) AS n,
+       ( percentile_disc(0.5) WITHIN GROUP (ORDER BY size_bytes) ) / 1024 AS mdn_n,
+       ROUND(AVG(size_bytes) / 1024) AS avg_n,
+       MIN(size_bytes) / 1024 AS min_n,
+       MAX(size_bytes) / 1024 AS max_n
 FROM (
     SELECT isolabel_ext, pack_number, class_ftname, ghs, (SELECT size::bigint FROM pg_stat_file(path)) AS size_bytes
     FROM (
