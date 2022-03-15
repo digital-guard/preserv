@@ -1757,7 +1757,6 @@ BEGIN
     );
   END CASE;
 
-  DELETE FROM ingest.publicating_geojsons_p3exprefix;  -- limpa
   RETURN (SELECT 'Arquivos de file_id='|| p_file_id::text || ' publicados em ' || p_file_id::text || '/' || (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) ||'_*.geojson' FROM ingest.vw03full_layer_file WHERE id=$1)
   ;
 END
@@ -1865,7 +1864,7 @@ BEGIN
     END CASE;
 
     UPDATE ingest.donated_packcomponent
-    SET proc_step=6, kx_profile = kx_profile || jsonb_build_object(
+    SET proc_step=5, kx_profile = kx_profile || jsonb_build_object(
         'publication_summary', (SELECT jsonb_build_object(
                 'itens', SUM((info->'ghs_items')::int),
                 'bytes', SUM((info->'ghs_bytes')::bigint),
@@ -1879,8 +1878,9 @@ BEGIN
         'date_generation', (date_trunc('second',NOW())) )
     WHERE id = $1 ;
 
-  DELETE FROM ingest.publicating_geojsons_p5distrib;  -- limpa
-  RETURN (SELECT 'Mosaico de file_id='|| p_file_id::text || ' publicado em ' || p_fileref::text || '/geohashes.geojson')
+    DELETE FROM ingest.publicating_geojsons_p3exprefix;  -- limpa
+    DELETE FROM ingest.publicating_geojsons_p5distrib;  -- limpa
+    RETURN (SELECT 'Mosaico de file_id='|| p_file_id::text || ' publicado em ' || p_fileref::text || '/geohashes.geojson')
   ;
 END
 $f$ language PLpgSQL; -- fim p5
