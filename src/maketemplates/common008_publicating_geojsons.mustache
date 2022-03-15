@@ -11,45 +11,10 @@ publicating_geojsons_{{layername_root}}:
 	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)','{{buffer_type}}');"
 
 	@echo "--- Gerando geomosaico em $(folder) ---"
-	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
-	psql $(pg_uri_db) -c "CREATE VIEW $(view) AS SELECT * FROM  geohash_GeomsMosaic_jinfo( (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}')), '{\"density_km2\":\"val\",\"area_km2\":\"val\",\"area\":\"val\"}  '::jsonb, (SELECT ingest.buffer_geom(geom,{{buffer_type}}) FROM ingest.vw01full_jurisdiction_geom where isolabel_ext='$(isolabel)'));"
-{{^isGeoaddress}}
-	psql $(pg_uri_db) -c "CREATE VIEW $(view)_adjusted AS SELECT r.ghs, (r.info || jsonb_build_object('ghsval_unit','bytes','ghs_items', n, 'ghs_bytes', bytes, 'size', size, 'size_unit', size_unit, 'size_unitDensity', (size::float/(info->'area_km2')::float) , 'ghs_itemsDensity', (n::float/(info->'area_km2')::float), 'ghs_area', ((info->'area_km2')::float) )) AS info, t.geom \
-	FROM ( \
-	SELECT p.geom, COUNT(*) AS n, SUM(length(St_asGeoJson(ST_Intersection( p.geom, f.geom )))) AS bytes, (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') WHEN 'line' THEN SUM(ST_Length(ST_Intersection( p.geom, f.geom ), true))/1000  WHEN 'poly' THEN SUM(ST_Area(ST_Intersection( p.geom, f.geom ),true))/1000000.0  END) AS size, (SELECT lineage->'feature_asis_summary'->'size_unit' FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') AS size_unit  \
-	FROM $(view) p \
-	LEFT JOIN ingest.feature_asis f \
-	ON ST_Contains(p.geom,ST_PointOnSurface(f.geom)) AND f.file_id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') \
-	GROUP BY 1) t \
-	LEFT JOIN $(view) r \
-	ON t.geom = r.geom ;"
-{{/isGeoaddress}}
-{{#isGeoaddress}}
-	psql $(pg_uri_db) -c "CREATE VIEW $(view)_adjusted AS SELECT r.ghs, (r.info || jsonb_build_object('ghsval_unit','items', 'ghs_items', n, 'ghs_bytes', bytes, 'ghs_itemsDensity', (n::float/(info->'area_km2')::float), 'ghs_area', ((info->'area_km2')::float))) AS info, t.geom \
-	FROM ( \
-	SELECT p.geom, COUNT(*) AS n, SUM(length(St_asGeoJson( f.geom ))) AS bytes  \
-	FROM $(view) p \
-	LEFT JOIN ingest.feature_asis f \
-	ON ST_Contains(p.geom,f.geom) AND f.file_id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') \
-	GROUP BY 1) t \
-	LEFT JOIN $(view) r \
-	ON t.geom = r.geom ;"
-{{/isGeoaddress}}
-	psql $(pg_uri_db) -c "SELECT write_geojsonb_features('$(view)_adjusted','$(folder)/geohashes.geojson', 't1.geom', 'ghs, (info->''ghs_items'')::int AS ghs_items, (info->''ghs_len'')::int AS ghs_len, round((info->''ghs_itemsDensity'')::float,0.01) AS ghs_itemsDensity, round((info->''ghs_area'')::float,0.01) AS ghs_area, {{^isGeoaddress}}round((info->''size'')::float,0.01) AS size, (info->''size_unit'') AS size_unit, round((info->''size_unitDensity'')::float,0.01) AS size_unitDensity,{{/isGeoaddress}}(info->''ghs_bytes'') AS ghs_bytes, (info->''ghsval_unit'') AS ghsval_unit', NULL, NULL, $(pretty_opt), 5);"
-{{^isGeoaddress}}
-	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent \
-	SET proc_step=6, kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(ghs, (info->>'ghs_items')::int) FROM $(view)_adjusted)) || jsonb_build_object('publication_summary', (SELECT jsonb_build_object('itens', SUM((info->'ghs_items')::int), 'bytes', SUM((info->'ghs_bytes')::bigint), 'size', SUM((info->'size')::float), 'size_unit', MIN((info->>'size_unit')), 'size_unitDensity', SUM((info->'size_unitDensity')::float), 'avg_density', AVG((info->'size_unitDensity')::float)) FROM $(view)_adjusted ), 'date_generation', (date_trunc('second',NOW())) ) \
-	WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') ;"
-{{/isGeoaddress}}
-{{#isGeoaddress}}
-	psql $(pg_uri_db) -c "UPDATE ingest.donated_packcomponent \
-	SET proc_step=6, kx_profile = kx_profile || jsonb_build_object('publication_summary', (SELECT jsonb_build_object('itens', SUM((info->'ghs_items')::int), 'bytes', SUM((info->'ghs_bytes')::bigint), 'size', SUM((info->'size')::float), 'size_unit', MIN((info->>'size_unit')), 'size_unitDensity', SUM((info->'ghs_itemsDensity')::float), 'avg_density', AVG((info->'size_unitDensity')::float)) FROM $(view)_adjusted ), 'date_generation', (date_trunc('second',NOW())) ) \
-	WHERE id=(SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext='$(isolabel)' AND ft_info->>'class_ftname'='{{layername_root}}') ;"
-{{/isGeoaddress}}
-	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view)_adjusted CASCADE;"
-	psql $(pg_uri_db) -c "DROP VIEW IF EXISTS $(view) CASCADE;"
-	make audit-geojsons_{{layername_root}} pg_db=$(pg_db)
+	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons_p5('{{layername_root}}','$(isolabel)','$(folder)','$(pretty_opt)');"
+
 	cd /var/gits/_dg/preserv/src; sudo bash fixaPermissoes.sh $(folder)
+	make audit-geojsons_{{layername_root}} pg_db=$(pg_db)
 	@echo " Save ls $(folder) after changes in $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt ---"
 	@ls -1 $(folder) > $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt
 	@echo "--- Check DIFF in $(pg_io)/$(isolabel)_{{layername_root}}_ls_diff.txt ---"
