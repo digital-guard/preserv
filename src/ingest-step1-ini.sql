@@ -1692,7 +1692,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 */
   UPDATE ingest.donated_PackComponent
   SET proc_step=4, 
-      kx_profile = kx_profile || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_keys) FROM ingest.publicating_geojsons_p2distrib))
+      kx_profile = coalesce(kx_profile,'{}'::jsonb) || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_keys) FROM ingest.publicating_geojsons_p2distrib))
   WHERE id= p_file_id
   ;
 
