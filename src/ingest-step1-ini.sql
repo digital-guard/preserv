@@ -1806,7 +1806,7 @@ CREATE or replace FUNCTION ingest.lix_insert(
     BEGIN
         SELECT (regexp_matches(file, '([^/]*)$'))[1] INTO p_type;
 
-        SELECT (regexp_matches(file, '.*-([^/-]*)/.*$'))[1] INTO jurisd;
+        SELECT (regexp_matches(file, '[^-]*-([^/-]*)/.*$'))[1] INTO jurisd;
         IF jurisd IS NULL
         THEN
             jurisd := 'INT';
