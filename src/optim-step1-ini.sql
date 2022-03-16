@@ -455,7 +455,18 @@ $f$ LANGUAGE PLpgSQL;
 
 CREATE or replace FUNCTION optim.format_filepath(escopo text, donor_id bigint, pack_count int) RETURNS text AS $f$
 BEGIN
-    RETURN (SELECT '/var/gits/_dg/preserv-'|| regexp_replace(replace(regexp_replace(escopo, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(donor_id,'fm0000') || '.' || to_char(pack_count,'fm00') || '/make_conf.yaml');
+    RETURN (
+        SELECT '/var/gits/_dg/preserv-' ||
+        CASE WHEN EXISTS (SELECT 1 FROM regexp_matches(escopo,'^EC-EC-[A-Z]-.*$'))
+        THEN regexp_replace(escopo, '^([A-Z][A-Z])-([A-Z][A-Z]-[A-Z])-(.*)$', '\1/data/\2/\3')
+        ELSE regexp_replace(replace(regexp_replace(escopo, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','')
+        END
+         ||
+        '/_pk' ||
+        to_char(donor_id,'fm0000') ||
+        '.' ||
+        to_char(pack_count,'fm00') ||
+        '/make_conf.yaml');
 END;
 $f$ LANGUAGE PLpgSQL;
 --SELECT optim.format_filepath('BR', 34);
