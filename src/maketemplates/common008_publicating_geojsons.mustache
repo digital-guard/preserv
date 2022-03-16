@@ -10,6 +10,8 @@ publicating_geojsons_{{layername_root}}:
 	@echo "--- Gerando arquivos em $(folder) ---"
 	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)','{{buffer_type}}');"
 
+	make audit-geojsons_{{layername_root}} pg_db=$(pg_db)
+
 	@echo "--- Gerando geomosaico em $(folder) ---"
 	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons_p5('{{layername_root}}','$(isolabel)','$(folder)','$(pretty_opt)');"
 

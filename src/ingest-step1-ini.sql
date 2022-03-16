@@ -1637,12 +1637,18 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
         (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
       ) AS geom
     FROM hcode_distribution_reduce_recursive_raw_alt2(
-    	((SELECT jsonb_object_agg(kx_ghs9,((info->'bytes')::bigint)) FROM ingest.publicating_geojsons_p3exprefix)),
-    	1,
-    	1,
-    	(SELECT (lineage->'hcode_distribution_parameters'->'p_threshold_sum')::int FROM ingest.donated_PackComponent WHERE id= p_file_id),
-    	9
+        ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix)),
+        1,
+        4,
+        (SELECT (lineage->'hcode_distribution_parameters'->'p_threshold_sum')::int FROM ingest.donated_PackComponent WHERE id= p_file_id),
+        9
     ) t
+    --FROM hcode_distribution_reduce_recursive_raw(
+        --(SELECT kx_profile->'ghs_distrib_mosaic' FROM ingest.donated_PackComponent WHERE id= p_file_id),
+        --1,
+        --(SELECT length(st_geohash(geom)) FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
+        --(SELECT lineage->'hcode_distribution_parameters' FROM ingest.donated_PackComponent WHERE id= p_file_id)
+    --) t
   ;
   SELECT pg_catalog.pg_file_unlink(p_fileref || '/'|| (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) || '_*.geojson') FROM ingest.vw03full_layer_file WHERE id=$1;
 
@@ -1875,7 +1881,9 @@ BEGIN
                                     ELSE                   SUM((info->'size_unitDensity')::float)
                                     END),
                 'avg_density', AVG((info->'size_unitDensity')::float)) FROM ingest.publicating_geojsons_p5distrib ),
-        'date_generation', (date_trunc('second',NOW())) )
+        'date_generation', (date_trunc('second',NOW())),
+        'ghs_info_mosaic', (SELECT jsonb_object_agg(ghs, info) FROM ingest.publicating_geojsons_p5distrib WHERE ghs IS NOT NULL)
+        )
     WHERE id = $1 ;
 
     DELETE FROM ingest.publicating_geojsons_p3exprefix;  -- limpa
