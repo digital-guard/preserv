@@ -146,8 +146,8 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_datalake_uri) -c "CREATE EXTENSION IF NOT EXISTS file_fdw;"
 	psql $(pg_datalake_uri) -c "CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;"
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/step01def-lib.sql
-	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction-04-02-22.sql
-	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction_geom-04-02-22.sql
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction-16-03-22.sql
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction_geom-16-03-22.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step2-ini.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step3-publication.sql
