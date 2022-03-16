@@ -1639,7 +1639,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
     FROM hcode_distribution_reduce_recursive_raw_alt2(
         ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix)),
         1,
-        4,
+        1,
         (SELECT (lineage->'hcode_distribution_parameters'->'p_threshold_sum')::int FROM ingest.donated_PackComponent WHERE id= p_file_id),
         9
     ) t
