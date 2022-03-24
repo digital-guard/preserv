@@ -12,7 +12,7 @@ publicating_geojsons_{{layername_root}}:
 
 	make audit-geojsons_{{layername_root}} pg_db=$(pg_db)
 	@echo "--- Gerando geomosaico em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons_p5('{{layername_root}}','$(isolabel)','$(folder)','$(pretty_opt)');"
+	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons_p5('{{layername_root}}','$(isolabel)','$(folder)',6,9,'$(pretty_opt)');"
 
 	cd /var/gits/_dg/preserv/src; sudo bash fixaPermissoes.sh $(folder)
 	@echo " Save ls $(folder) after changes in $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt ---"
