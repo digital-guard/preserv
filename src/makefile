@@ -65,6 +65,7 @@ message:
 	echo
 	echo " to_donated_packcomponent pg_db=ingest42 pg_datalake=dl42t_main: copy ingest.donated_packcomponent to optim.donated_PackComponent_not_approved in DL03t_main. "
 	echo " approved_donated_packcomponent id=42 pg_datalake=dl42t_main: approved packcomponent from optim.donated_PackComponent_not_approved to optim.donated_PackComponent. "
+	echo " report pg_datalake= "
 ## ## ## ##
 ## -- SQL BUILDERs --
 
@@ -132,6 +133,17 @@ approved_donated_packcomponent:
 	@echo "Usage: make approved_donated_packcomponent id=<id from optim.donated_PackComponent_not_approved>"
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	@[ "${id}" ] && psql $(pg_datalake_uri) -c "SELECT optim.approved_packcomponent($(id))" || ( echo "Unknown id.")
+
+report:
+	@echo "Relatorios"
+	@echo "Uso make report pg_datalake=dl03t_main "
+	@echo "Doc: https://github.com/digital-guard/preserv/blob/main/docs/pt/man-diversos.md#relat%C3%B3rios"
+# 	@echo "View optim.vw01report:"
+# 	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw01report;"
+# 	@echo "View optim.vw02report_simple:"
+# 	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw02report_simple;"
+	@echo "View vw01report_median:"
+	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw01report_median;"
 
 ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_datalake)"
