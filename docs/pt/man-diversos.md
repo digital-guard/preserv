@@ -155,6 +155,9 @@ make load_optim_csv pg_datalake=dl03t_main
 
 Notar que se as restrições das tabelas não forem respeitadas o carregamento ou atualização dos dados não acontece. Retornando erro.
 
+Caso for alterado o sha256 em um make_conf.yaml já existente, ver [preserv-BR/issues/68](https://github.com/digital-guard/preserv-BR/issues/68#issuecomment-1081026983).
+
+
 ## Especificações mosaico:
 
 Propriedades presentes em todos os layers:
