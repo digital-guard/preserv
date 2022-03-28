@@ -1627,7 +1627,6 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text,       --
 	p_buffer_type int DEFAULT 1,
-	p_size_max_agg  int    DEFAULT 7,    -- 5. max size of hcode
 	p_size_max      int    DEFAULT 1     -- 5. max size of hcode
 ) RETURNS text  AS $f$
 
@@ -1641,18 +1640,11 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
     FROM hcode_distribution_reduce_recursive_raw_alt(
         ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix)),
         1,
-        1,
+        (SELECT length((geohash_cover_list( ST_Collect(geom) ))[1]) FROM ingest.feature_asis WHERE file_id=$1),
         $5,
-        $6,
         (SELECT (lineage->'hcode_distribution_parameters'->'p_threshold_sum')::int FROM ingest.donated_PackComponent WHERE id= p_file_id),
         (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1000::int ELSE 102400::int END)
     ) t
-    --FROM hcode_distribution_reduce_recursive_raw(
-        --(SELECT kx_profile->'ghs_distrib_mosaic' FROM ingest.donated_PackComponent WHERE id= p_file_id),
-        --1,
-        --(SELECT length(st_geohash(geom)) FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
-        --(SELECT lineage->'hcode_distribution_parameters' FROM ingest.donated_PackComponent WHERE id= p_file_id)
-    --) t
   ;
   SELECT pg_catalog.pg_file_unlink(p_fileref || '/'|| (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) || '_*.geojson') FROM ingest.vw03full_layer_file WHERE id=$1;
 
@@ -1665,41 +1657,6 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
   WHERE t.kx_ghs9 = publicating_geojsons_p3exprefix.kx_ghs9
   ;
 
-  /*
-  UPDATE ingest.publicating_geojsons_p3exprefix
-  SET prefix=t4.prefix
-  FROM (
-    WITH t1 (prefix_regex) as (
-     SELECT hcode_prefixset_parse( array_agg(hcode) )
-     FROM ingest.publicating_geojsons_p2distrib
-    )
-      SELECT t.kx_ghs9, hcode_prefixset_element(t.kx_ghs9,'^(?:'|| t1.prefix_regex ||')') AS prefix, t.gid
-      FROM ingest.publicating_geojsons_p3exprefix t, t1
-  ) t4
-  WHERE t4.gid = publicating_geojsons_p3exprefix.gid
-  ;
-*/
-/*
-  UPDATE ingest.publicating_geojsons_p3exprefix
-  SET info = publicating_geojsons_p3exprefix.info || t1.info
-  FROM (
-    WITH geomtype AS (
-        SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1
-    )
-    SELECT gid, jsonb_strip_nulls(jsonb_build_object('bytes', length(St_asGeoJson(intersec)), 'size',
-        CASE (SELECT geomtype FROM geomtype)
-        WHEN 'line' THEN round(ST_Length(intersec,true)/1000.0,0.01)
-        WHEN 'poly' THEN round(ST_Area(intersec,true)/1000000.0,0.01)
-        END)) AS info
-    FROM
-        (
-        SELECT gid, ST_Intersection(geom,ST_SetSRID( ST_geomFromGeohash(prefix),4326)) AS intersec
-        FROM ingest.publicating_geojsons_p3exprefix
-        ) as t
-  ) t1
-  WHERE t1.gid = publicating_geojsons_p3exprefix.gid
-  ;
-*/
   UPDATE ingest.donated_PackComponent
   SET proc_step=4, 
       kx_profile = coalesce(kx_profile,'{}'::jsonb) || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_keys) FROM ingest.publicating_geojsons_p2distrib))
@@ -1778,8 +1735,6 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p5(
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text,       -- e.g.
 	p_buffer_type int DEFAULT 1,  -- e.g.
-	p_size_max_agg int DEFAULT 7, -- e.g.
-	p_size_max int DEFAULT 1,     -- e.g.
 	p_pretty_opt int DEFAULT 3
 ) RETURNS text  AS $f$
 BEGIN
@@ -1789,57 +1744,11 @@ BEGIN
     CASE (SELECT ft_info->>'class_ftname' FROM ingest.vw03full_layer_file WHERE id=p_file_id)
     WHEN 'geoaddress' THEN
         WITH geohash_GeomsMosaic AS (
-            --SELECT * FROM  geohash_GeomsMosaic_jinfo(
-                            --(SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=$1),
-                            --'{"density_km2":"val","area_km2":"val","area":"val"}  '::jsonb,
-                            --(SELECT ingest.buffer_geom(geom,1) FROM ingest.vw01full_jurisdiction_geom where isolabel_ext=$2)
-                            --)
-
-            WITH
-            -- obtem area
-            a AS (
-                SELECT prefix, ST_Union(ST_SetSRID( ST_GeomFromGeoHash(lad), 4326)) AS geom
-
-                FROM (
-                    SELECT prefix, substr(kx_ghs9,1,length(kx_ghs9)-($6-$5)) AS lad
-                    --SELECT prefix, kx_ghs9 AS lad
-                    FROM ingest.publicating_geojsons_p3exprefix
-                ) a
-                group by prefix
-            ),
-            --b AS (
-                --SELECT ST_UNION(geom) AS geom FROM a
-            --),
-            ---- espaço vazio no hash
-            --c AS (
-                --SELECT prefix, ST_Difference(ST_SetSRID( ST_GeomFromGeoHash(prefix), 4326),(SELECT geom FROM b )) AS geom
-                --FROM a 
-            --),
-            ---- junta espaço vazio com area
-            --d AS
-            --(
-                --SELECT a.prefix, ST_Union(a.geom, c.geom) AS geom
-                --FROM a
-                --LEFT JOIN c
-                --ON a.prefix = c.prefix
-            --),
-            --e AS
-            --(
-                --SELECT d.prefix, COALESCE(ST_Difference(d.geom, (SELECT ST_UNION(geom) AS geom FROM d a WHERE length(a.prefix) > length(d.prefix) ) ),d.geom) AS geom
-                --FROM d
-            --),
-            f AS
-            (
-                SELECT prefix, ST_Intersection(geom,(SELECT ingest.buffer_geom(geom,$4) FROM ingest.vw01full_jurisdiction_geom where isolabel_ext=$2)) AS geom
-                FROM a
-            ),
-            g AS
-            (
-                SELECT kx_profile->'ghs_distrib_mosaic' AS distrib from ingest.donated_packcomponent WHERE id=$1
-            )
-            SELECT prefix AS ghs, jsonb_build_object('area', area, 'area_km2', l.area/1000000.0, 'density_km2', 1000000.0*r.ele::float/l.area, 'ghs_items', r.ele, 'ghs_len', length(prefix)) AS info, geom
-            FROM f, LATERAL (SELECT ST_Area(geom,true)) l(area), LATERAL (SELECT distrib->prefix FROM g) r(ele)
-
+            SELECT * FROM  geohash_GeomsMosaic_jinfo(
+                            (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=$1),
+                            '{"density_km2":"val","area_km2":"val","area":"val"}  '::jsonb,
+                            (SELECT ingest.buffer_geom(geom,1) FROM ingest.vw01full_jurisdiction_geom where isolabel_ext=$2)
+                            )
         )
         INSERT INTO ingest.publicating_geojsons_p5distrib
         SELECT  t.ghs,
@@ -1864,57 +1773,11 @@ BEGIN
         ;
     ELSE
         WITH geohash_GeomsMosaic AS (
-            --SELECT * FROM  geohash_GeomsMosaic_jinfo(
-                            --(SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=$1),
-                            --'{"density_km2":"val","area_km2":"val","area":"val"}  '::jsonb,
-                            --(SELECT ingest.buffer_geom(geom,1) FROM ingest.vw01full_jurisdiction_geom where isolabel_ext=$2)
-                            --)
-
-            WITH
-            -- obtem area
-            a AS (
-                SELECT prefix, ST_Union(ST_SetSRID( ST_GeomFromGeoHash(lad), 4326)) AS geom
-
-                FROM (
-                    SELECT prefix, substr(kx_ghs9,1,length(kx_ghs9)-($6-$5)) AS lad
-                    --SELECT prefix, kx_ghs9 AS lad
-                    FROM ingest.publicating_geojsons_p3exprefix
-                ) a
-                group by prefix
-            ),
-            --b AS (
-                --SELECT ST_UNION(geom) AS geom FROM a
-            --),
-            ---- espaço vazio no hash
-            --c AS (
-                --SELECT prefix, ST_Difference(ST_SetSRID( ST_GeomFromGeoHash(prefix), 4326),(SELECT geom FROM b )) AS geom
-                --FROM a 
-            --),
-            ---- junta espaço vazio com area
-            --d AS
-            --(
-                --SELECT a.prefix, ST_Union(a.geom, c.geom) AS geom
-                --FROM a
-                --LEFT JOIN c
-                --ON a.prefix = c.prefix
-            --),
-            --e AS
-            --(
-                --SELECT d.prefix, COALESCE(ST_Difference(d.geom, (SELECT ST_UNION(geom) AS geom FROM d a WHERE length(a.prefix) > length(d.prefix) ) ),d.geom) AS geom
-                --FROM d
-            --),
-            f AS
-            (
-                SELECT prefix, ST_Intersection(geom,(SELECT ingest.buffer_geom(geom,$4) FROM ingest.vw01full_jurisdiction_geom where isolabel_ext=$2)) AS geom
-                FROM a
-            ),
-            g AS
-            (
-                SELECT kx_profile->'ghs_distrib_mosaic' AS distrib from ingest.donated_packcomponent WHERE id=$1
-            )
-            SELECT prefix AS ghs, jsonb_build_object('area', area, 'area_km2', l.area/1000000.0, 'density_km2', 1000000.0*r.ele::float/l.area, 'ghs_items', r.ele, 'ghs_len', length(prefix)) AS info, geom
-            FROM f, LATERAL (SELECT ST_Area(geom,true)) l(area), LATERAL (SELECT distrib->prefix FROM g) r(ele)
-
+            SELECT * FROM  geohash_GeomsMosaic_jinfo(
+                            (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=$1),
+                            '{"density_km2":"val","area_km2":"val","area":"val"}  '::jsonb,
+                            (SELECT ingest.buffer_geom(geom,1) FROM ingest.vw01full_jurisdiction_geom where isolabel_ext=$2)
+                            )
         )
         INSERT INTO ingest.publicating_geojsons_p5distrib
         SELECT  t.ghs,
@@ -1954,7 +1817,7 @@ BEGIN
             'ghs, (info->''ghs_items'')::int AS ghs_items, (info->''ghs_len'')::int AS ghs_len, round((info->''ghs_itemsDensity'')::float,0.01) AS ghs_itemsDensity, round((info->''ghs_area'')::float,0.01) AS ghs_area, (info->''ghs_bytes'') AS ghs_bytes, (info->''ghsval_unit'') AS ghsval_unit',
             NULL,
             NULL,
-            $7,
+            $5,
             5);
     ELSE
         PERFORM write_geojsonb_features(
@@ -1964,7 +1827,7 @@ BEGIN
             'ghs, (info->''ghs_items'')::int AS ghs_items, (info->''ghs_len'')::int AS ghs_len, round((info->''ghs_itemsDensity'')::float,0.01) AS ghs_itemsDensity, round((info->''ghs_area'')::float,0.01) AS ghs_area, round((info->''size'')::float,0.01) AS size, (info->''size_unit'') AS size_unit, round((info->''size_unitDensity'')::float,0.01) AS size_unitDensity, (info->''ghs_bytes'') AS ghs_bytes, (info->''ghsval_unit'') AS ghsval_unit',
             NULL,
             NULL,
-            $7,
+            $5,
             5);
     END CASE;
 
@@ -1985,7 +1848,7 @@ BEGIN
         )
     WHERE id = $1 ;
 
-    --DELETE FROM ingest.publicating_geojsons_p3exprefix;  -- limpa
+    DELETE FROM ingest.publicating_geojsons_p3exprefix; -- limpa
     DELETE FROM ingest.publicating_geojsons_p5distrib;  -- limpa
     RETURN (SELECT 'Mosaico de file_id='|| p_file_id::text || ' publicado em ' || p_fileref::text || '/geohashes.geojson')
   ;
@@ -1997,15 +1860,14 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_isolabel_ext  text,         -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text,               -- e.g.
 	p_buffer_type int DEFAULT 1,  -- e.g.
-	p_size_max_agg int DEFAULT 7, -- e.g.
 	p_size_max int DEFAULT 1,     -- e.g.
 	p_pretty_opt int DEFAULT 3
 ) RETURNS text  AS $f$
   SELECT ingest.publicating_geojsons_p1($1,$2);
   --SELECT ingest.publicating_geojsons_p2($1,$2,(SELECT CASE geomtype WHEN 'point' THEN false ELSE true END FROM ingest.vw03full_layer_file WHERE id=$1));
-  SELECT ingest.publicating_geojsons_p3($1,$2,$3,$4,$5,$6);
+  SELECT ingest.publicating_geojsons_p3($1,$2,$3,$4,$5);
   SELECT ingest.publicating_geojsons_p4($1,$2,$3);
-  SELECT ingest.publicating_geojsons_p5($1,$2,$3,$4,$5,$6,$7);
+  SELECT ingest.publicating_geojsons_p5($1,$2,$3,$4,$6);
   SELECT 'fim';
 $f$ language SQL VOLATILE; -- need be a sequential PLpgSQL to neatly COMMIT?
 
@@ -2014,13 +1876,12 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_isolabel_ext  text,         -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text,               -- e.g.
 	p_buffer_type int DEFAULT 1,  -- e.g.
-	p_size_max_agg int DEFAULT 7, -- e.g.
 	p_size_max int DEFAULT 1,     -- e.g.
 	p_pretty_opt int DEFAULT 3
 ) RETURNS text AS $wrap$
-  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1)),$2,$3,$4,$5,$6,$7);
+  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1)),$2,$3,$4,$5,$6);
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int,int)
+COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int)
   IS 'Wrap to ingest.publicating_geojsons'
 ;
 -- SELECT ingest.publicating_geojsons('geoaddress','BR-MG-BeloHorizonte','folder');
