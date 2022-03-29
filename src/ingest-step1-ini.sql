@@ -736,7 +736,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   )
   SELECT id FROM file_exists
 $f$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,boolean,boolean)
   IS 'Reads file metadata and return id if exists in ingest.donated_PackComponent.'
 ;
 
@@ -755,7 +755,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
       $5
     );
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,boolean,boolean)
   IS 'Wrap para ingest.getmeta_to_file(text,int,bigint) usando ftName ao invés de ftID.'
 ;
 
@@ -1579,7 +1579,6 @@ $f$ LANGUAGE PLpgSQL;
 
 -- ----------------------------
 
-DROP TABLE IF EXISTS ingest.publicating_geojsons_p3exprefix;
 CREATE TABLE ingest.publicating_geojsons_p3exprefix(
  kx_ghs9   text,
  prefix text,
@@ -1588,7 +1587,6 @@ CREATE TABLE ingest.publicating_geojsons_p3exprefix(
  geom   geometry
 );
 
-DROP TABLE IF EXISTS ingest.publicating_geojsons_p2distrib;
 CREATE TABLE ingest.publicating_geojsons_p2distrib(
  hcode    text,
  n_items  integer,
@@ -1597,7 +1595,6 @@ CREATE TABLE ingest.publicating_geojsons_p2distrib(
  geom     geometry
 );
 
-DROP TABLE IF EXISTS ingest.publicating_geojsons_p5distrib;
 CREATE TABLE ingest.publicating_geojsons_p5distrib(
  ghs    text,
  info   jsonb,
