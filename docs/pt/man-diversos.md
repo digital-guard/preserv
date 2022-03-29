@@ -223,3 +223,56 @@ dl03t_main=# select * from optim.vw01report_median ;
  BR-SP-Santos  | 0029.01     | geoaddress   | 33 |   149 |   166 |   101 |   469
 (4 rows)
 ```
+
+
+## Parâmetros de publicação
+
+ A opção `pretty_opt=3` aplicada por default no target `publicating_geojsons_<nome_do_layer>` gera um mosaico sem espaços e quebra de linha, ver função [jsonb_pretty_lines](https://github.com/AddressForAll/pg_pubLib-v1/blob/main/src/pubLib03-json.sql#L166).
+
+### Tabela de parâmetros
+Bytes passaram a ser utilizados para balanceamento. [hcode_parameters.csv](https://github.com/digital-guard/preserv/blob/main/data/hcode_parameters.csv) fornece a lista de parametros.
+
+* `id_profile_params: 1`: valor default para layers `geoaddress`;
+* `id_profile_params: 5`: valor default para os demais layers. 
+
+### Busca de parâmetros
+Se for necessário, para buscar novos parametros para `hcode_distribution_parameters` para distribuição, após a ingestão do _layer_, duas opções:
+
+1. Target
+
+   O target `change_parameters_<nome do layer>` altera os parâmetros em `lineage`, executa a publicação (no respectivo repositório CutGeo) e, no final, executa o `target audit-geojsons_<nome do layer>`
+
+   Exemplos de uso (é obrigatório informar as variáveis threshold_sum):
+```
+   make change_parameters_block threshold_sum=3000000 pg_db=ingest99 (`pg_db` é opcional, se estiver usando abase de dados default da respectiva jurisdição.)
+```
+
+2. Manual:
+
+   Para configurar os parâmetros, utilizar, por exemplo:
+
+```
+   UPDATE ingest.donated_packcomponent
+   SET lineage = jsonb_set(lineage, '{hcode_distribution_parameters}', '{"p_threshold_sum": 13500}', TRUE)
+WHERE id = 11;
+```
+   O valor de `id` pode ser obtido por meio de `SELECT * FROM ingest.donated_packcomponent;`.
+
+   Após o `UPDATE` executar novamente o target de publicação.
+
+### Registrar parâmetros encontrados
+Depois de encontrar os parâmetros, registrá-los em [hcode_parameters.csv](https://github.com/digital-guard/preserv/blob/main/data/hcode_parameters.csv) e informar no layer, como no exemplo:
+
+```
+  parcel:
+        subtype: full
+        ...
+        id_profile_params: 3
+```
+   Após registrar os novos parâmetros em [hcode_parameters.csv](https://github.com/digital-guard/preserv/blob/main/data/hcode_parameters.csv) deve-se atualizar o banco de dados com:
+
+```
+pushd /var/gits/_dg/preserv/src
+make load_hcode_parameters
+popd
+```
