@@ -671,7 +671,9 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_pck_id bigint,
   p_pck_fileref_sha256 text,
   p_id_profile_params int,
-  p_ftype text DEFAULT NULL
+  p_ftype text DEFAULT NULL,
+  p_add_md5 boolean DEFAULT true,
+  p_is_osm boolean DEFAULT false
   -- proc_step = 1
   -- ,p_size_min int DEFAULT 5
 ) RETURNS bigint AS $f$
@@ -679,12 +681,13 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
  WITH filedata AS (
    SELECT p_pck_id, p_ftid,
           CASE
-            WHEN (fmeta->'size')::int<5 OR (fmeta->>'hash_md5')='' THEN NULL --guard
+            WHEN ((fmeta->'size')::int<5 OR (fmeta->>'hash_md5')='') AND NOT(p_is_osm) THEN NULL --guard
+            WHEN p_is_osm THEN md5('OpenStreetMap')
             ELSE fmeta->>'hash_md5'
           END AS hash_md5,
           (fmeta - 'hash_md5') AS fmeta
    FROM (
-       SELECT jsonb_pg_stat_file(p_file,true) as fmeta
+       SELECT jsonb_pg_stat_file(p_file,p_add_md5) as fmeta
    ) t
  ),
   file_exists AS (
@@ -703,24 +706,27 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
       SELECT id, proc_step      FROM file_exists
   ) t WHERE proc_step=1
 $f$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,text,int,text)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,text,int,text,boolean,boolean)
   IS 'Reads file metadata and inserts it into ingest.donated_PackComponent. If proc_step=1 returns valid ID else NULL.'
 ;
 
 CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_file text,
   p_ftid int,
-  p_pck_id bigint
+  p_pck_id bigint,
+  p_add_md5 boolean DEFAULT true,
+  p_is_osm boolean DEFAULT false
 ) RETURNS bigint AS $f$
  WITH filedata AS (
    SELECT p_pck_id, p_ftid,
           CASE
-            WHEN (fmeta->'size')::int<5 OR (fmeta->>'hash_md5')='' THEN NULL --guard
+            WHEN ((fmeta->'size')::int<5 OR (fmeta->>'hash_md5')='') AND NOT(p_is_osm) THEN NULL --guard
+            WHEN p_is_osm THEN md5('OpenStreetMap')
             ELSE fmeta->>'hash_md5'
           END AS hash_md5,
           (fmeta - 'hash_md5') AS fmeta
    FROM (
-       SELECT jsonb_pg_stat_file(p_file,true) as fmeta
+       SELECT jsonb_pg_stat_file(p_file,p_add_md5) as fmeta
    ) t
  ),
   file_exists AS (
@@ -737,12 +743,16 @@ COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint)
 CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_file text,   -- 1.
   p_ftname text, -- 2. define o layer... um file pode ter mais de um layer??
-  p_pck_id bigint
+  p_pck_id bigint,
+  p_add_md5 boolean DEFAULT true,
+  p_is_osm boolean DEFAULT false
 ) RETURNS bigint AS $wrap$
     SELECT ingest.getmeta_to_file(
       $1,
       (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower($2)),
-      $3
+      $3,
+      $4,
+      $5
     );
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint)
@@ -755,15 +765,17 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_pck_id bigint,
   p_pck_fileref_sha256 text,
   p_id_profile_params int,
-  p_ftype text DEFAULT NULL -- 6
+  p_ftype text DEFAULT NULL, -- 6
+  p_add_md5 boolean DEFAULT true,
+  p_is_osm boolean DEFAULT false
 ) RETURNS bigint AS $wrap$
     SELECT ingest.getmeta_to_file(
       $1,
       (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower($2)),
-      $3, $4, $5, $6
+      $3, $4, $5, $6, $7, $8
     );
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,text,int,text)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,text,int,text,boolean,boolean)
   IS 'Wrap para ingest.getmeta_to_file() usando ftName ao invés de ftID.'
 ;
 -- ex. select ingest.getmeta_to_file('/tmp/a.csv',3,555);
@@ -1171,9 +1183,9 @@ CREATE or replace FUNCTION ingest.osm_load(
     stats bigint[];
     stats_dup bigint[];
   BEGIN
-  q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params); -- not null when proc_step=1. Ideal retornar array.
+  q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params,null,false,true); -- not null when proc_step=1. Ideal retornar array.
   IF q_file_id IS NULL THEN
-    RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s\nor use make delete_file id=%s to delete data.\nSee ingest.vw03full_layer_file.',p_fileref,ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id));
+    RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s\nor use make delete_file id=%s to delete data.\nSee ingest.vw03full_layer_file.',p_fileref,ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,false,true));
   END IF;
   IF p_tabcols=array[]::text[] THEN  -- condição para solicitar todas as colunas
     p_tabcols = rel_columns(p_tabname);
