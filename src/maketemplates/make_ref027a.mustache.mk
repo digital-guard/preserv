@@ -195,7 +195,7 @@ via: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
-	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, tags FROM jplanet_osm_roads WHERE tags->>'highway' IN ('residential','unclassified','tertiary','secondary','primary','trunk','motorway') AND country_id = {{country_id}}::smallint "
+	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, tags FROM jplanet_osm_line WHERE tags->>'highway' IN ('residential','unclassified','tertiary','secondary','primary','trunk','motorway') AND country_id = {{country_id}}::smallint "
 {{/isOsm}}
 {{>common001_pgAny_load}}
 {{>common007_layerFooter}}
