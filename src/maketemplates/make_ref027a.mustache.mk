@@ -97,9 +97,6 @@ building: tabname = {{tabname}}
 building: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
-{{#isOsm}}
-	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, tags - ARRAY['addr:housenumber','addr:street'] || jsonb_objslice(ARRAY['addr:housenumber','addr:street'], tags, ARRAY['house_number','via_name']) AS tags FROM jplanet_osm_polygon WHERE tags->'building' IS NOT NULL AND country_id = {{country_id}}::smallint "
-{{/isOsm}}
 {{>common001_pgAny_load}}
 {{>common007_layerFooter}}
 
@@ -153,7 +150,7 @@ geoaddress: makedirs
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
 {{#isOsm}}
-	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, tags - ARRAY['addr:housenumber','addr:street'] || jsonb_objslice(ARRAY['addr:housenumber','addr:street'], tags, ARRAY['house_number','via_name']) AS tags FROM jplanet_osm_point WHERE tags ?| ARRAY['addr:housenumber','addr:street'] AND country_id = {{country_id}}::smallint "
+	psql $(pg_uri_db) -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, tags - ARRAY['addr:housenumber','addr:street'] || jsonb_objslice(ARRAY['addr:housenumber','addr:street'], tags, ARRAY['house_number','via_name']) AS tags FROM jplanet_osm_point WHERE tags ?| ARRAY['addr:housenumber','addr:street'] AND country_id = {{country_id}}::smallint  UNION SELECT ST_PointOnSurface(way) AS way, tags - ARRAY['addr:housenumber','addr:street'] || jsonb_objslice(ARRAY['addr:housenumber','addr:street'], tags, ARRAY['house_number','via_name']) AS tags FROM jplanet_osm_polygon WHERE tags ?| ARRAY['addr:housenumber','addr:street'] AND tags ?& ARRAY['building'] AND country_id = {{country_id}}::smallint "
 {{/isOsm}}
 {{>common001_pgAny_load}}
 {{>common007_layerFooter}}
