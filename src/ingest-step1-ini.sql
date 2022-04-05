@@ -504,7 +504,8 @@ $f$ LANGUAGE SQL;
 
 CREATE FUNCTION ingest.feature_asis_assign_volume(
     p_file_id bigint,  -- ID at ingest.donated_PackComponent
-    p_usemedian boolean DEFAULT false
+    p_usemedian boolean DEFAULT false,
+    p_usejurisdiction boolean DEFAULT false
 ) RETURNS jsonb AS $f$
   WITH get_layer_type AS (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype)
   SELECT to_jsonb(t3)
@@ -544,11 +545,12 @@ CREATE FUNCTION ingest.feature_asis_assign_volume(
 $f$ LANGUAGE SQL;
 
 CREATE or replace FUNCTION ingest.feature_asis_assign(
-    p_file_id bigint  -- ID at ingest.donated_PackComponent
+    p_file_id bigint,  -- ID at ingest.donated_PackComponent
+    p_usejurisdiction boolean DEFAULT false
 ) RETURNS jsonb AS $f$
   SELECT jsonb_build_object(
         'feature_asis_summary',
-        ingest.feature_asis_assign_volume(p_file_id,true)
+        ingest.feature_asis_assign_volume(p_file_id,true,p_usejurisdiction)
         )
 $f$ LANGUAGE SQL;
 
@@ -1413,7 +1415,7 @@ CREATE or replace FUNCTION ingest.osm_load(
 
     UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
-        lineage = lineage || ingest.feature_asis_assign(q_file_id) || 
+        lineage = lineage || ingest.feature_asis_assign(q_file_id, true) || 
         jsonb_build_object('statistics',(stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) )
     WHERE id=q_file_id;
   END IF;
@@ -1636,7 +1638,8 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text,       --
 	p_buffer_type int DEFAULT 1,
-	p_size_max      int    DEFAULT 1     -- 5. max size of hcode
+	p_size_max      int    DEFAULT 1,     -- 5. max size of hcode
+	p_is_osm boolean DEFAULT false
 ) RETURNS text  AS $f$
 
   DELETE FROM ingest.publicating_geojsons_p2distrib;
@@ -1870,11 +1873,12 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_fileref text,               -- e.g.
 	p_buffer_type int DEFAULT 1,  -- e.g.
 	p_size_max int DEFAULT 1,     -- e.g.
-	p_pretty_opt int DEFAULT 3
+	p_pretty_opt int DEFAULT 3,
+	p_is_osm boolean DEFAULT false
 ) RETURNS text  AS $f$
   SELECT ingest.publicating_geojsons_p1($1,$2);
   --SELECT ingest.publicating_geojsons_p2($1,$2,(SELECT CASE geomtype WHEN 'point' THEN false ELSE true END FROM ingest.vw03full_layer_file WHERE id=$1));
-  SELECT ingest.publicating_geojsons_p3($1,$2,$3,$4,$5);
+  SELECT ingest.publicating_geojsons_p3($1,$2,$3,$4,$5,$7);
   SELECT ingest.publicating_geojsons_p4($1,$2,$3);
   SELECT ingest.publicating_geojsons_p5($1,$2,$3,$4,$6);
   SELECT 'fim';
@@ -1886,11 +1890,12 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_fileref text,               -- e.g.
 	p_buffer_type int DEFAULT 1,  -- e.g.
 	p_size_max int DEFAULT 1,     -- e.g.
-	p_pretty_opt int DEFAULT 3
+	p_pretty_opt int DEFAULT 3,
+	p_is_osm boolean DEFAULT false
 ) RETURNS text AS $wrap$
-  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1)),$2,$3,$4,$5,$6);
+  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1)),$2,$3,$4,$5,$6,$7);
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int)
+COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int,boolean)
   IS 'Wrap to ingest.publicating_geojsons'
 ;
 -- SELECT ingest.publicating_geojsons('geoaddress','BR-MG-BeloHorizonte','folder');
