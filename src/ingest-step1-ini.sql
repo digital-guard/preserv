@@ -502,7 +502,7 @@ CREATE FUNCTION ingest.feature_asis_geohashes(
    FROM scan
 $f$ LANGUAGE SQL;
 
-CREATE FUNCTION ingest.feature_asis_assign_volume(
+CREATE or replace FUNCTION ingest.feature_asis_assign_volume(
     p_file_id bigint,  -- ID at ingest.donated_PackComponent
     p_usemedian boolean DEFAULT false,
     p_usejurisdiction boolean DEFAULT false
@@ -1641,43 +1641,64 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 	p_size_max      int    DEFAULT 1,     -- 5. max size of hcode
 	p_is_osm boolean DEFAULT false
 ) RETURNS text  AS $f$
+BEGIN
+    DELETE FROM ingest.publicating_geojsons_p2distrib;
+    CASE p_is_osm
+    WHEN TRUE THEN
+    INSERT INTO ingest.publicating_geojsons_p2distrib
+        SELECT t.hcode, t.n_items, t.n_keys,  t.jj, -- length(t.hcode) AS len,
+        ST_Intersection(
+            ST_SetSRID( ST_geomFromGeohash(replace(t.hcode, '*', '')) ,  4326),
+            (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
+        ) AS geom
+        FROM hcode_distribution_reduce_recursive_raw_alt(
+            ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix)),
+            1,
+            (SELECT length((geohash_cover_list(geom))[1]) FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
+            $5,
+            (SELECT (lineage->'hcode_distribution_parameters'->'p_threshold_sum')::int FROM ingest.donated_PackComponent WHERE id= p_file_id),
+            (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1000::int ELSE 102400::int END)
+        ) t
+    ;
+    ELSE
+    INSERT INTO ingest.publicating_geojsons_p2distrib
+        SELECT t.hcode, t.n_items, t.n_keys,  t.jj, -- length(t.hcode) AS len,
+        ST_Intersection(
+            ST_SetSRID( ST_geomFromGeohash(replace(t.hcode, '*', '')) ,  4326),
+            (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
+        ) AS geom
+        FROM hcode_distribution_reduce_recursive_raw_alt(
+            ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix)),
+            1,
+            (SELECT length((geohash_cover_list( ST_Collect(geom)))[1]) FROM ingest.feature_asis WHERE file_id=$1),
+            $5,
+            (SELECT (lineage->'hcode_distribution_parameters'->'p_threshold_sum')::int FROM ingest.donated_PackComponent WHERE id= p_file_id),
+            (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1000::int ELSE 102400::int END)
+        ) t
+    ;
+    END CASE;
 
-  DELETE FROM ingest.publicating_geojsons_p2distrib;
-  INSERT INTO ingest.publicating_geojsons_p2distrib
-    SELECT t.hcode, t.n_items, t.n_keys,  t.jj, -- length(t.hcode) AS len,
-      ST_Intersection(
-        ST_SetSRID( ST_geomFromGeohash(replace(t.hcode, '*', '')) ,  4326),
-        (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
-      ) AS geom
-    FROM hcode_distribution_reduce_recursive_raw_alt(
-        ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix)),
-        1,
-        (SELECT length((geohash_cover_list( ST_Collect(geom) ))[1]) FROM ingest.feature_asis WHERE file_id=$1),
-        $5,
-        (SELECT (lineage->'hcode_distribution_parameters'->'p_threshold_sum')::int FROM ingest.donated_PackComponent WHERE id= p_file_id),
-        (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1000::int ELSE 102400::int END)
+    PERFORM pg_catalog.pg_file_unlink(p_fileref || '/'|| (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) || '_*.geojson') FROM ingest.vw03full_layer_file WHERE id=$1;
+
+    UPDATE ingest.publicating_geojsons_p3exprefix
+    SET prefix=t.prefix
+    FROM (
+        SELECT hcode AS prefix, unnest(jj) as kx_ghs9
+        FROM ingest.publicating_geojsons_p2distrib
     ) t
-  ;
-  SELECT pg_catalog.pg_file_unlink(p_fileref || '/'|| (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) || '_*.geojson') FROM ingest.vw03full_layer_file WHERE id=$1;
+    WHERE t.kx_ghs9 = publicating_geojsons_p3exprefix.kx_ghs9
+    ;
 
-  UPDATE ingest.publicating_geojsons_p3exprefix
-  SET prefix=t.prefix
-  FROM (
-      SELECT hcode AS prefix, unnest(jj) as kx_ghs9
-      FROM ingest.publicating_geojsons_p2distrib
-  ) t
-  WHERE t.kx_ghs9 = publicating_geojsons_p3exprefix.kx_ghs9
-  ;
+    UPDATE ingest.donated_PackComponent
+    SET proc_step=4, 
+        kx_profile = coalesce(kx_profile,'{}'::jsonb) || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_keys) FROM ingest.publicating_geojsons_p2distrib))
+    WHERE id= p_file_id
+    ;
 
-  UPDATE ingest.donated_PackComponent
-  SET proc_step=4, 
-      kx_profile = coalesce(kx_profile,'{}'::jsonb) || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_keys) FROM ingest.publicating_geojsons_p2distrib))
-  WHERE id= p_file_id
-  ;
-
-  DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
-  SELECT 'p3';
-$f$ language SQL VOLATILE; --fim p3
+    DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
+    RETURN 'p3';
+END
+$f$ language PLpgSQL; --fim p3
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
