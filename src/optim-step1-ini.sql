@@ -491,7 +491,7 @@ BEGIN
     DO UPDATE 
     SET scope_osm_id=EXCLUDED.scope_osm_id, kx_scope_label=EXCLUDED.kx_scope_label, shortName=EXCLUDED.shortName, vat_id=EXCLUDED.vat_id, legalName=EXCLUDED.legalName, wikidata_id=EXCLUDED.wikidata_id, url=EXCLUDED.url;
   $$;
- 
+
   EXECUTE format( q, jurisdiction, jurisdiction) ;
 
   q := $$
@@ -512,6 +512,7 @@ BEGIN
         ), lower(user_resp), pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(escopo, donor_id, pack_count))), yamlfile_to_jsonb(optim.format_filepath(escopo, donor_id, pack_count)) as make_conf_tpl
     FROM tmp_orig.fdw_donatedpack%s
     WHERE file_exists(optim.format_filepath(escopo, donor_id, pack_count)) -- verificar make_conf.yaml ausentes
+    LIMIT 1
     ON CONFLICT (donor_id,pk_count)
     DO UPDATE 
     SET original_tpl=EXCLUDED.original_tpl, make_conf_tpl=EXCLUDED.make_conf_tpl, kx_num_files=EXCLUDED.kx_num_files;
@@ -521,10 +522,10 @@ BEGIN
 
   q := $$
     -- popula optim.donated_PackFileVers a partir de optim.donated_PackTpl
-    INSERT INTO optim.donated_PackFileVers (hashedfname, pack_id, pack_item, pack_item_accepted_date, user_resp)
-    SELECT j->>'file'::text AS hashedfname, t.pack_id , (j->>'p')::int AS pack_item, accepted_date::date AS pack_item_accepted_date, lower(t.user_resp::text) AS user_resp
+    INSERT INTO optim.donated_PackFileVers (hashedfname, pack_id, pack_item, pack_item_accepted_date, kx_pack_item_version, user_resp)
+    SELECT j->>'file'::text AS hashedfname, t.pack_id , (j->>'p')::int AS pack_item, accepted_date::date AS pack_item_accepted_date, lst_vers, lower(t.user_resp::text) AS user_resp
     FROM (
-        SELECT pt.id AS pack_id, pt.user_resp, fpt.accepted_date, jsonb_array_elements(pt.make_conf_tpl->'files')::jsonb AS j
+        SELECT pt.id AS pack_id, pt.user_resp, fpt.accepted_date, fpt.lst_vers, jsonb_array_elements((yamlfile_to_jsonb(optim.format_filepath(fpt.escopo, fpt.donor_id, fpt.pack_count)))->'files')::jsonb AS j
         FROM optim.donated_packtpl pt
         LEFT JOIN optim.donor d
         ON pt.donor_id = d.id
@@ -537,7 +538,9 @@ BEGIN
                     FROM optim.jurisdiction
                     WHERE admin_level = 2 AND lower(abbrev) = lower('%s')
                     )
-                ) 
+                )
+            AND ((yamlfile_to_jsonb(optim.format_filepath(fpt.escopo, fpt.donor_id, fpt.pack_count)))->'pkversion')::int = lst_vers
+            AND file_exists(optim.format_filepath(fpt.escopo, fpt.donor_id, fpt.pack_count))
         ) AS t 
     WHERE j->'file' IS NOT NULL -- verificar hash null
     ON CONFLICT (hashedfname)
