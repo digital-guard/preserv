@@ -276,3 +276,12 @@ pushd /var/gits/_dg/preserv/src
 make load_hcode_parameters
 popd
 ```
+
+## Alterações de sha256 em make_conf.yaml
+
+Ao alterações no sha256 de arquivos make_conf.yaml:
+
+1. incrementar `pkversion`;
+2. insrir nova entrada no arquivo donatePack.csv;
+3. excecutar https://github.com/digital-guard/preserv/blob/main/docs/pt/man-diversos.md#atualizar-tabelas-de-optim-atualmente-em-dl03t_main
+
