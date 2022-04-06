@@ -507,42 +507,90 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_volume(
     p_usemedian boolean DEFAULT false,
     p_usejurisdiction boolean DEFAULT false
 ) RETURNS jsonb AS $f$
-  WITH get_layer_type AS (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype)
-  SELECT to_jsonb(t3)
-  FROM (
-      SELECT n, CASE gtype
-          WHEN 'poly'  THEN 'polygons'
-          WHEN 'line'  THEN 'segments'
-          WHEN 'point'  THEN 'points'
-        END n_unit,
-      size, CASE gtype
-          WHEN 'poly'  THEN 'km2'
-          WHEN 'line'  THEN 'km'
-          ELSE  ''
-        END size_unit,
-        bbox_km2,
-        size_mdn
-      FROM (
-        SELECT gtype, n, CASE gtype
-            WHEN 'poly'  THEN round( ST_Area(geom,true)/1000000.0)::int
-            WHEN 'line'  THEN round( ST_Length(geom,true)/1000.0)::int
-            ELSE  null::int
-          END size,
-          round( (ST_Area(ST_OrientedEnvelope(geom),true)/1000000)::numeric, 1)::int AS bbox_km2,
-          round(size_mdn::numeric,3) AS size_mdn
+DECLARE
+    j jsonb;
+BEGIN
+    IF p_usejurisdiction
+    THEN
+    RAISE NOTICE 'feature_asis_assign_volume : %', p_usejurisdiction;
+    WITH get_layer_type AS (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype)
+    SELECT to_jsonb(t3) INTO j
+    FROM (
+        SELECT n, CASE gtype
+            WHEN 'poly'  THEN 'polygons'
+            WHEN 'line'  THEN 'segments'
+            WHEN 'point'  THEN 'points'
+            END n_unit,
+        size, CASE gtype
+            WHEN 'poly'  THEN 'km2'
+            WHEN 'line'  THEN 'km'
+            ELSE  ''
+            END size_unit,
+            bbox_km2,
+            size_mdn
         FROM (
-            SELECT count(*) n, st_collect(geom) as geom, CASE gtype --(gtype||iif(p_usemedian,'','_no'::text))
-                WHEN 'poly'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Area(geom,true)) /1000000.0
-                WHEN 'line'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Length(geom,true)) /1000.0
-                ELSE  null::float
-                END size_mdn
-            FROM ingest.feature_asis, get_layer_type
-            WHERE file_id=p_file_id
-            GROUP BY gtype
-        ) t1a, get_layer_type
-      ) t2
-  ) t3
-$f$ LANGUAGE SQL;
+            SELECT gtype, n, CASE gtype
+                WHEN 'poly'  THEN round( ST_Area(geom,true)/1000000.0)::int
+                WHEN 'line'  THEN round( ST_Length(geom,true)/1000.0)::int
+                ELSE  null::int
+            END size,
+            round( (ST_Area(ST_OrientedEnvelope(geom),true)/1000000)::numeric, 1)::int AS bbox_km2,
+            round(size_mdn::numeric,3) AS size_mdn
+            FROM (
+                SELECT count(*) n, (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=(SELECT isolabel_ext FROM ingest.vw03full_layer_file WHERE id=p_file_id)) as geom, CASE gtype --(gtype||iif(p_usemedian,'','_no'::text))
+                    WHEN 'poly'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Area(geom,true)) /1000000.0
+                    WHEN 'line'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Length(geom,true)) /1000.0
+                    ELSE  null::float
+                    END size_mdn
+                FROM ingest.feature_asis, get_layer_type
+                WHERE file_id=p_file_id
+                GROUP BY gtype
+            ) t1a, get_layer_type
+        ) t2
+    ) t3
+    ;
+    ELSE
+    RAISE NOTICE 'feature_asis_assign_volume : %', p_usejurisdiction;
+    WITH get_layer_type AS (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype)
+    SELECT to_jsonb(t3) INTO j
+    FROM (
+        SELECT n, CASE gtype
+            WHEN 'poly'  THEN 'polygons'
+            WHEN 'line'  THEN 'segments'
+            WHEN 'point'  THEN 'points'
+            END n_unit,
+        size, CASE gtype
+            WHEN 'poly'  THEN 'km2'
+            WHEN 'line'  THEN 'km'
+            ELSE  ''
+            END size_unit,
+            bbox_km2,
+            size_mdn
+        FROM (
+            SELECT gtype, n, CASE gtype
+                WHEN 'poly'  THEN round( ST_Area(geom,true)/1000000.0)::int
+                WHEN 'line'  THEN round( ST_Length(geom,true)/1000.0)::int
+                ELSE  null::int
+            END size,
+            round( (ST_Area(ST_OrientedEnvelope(geom),true)/1000000)::numeric, 1)::int AS bbox_km2,
+            round(size_mdn::numeric,3) AS size_mdn
+            FROM (
+                SELECT count(*) n, st_collect(geom) as geom, CASE gtype --(gtype||iif(p_usemedian,'','_no'::text))
+                    WHEN 'poly'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Area(geom,true)) /1000000.0
+                    WHEN 'line'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Length(geom,true)) /1000.0
+                    ELSE  null::float
+                    END size_mdn
+                FROM ingest.feature_asis, get_layer_type
+                WHERE file_id=p_file_id
+                GROUP BY gtype
+            ) t1a, get_layer_type
+        ) t2
+    ) t3
+    ;
+    END IF;
+    RETURN j;
+END
+$f$ language PLpgSQL;
 
 CREATE or replace FUNCTION ingest.feature_asis_assign(
     p_file_id bigint,  -- ID at ingest.donated_PackComponent
