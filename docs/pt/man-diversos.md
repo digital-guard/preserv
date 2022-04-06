@@ -58,7 +58,7 @@ O processo de ingestão utiliza uma sequencia de 12 bits, em `error_mask`, para 
 
 No inicio do processo a sequencia de bits de um item é:
 
-`error_mask=000000000000`
+`error_mask=0000000000000`
 
 Dá direita para esquerda, um bit igual a 1 representa:
 
@@ -71,7 +71,8 @@ Dá direita para esquerda, um bit igual a 1 representa:
 - Item tem geometria com tipo diferente do estabelecido para o layer em feature_type;
 - Item duplicado. Dois items são duplicados se seus geohash de tamanho 9 são iguais;
 - Item com geometria não fechada (em se tratando de polígonos);
-- Os 3 bits mais à esquerda estão reservados para eventuais usos futuros e, por hora, são sempre zero.
+- Item com geometria muito grande. Atualmente, se área ou comprimento exceder 2147483647;
+- Os 2 bits mais à esquerda estão reservados para eventuais usos futuros e, por hora, são sempre zero.
 
 Exemplo de saída produzida após a execução de uma ingestão:
 
@@ -100,6 +101,8 @@ Exemplo de saída produzida após a execução de uma ingestão:
          Invalid geometry type: 0 items.                               +
                                                                        +
          Not closed: 0 items.                                          +
+                                                                       +
+         Large: 0 items.                                               +
                                                                        +
          Inserted in feature_asis: 473836 items.                       +
                                                                        +
