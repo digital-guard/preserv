@@ -951,9 +951,14 @@ CREATE or replace FUNCTION ingest.any_load(
             FROM %s %s
           ) t
       ),
-      a AS (
+      a0 AS (
         SELECT *
         FROM scan
+        WHERE ST_IsValid(geom)
+      ),
+      a AS (
+        SELECT *
+        FROM a0
         WHERE ST_IsClosed(geom) = TRUE OR GeometryType(geom) IN ('LINESTRING','MULTILINESTRING')
       ),
       mask AS (SELECT ingest.buffer_geom(geom,%s) AS geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
@@ -999,6 +1004,12 @@ CREATE or replace FUNCTION ingest.any_load(
             SELECT file_id, gid, properties, ST_MakeValid(geom) AS geom, B'000100000000' AS error_mask
             FROM scan
             WHERE ST_IsClosed(geom) = FALSE AND GeometryType(geom) NOT IN ('LINESTRING','MULTILINESTRING')
+        )
+        UNION
+        (
+            SELECT file_id, gid, properties, ST_MakeValid(geom) AS geom, B'000000000010' AS error_mask
+            FROM scan
+            WHERE ST_IsValid(geom) = FALSE
         )
       ),
       stats AS (
