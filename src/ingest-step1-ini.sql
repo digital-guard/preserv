@@ -963,7 +963,15 @@ CREATE or replace FUNCTION ingest.any_load(
       ),
       c AS (
         (
-        SELECT file_id, gid, properties, geom, (error_mask | ( B'00000' || (GeometryType(geom) NOT IN %s)::int::bit || (geom IS NULL)::int::bit || (CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) < 5 WHEN 'line' THEN ST_Length(geom,true) < 2 ELSE FALSE END)::int::bit || (ST_IsEmpty(geom))::int::bit || B'000' )) AS error_mask
+        SELECT file_id, gid, properties, geom, (error_mask | (
+            B'00' ||
+            (CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) > 2147483647 WHEN 'line' THEN ST_Length(geom,true) > 2147483647 ELSE FALSE END)::int::bit ||
+            B'00' ||
+            (GeometryType(geom) NOT IN %s)::int::bit ||
+            (geom IS NULL)::int::bit ||
+            (CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) < 5 WHEN 'line' THEN ST_Length(geom,true) < 2 ELSE FALSE END)::int::bit ||
+            (ST_IsEmpty(geom))::int::bit ||
+            B'000' )) AS error_mask
         FROM (
            SELECT file_id, gid,
                   properties,
@@ -1004,7 +1012,10 @@ CREATE or replace FUNCTION ingest.any_load(
             (COUNT(*) filter (WHERE get_bit(error_mask, 6) = 1))::bigint, -- null
             (COUNT(*) filter (WHERE get_bit(error_mask, 5) = 1))::bigint, -- invalid_type
                                                                           -- bit 4 é reservado para duplicados
-            (COUNT(*) filter (WHERE get_bit(error_mask, 3) = 1))::bigint  -- is_closed
+            (COUNT(*) filter (WHERE get_bit(error_mask, 3) = 1))::bigint, -- is_closed
+            (COUNT(*) filter (WHERE get_bit(error_mask, 2) = 1))::bigint  -- large
+                                                                          -- bit 1 uso futuro
+                                                                          -- bit 0 uso futuro
             ]
         FROM c
       ),
@@ -1034,6 +1045,7 @@ CREATE or replace FUNCTION ingest.any_load(
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
     buffer_type,
     p_pck_id,
+    q_file_id,
         (CASE (SELECT (ingest.donated_PackComponent_geomtype(q_file_id))[1]) 
         WHEN 'point' THEN $$('POINT')$$ 
         WHEN 'poly'  THEN $$('POLYGON'   ,'MULTIPOLYGON')$$ 
@@ -1073,7 +1085,7 @@ CREATE or replace FUNCTION ingest.any_load(
     msg_ret := format(E'From file_id=%s inserted type=%s\nin cadastral_asis %s items.', q_file_id, p_ftname, num_items);
   ELSE
     EXECUTE q_query INTO stats;
-    num_items := stats[10];
+    num_items := stats[11];
     msg_ret := format(
         E'From file_id=%s inserted type=%s.\nStatistics:\n
         %s\n',
@@ -1087,6 +1099,7 @@ CREATE or replace FUNCTION ingest.any_load(
         Null: %s items.\n
         Invalid geometry type: %s items.\n
         Not closed: %s items.\n
+        Large: %s items.\n
         Inserted feature_asis: %s items.\n
         Inserted feature_asis_discarded: %s items.\n',
         VARIADIC stats
@@ -1159,6 +1172,7 @@ CREATE or replace FUNCTION ingest.any_load(
         Null: %s items.\n
         Invalid geometry type: %s items.\n
         Not closed: %s items.\n
+        Large: %s items.\n
         Inserted in feature_asis: %s items.\n
         Inserted in feature_asis_discarded: %s items.\n\n
         After deduplication:\n
