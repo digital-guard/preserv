@@ -1788,7 +1788,7 @@ BEGIN
         FROM hcode_distribution_reduce_recursive_raw_alt(
             ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix)),
             1,
-            (SELECT length((geohash_cover_list( ST_Collect(geom)))[1]) FROM ingest.feature_asis WHERE file_id=$1),
+            (SELECT length((geohash_cover_list( ST_Collect(ST_Force2D(geom))))[1]) FROM ingest.feature_asis WHERE file_id=$1),
             $5,
             (SELECT (lineage->'hcode_distribution_parameters'->'p_threshold_sum')::int FROM ingest.donated_PackComponent WHERE id= p_file_id),
             (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1000::int ELSE 102400::int END)
