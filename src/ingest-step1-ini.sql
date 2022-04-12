@@ -575,7 +575,7 @@ BEGIN
             round( (ST_Area(ST_OrientedEnvelope(geom),true)/1000000)::numeric, 1)::int AS bbox_km2,
             round(size_mdn::numeric,3) AS size_mdn
             FROM (
-                SELECT count(*) n, st_collect(geom) as geom, CASE gtype --(gtype||iif(p_usemedian,'','_no'::text))
+                SELECT count(*) n, st_collect(ST_Force2D(geom)) as geom, CASE gtype --(gtype||iif(p_usemedian,'','_no'::text))
                     WHEN 'poly'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Area(geom,true)) /1000000.0
                     WHEN 'line'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Length(geom,true)) /1000.0
                     ELSE  null::float
