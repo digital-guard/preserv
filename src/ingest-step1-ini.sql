@@ -896,6 +896,7 @@ CREATE or replace FUNCTION ingest.any_load(
     p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
     p_id_profile_params int DEFAULT 1,
     buffer_type int DEFAULT 1,
+    p_check_file_id_exist boolean DEFAULT true,
     p_geom_name text DEFAULT 'geom',
     p_to4326 boolean DEFAULT true -- on true converts SRID to 4326 .
 ) RETURNS text AS $f$
@@ -912,8 +913,11 @@ CREATE or replace FUNCTION ingest.any_load(
   BEGIN
   q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params); -- not null when proc_step=1. Ideal retornar array.
   
-  IF q_file_id IS NULL THEN
+  IF q_file_id IS NULL AND p_check_file_id_exist THEN
     RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s\nor use make delete_file id=%s to delete data.\nSee ingest.vw03full_layer_file.',p_fileref,ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id));
+  END IF;
+  IF q_file_id IS NULL AND NOT(p_check_file_id_exist) THEN
+    q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id);
   END IF;
   IF p_tabcols=array[]::text[] THEN  -- condição para solicitar todas as colunas
     p_tabcols = rel_columns(p_tabname);
@@ -938,7 +942,12 @@ CREATE or replace FUNCTION ingest.any_load(
       $$
       WITH
       scan AS (
-        SELECT %s AS file_id, gid, properties,
+        SELECT %s AS file_id,
+                CASE
+                 WHEN %s THEN gid
+                 ELSE gid+COALESCE((SELECT MAX(feature_id) FROM ingest.feature_asis WHERE file_id=%s),0)
+               END AS gid,
+        properties,
                CASE
                  WHEN ST_SRID(geom)=0 THEN ST_SetSRID(geom,4326)
                  WHEN %s AND ST_SRID(geom)!=4326 AND %s THEN ST_Transform(geom,4326)
@@ -1046,6 +1055,8 @@ CREATE or replace FUNCTION ingest.any_load(
       )
       SELECT array_append(array_append( (SELECT * FROM stats), (SELECT COUNT(*) FROM ins_asis) ), (SELECT COUNT(*) FROM ins_asis_discarded))
     $$,
+    q_file_id,
+    iif(p_check_file_id_exist,'true'::text,'false'),
     q_file_id,
     iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
     iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
@@ -1212,7 +1223,7 @@ CREATE or replace FUNCTION ingest.any_load(
   RETURN msg_ret;
   END;
 $f$ LANGUAGE PLpgSQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],int,int,text,boolean)
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],int,int,boolean,text,boolean)
   IS 'Load (into ingest.feature_asis) shapefile or any other non-GeoJSON, of a separated table.'
 ;
 -- posto ipiranga logo abaixo..  sorvetorua.
@@ -1228,12 +1239,13 @@ CREATE or replace FUNCTION ingest.any_load(
     p_tabcols text[] DEFAULT NULL,   -- 7. lista de atributos, ou só geometria
     p_id_profile_params int DEFAULT 1,
     buffer_type int DEFAULT 1,
+    p_check_file_id_exist boolean DEFAULT true,
     p_geom_name text DEFAULT 'geom', -- 8
     p_to4326 boolean DEFAULT true    -- 9. on true converts SRID to 4326 .
 ) RETURNS text AS $wrap$
-   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9, $10, $11)
+   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9, $10, $11, $12)
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],int,int,text,boolean)
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],int,int,boolean,text,boolean)
   IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
 ;
 
@@ -2229,7 +2241,16 @@ BEGIN
         -- Caso de BR-PR-Araucaria/_pk0061.01
         IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
         THEN
-            SELECT to_jsonb(array_agg(jsonb_build_object('name_item',n, 'sql_select_item',s))) FROM  unnest(ARRAY(SELECT jsonb_array_elements_text(dict->'layers'->key->'orig_filename')),ARRAY(SELECT jsonb_array_elements(dict->'layers'->key->'sql_select'))) t(n,s) INTO multiple_files;
+            SELECT to_jsonb(array_agg(jsonb_build_object(
+                    'name_item',n,
+                    'sql_select_item',s,
+                    'orig_filename_array_first',(to_jsonb(((dict->'layers'->key->'orig_filename'))->0)),
+                    'isFirst', iif(row_num=1,'true'::jsonb,'false'::jsonb))))
+            FROM (
+                SELECT row_number() OVER () AS row_num, t.*
+                FROM  unnest(ARRAY(SELECT jsonb_array_elements_text(dict->'layers'->key->'orig_filename')),ARRAY(SELECT jsonb_array_elements(dict->'layers'->key->'sql_select'))) t(n,s)
+            ) r
+            INTO multiple_files;
 
             RAISE NOTICE 'multiple_files_array : %', multiple_files;
             dict := jsonb_set( dict, array['layers',key,'multiple_files'], 'true'::jsonb );
