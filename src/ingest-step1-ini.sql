@@ -1206,14 +1206,16 @@ CREATE or replace FUNCTION ingest.any_load(
         )
     );
 
-    UPDATE ingest.donated_PackComponent
-    SET proc_step=2,   -- if insert process occurs after q_query.
-        lineage = lineage || ingest.feature_asis_assign(q_file_id) || 
-        jsonb_build_object('statistics',(stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) )
-    WHERE id=q_file_id;
+    IF p_check_file_id_exist THEN
+        UPDATE ingest.donated_PackComponent
+        SET proc_step=2,   -- if insert process occurs after q_query.
+            lineage = lineage || ingest.feature_asis_assign(q_file_id) ||
+            jsonb_build_object('statistics',(stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) )
+        WHERE id=q_file_id;
+    END IF;
   END IF;
 
-  IF num_items>0 THEN
+  IF num_items>0 AND p_check_file_id_exist THEN
     UPDATE ingest.donated_PackComponent
     SET proc_step=3,   -- if insert process occurs after q_query.
         lineage =  lineage || ingest.feature_asis_assign_signature(q_file_id)
@@ -1228,6 +1230,37 @@ COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],int,i
 ;
 -- posto ipiranga logo abaixo..  sorvetorua.
 -- ex. SELECT ingest.any_load('/tmp/pg_io/NRO_IMOVEL.shp','geoaddress_none','pk027_geoaddress1',27,array['gid','textstring']);
+
+CREATE or replace FUNCTION ingest.any_load_assign(
+    p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
+    p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
+    p_pck_id bigint  -- id do package da Preservação.
+) RETURNS text AS $f$
+  DECLARE
+    q_file_id integer;
+  BEGIN
+  q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id);
+
+  IF (SELECT COUNT(*) FROM ingest.feature_asis WHERE file_id=q_file_id)>0 AND (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower(p_ftname))>=20 THEN
+    UPDATE ingest.donated_PackComponent
+    SET proc_step=2,   -- if insert process occurs after q_query.
+        lineage = lineage || ingest.feature_asis_assign(q_file_id)
+    WHERE id=q_file_id;
+  END IF;
+
+  IF (SELECT COUNT(*) FROM ingest.feature_asis WHERE file_id=q_file_id)>0 THEN
+    UPDATE ingest.donated_PackComponent
+    SET proc_step=3,   -- if insert process occurs after q_query.
+        lineage =  lineage || ingest.feature_asis_assign_signature(q_file_id)
+    WHERE id=q_file_id;
+  END IF;
+
+  RETURN 'Ok';
+  END;
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION ingest.any_load_assign(text,text,bigint)
+  IS 'Assign when ingest multiple files per layer.'
+;
 
 CREATE or replace FUNCTION ingest.any_load(
     p_method text,   -- 1.  shp/csv/etc.
@@ -2258,6 +2291,8 @@ BEGIN
 
             SELECT string_agg($$'*$$ || trim(txt::text, $$"$$) || $$*'$$, ' ') FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
             dict := jsonb_set( dict, array['layers',key,'orig_filename_string_extract'], to_jsonb(orig_filename_string) );
+
+            dict := jsonb_set( dict, array['layers',key,'orig_filename_array_first'], (to_jsonb(((dict->'layers'->key->'orig_filename'))->0)) );
 
             SELECT $$\( $$ || string_agg($$-iname '*$$ || trim(txt::text, $$"$$) || $$*.shp'$$, ' -o ') || $$ \)$$ FROM jsonb_array_elements(dict->'layers'->key->'orig_filename') AS txt INTO orig_filename_string;
             dict := jsonb_set( dict, array['layers',key,'orig_filename_string_find'], to_jsonb(orig_filename_string) );
