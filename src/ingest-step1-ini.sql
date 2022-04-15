@@ -342,7 +342,7 @@ CREATE TABLE ingest.cadastral_asis (
 -- -- -- --
 --  VIEWS:
 
-DROP VIEW IF EXISTS ingest.vw01info_feature_type CASCADE;
+--DROP VIEW IF EXISTS ingest.vw01info_feature_type CASCADE;
 CREATE VIEW ingest.vw01info_feature_type AS
   SELECT ftid, ftname, geomtype, need_join, description,
        COALESCE(f.info,'{}'::jsonb) || (
@@ -361,7 +361,7 @@ COMMENT ON VIEW ingest.vw01info_feature_type
   IS 'Adds class_ftname, class_description and class_info to ingest.fdw_feature_type.info.'
 ;
 
-DROP VIEW IF EXISTS ingest.vw02simple_feature_asis CASCADE;
+--DROP VIEW IF EXISTS ingest.vw02simple_feature_asis CASCADE;
 CREATE VIEW ingest.vw02simple_feature_asis AS
  -- Pending: validar fazendo count(*) comparativo entre a view e a tabela.
  WITH dump AS (
@@ -386,7 +386,7 @@ COMMENT ON VIEW ingest.vw02simple_feature_asis
 -- Homologando o uso do feature_id como gid, n=n2:
 --  SELECT count(*) n, count(distinct feature_id::text||','||file_id::text) n2 FROM ingest.feature_asis;
 
-DROP VIEW IF EXISTS ingest.vw02full_donated_packfilevers CASCADE;
+--DROP VIEW IF EXISTS ingest.vw02full_donated_packfilevers CASCADE;
 CREATE or replace VIEW ingest.vw02full_donated_packfilevers AS
   SELECT pf.*, j.isolabel_ext, j.geom, '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path
   FROM ingest.fdw_donated_packfilevers pf
@@ -399,7 +399,7 @@ CREATE or replace VIEW ingest.vw02full_donated_packfilevers AS
   ORDER BY j.isolabel_ext
 ;
 
-DROP VIEW IF EXISTS ingest.vw03full_layer_file CASCADE;
+--DROP VIEW IF EXISTS ingest.vw03full_layer_file CASCADE;
 CREATE VIEW ingest.vw03full_layer_file AS
   SELECT j.isolabel_ext,dn.kx_scope_label, pc.*, ft.ftname, ft.geomtype, j.housenumber_system_type, ft.need_join, ft.description, ft.info AS ft_info
   FROM ingest.donated_PackComponent pc
@@ -427,7 +427,7 @@ CREATE VIEW ingest.vw03dup_feature_asis AS
     ON v.id = t.file_id
 ;
 
-DROP VIEW IF EXISTS ingest.vw04simple_layer_file CASCADE;
+--DROP VIEW IF EXISTS ingest.vw04simple_layer_file CASCADE;
 CREATE VIEW ingest.vw04simple_layer_file AS
   --SELECT id, geomtype, proc_step, ftid, ftname, file_type,
   SELECT id, geomtype, proc_step, ftid, ftname,
@@ -436,7 +436,7 @@ CREATE VIEW ingest.vw04simple_layer_file AS
   FROM ingest.vw03full_layer_file
 ;
 
-DROP VIEW IF EXISTS ingest.vw05test_feature_asis CASCADE;
+--DROP VIEW IF EXISTS ingest.vw05test_feature_asis CASCADE;
 CREATE VIEW ingest.vw05test_feature_asis AS
   SELECT v.packvers_id, v.ft_info->>'class_ftname' as class_ftname, t.file_id,
          v.lineage->'file_meta'->>'file' as file,

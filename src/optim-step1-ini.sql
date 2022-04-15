@@ -509,7 +509,7 @@ BEGIN
                 WHERE admin_level = 2 AND lower(abbrev) = lower('%s')
                 )
             )
-        ), lower(user_resp), pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(escopo, donor_id, pack_count))), yamlfile_to_jsonb(optim.format_filepath(escopo, donor_id, pack_count)) as make_conf_tpl
+        ) AS donor_id, lower(user_resp) AS user_resp, pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(escopo, donor_id, pack_count))) AS original_tpl, yamlfile_to_jsonb(optim.format_filepath(escopo, donor_id, pack_count)) AS make_conf_tpl
     FROM tmp_orig.fdw_donatedpack%s
     WHERE file_exists(optim.format_filepath(escopo, donor_id, pack_count)) -- verificar make_conf.yaml ausentes
     LIMIT 1
