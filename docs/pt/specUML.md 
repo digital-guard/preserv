@@ -1,5 +1,6 @@
 ## Diagrama DL03t_main
 
+```mermaid
 erDiagram
     jurisdiction |o--o| jurisdiction : ""
     jurisdiction_geom
@@ -52,3 +53,4 @@ erDiagram
         bigint packvers_id FK
         smallint ftid PK
     }
+```
