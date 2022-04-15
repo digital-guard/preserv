@@ -1160,6 +1160,9 @@ CREATE or replace FUNCTION ingest.any_load(
             INSERT INTO ingest.feature_asis_discarded (file_id, feature_id, properties, geom)
             SELECT file_id, feature_id, ( properties || jsonb_build_object('error_mask', error_mask) ) AS properties, geom
             FROM dup_mask t
+            ON CONFLICT (file_id,feature_id)
+            DO UPDATE
+            SET properties = EXCLUDED.properties
             RETURNING 1
         ),
         del AS (
