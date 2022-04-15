@@ -1,5 +1,7 @@
 ## Diagrama DL03t_main
 
+Diagrama:
+
 ```mermaid
 erDiagram
     jurisdiction |o--o| jurisdiction : ""
