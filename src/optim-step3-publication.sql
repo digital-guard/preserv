@@ -1,4 +1,3 @@
-DROP VIEW IF EXISTS optim.vw03publication CASCADE;
 CREATE VIEW optim.vw03publication AS
 SELECT isolabel_ext, local_serial, pk_count, jsonb_build_object(
     'isolabel_ext', isolabel_ext,
@@ -73,6 +72,9 @@ FROM (
 ) t
 GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv, pack_number, path_cutgeo, pack_item_accepted_date, local_serial, pk_count
 ;
+COMMENT ON VIEW optim.vw03publication
+  IS 'Generate json for mustache template for preservDataViz pages.'
+;
 
 CREATE or replace FUNCTION optim.publicating_page(
 	p_isolabel_ext  text, -- e.g. 'BR-AC-RioBranco'
@@ -92,6 +94,9 @@ CREATE or replace FUNCTION optim.publicating_page(
 $f$ language SQL VOLATILE;
 -- SELECT optim.publicating_page('BR-AC-RioBranco','/tmp/pg_io');
 -- SELECT jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), (SELECT page FROM optim.vw03publication WHERE isolabel_ext='BR-AC-RioBranco'));
+COMMENT ON FUNCTION optim.publicating_page
+  IS 'Generate html file for preservDataViz pages.'
+;
 
 CREATE or replace FUNCTION optim.publicating_index_page(
 	p_fileref text
@@ -128,3 +133,6 @@ CREATE or replace FUNCTION optim.publicating_index_page(
     ) v;
 $f$ language SQL VOLATILE;
 -- SELECT optim.publicating_index_page('/tmp/pg_io');
+COMMENT ON FUNCTION optim.publicating_index_page
+  IS 'Generate index.html file for preservDataViz pages.'
+;

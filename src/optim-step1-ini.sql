@@ -33,6 +33,21 @@
   --,UNIQUE(jurisd_base_id,parent_abbrev,lexlabel)
   --,UNIQUE(jurisd_base_id,parent_abbrev,abbrev)
 --);
+COMMENT ON COLUMN optim.jurisdiction.osm_id                  IS 'Relation identifier in OpenStreetMap.';
+COMMENT ON COLUMN optim.jurisdiction.jurisd_base_id          IS 'ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans).';
+COMMENT ON COLUMN optim.jurisdiction.jurisd_local_id         IS 'Numeric official ID like IBGE_ID of BR jurisdiction. For example ACRE is 12 and its cities are {1200013, 1200054,etc}.';
+COMMENT ON COLUMN optim.jurisdiction.parent_id               IS 'osm_id of top admin_level.';
+COMMENT ON COLUMN optim.jurisdiction.admin_level             IS 'OSM convention for admin_level tag in country.';
+COMMENT ON COLUMN optim.jurisdiction.name                    IS 'Name of jurisdiction';
+--COMMENT ON COLUMN optim.jurisdiction.parent_abbrev           IS '';
+--COMMENT ON COLUMN optim.jurisdiction.abbrev                  IS '';
+COMMENT ON COLUMN optim.jurisdiction.wikidata_id             IS 'wikidata identifier without Q prefix.';
+COMMENT ON COLUMN optim.jurisdiction.lexlabel                IS 'Cache from name; e.g. sao.paulo.';
+COMMENT ON COLUMN optim.jurisdiction.isolabel_ext            IS 'Cache from parent_abbrev (ISO) and name (camel case); e.g. BR-SP-SaoPaulo.';
+COMMENT ON COLUMN optim.jurisdiction.ddd                     IS 'Direct distance dialing.';
+COMMENT ON COLUMN optim.jurisdiction.housenumber_system_type IS 'Housenumber system.';
+COMMENT ON COLUMN optim.jurisdiction.lex_urn                 IS 'Housenumber system law.';
+COMMENT ON COLUMN optim.jurisdiction.info                    IS 'Others information.';
 
 --CREATE TABLE optim.jurisdiction_geom (
   --osm_id bigint PRIMARY KEY, 
@@ -42,12 +57,20 @@
   --kx_ghs2_intersects text[],
   --UNIQUE(isolabel_ext)
 --);
+COMMENT ON COLUMN optim.jurisdiction_geom.osm_id             IS 'Relation identifier in OpenStreetMap.';
+COMMENT ON COLUMN optim.jurisdiction_geom.isolabel_ext       IS 'ISO 3166-1 alpha-2 code and name (camel case); e.g. BR-SP-SaoPaulo.';
+COMMENT ON COLUMN optim.jurisdiction_geom.geom               IS 'Geometry for osm_id identifier';
+--COMMENT ON COLUMN optim.jurisdiction_geom.kx_ghs1_intersects IS '';
+--COMMENT ON COLUMN optim.jurisdiction_geom.kx_ghs2_intersects IS '';
 
 CREATE TABLE optim.auth_user (
   -- authorized users to be a datapack responsible and eclusa-FTP manager
   username text NOT NULL PRIMARY KEY,
   info jsonb
 );
+COMMENT ON COLUMN optim.auth_user.username IS 'username in host account.';
+COMMENT ON COLUMN optim.auth_user.info     IS 'Other account details on host.';
+
 INSERT INTO optim.auth_user(username) VALUES ('carlos'),('igor'),('enio'),('peter'),('claiton'); -- minimal one Linux's /home/username
 
 CREATE TABLE optim.donor (
@@ -68,6 +91,19 @@ CREATE TABLE optim.donor (
   UNIQUE(country_id,legalName),
   UNIQUE(country_id,kx_scope_label,shortname)
 );
+COMMENT ON COLUMN optim.donor.id             IS 'id = country_id*1000000+local_serial';
+COMMENT ON COLUMN optim.donor.country_id     IS 'ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans).';
+COMMENT ON COLUMN optim.donor.local_serial   IS 'Numeric official ID like IBGE_ID of BR jurisdiction. For example ACRE is 12 and its cities are {1200013, 1200054,etc}.';
+COMMENT ON COLUMN optim.donor.scope_osm_id   IS 'osm_id of jurisdiction.';
+COMMENT ON COLUMN optim.donor.kx_scope_label IS 'OSM convention for admin_level tag in country.';
+COMMENT ON COLUMN optim.donor.shortname      IS 'Abreviation or acronym (local)';
+COMMENT ON COLUMN optim.donor.vat_id         IS 'in the Brazilian case is CNPJ number.';
+COMMENT ON COLUMN optim.donor.legalName      IS 'in the Brazilian case is Razao Social.';
+
+COMMENT ON COLUMN optim.donor.wikidata_id    IS 'wikidata identifier without Q prefix.';
+COMMENT ON COLUMN optim.donor.url            IS 'Official home page of the organization.';
+COMMENT ON COLUMN optim.donor.info           IS 'Others information.';
+COMMENT ON COLUMN optim.donor.kx_vat_id      IS 'Cache for normalized vat_id.';
 
 CREATE TABLE optim.donated_PackTpl(
    -- donated pack template, Pacote não-versionado, apenas controle de pack_id e registro da entrada. Só metadados comuns às versões.
@@ -81,6 +117,14 @@ CREATE TABLE optim.donated_PackTpl(
   info JSONb, -- uso futuro caso necessário.
   UNIQUE(donor_id,pk_count)
 );  -- cada file de  make_conf_tpl->files  resulta em um registro optim.donated_PackFileVers
+COMMENT ON COLUMN optim.donated_PackTpl.id            IS 'id = donor_id::bigint*100::bigint + pk_count::bigint';
+COMMENT ON COLUMN optim.donated_PackTpl.donor_id      IS 'Package donor identifier.';
+COMMENT ON COLUMN optim.donated_PackTpl.user_resp     IS 'User responsible for the README and makefile testing.';
+COMMENT ON COLUMN optim.donated_PackTpl.pk_count      IS 'Serial number of the package donated by the donor.';
+COMMENT ON COLUMN optim.donated_PackTpl.original_tpl  IS 'make_conf.yaml backup by replacing "version" and "file" with mustache placeholder.';
+COMMENT ON COLUMN optim.donated_PackTpl.make_conf_tpl IS 'Cache, parsing result from original_tpl (YAML) to JSON.';
+COMMENT ON COLUMN optim.donated_PackTpl.kx_num_files  IS 'Cache for jsonb_array_length(make_conf_tpl->files).';
+COMMENT ON COLUMN optim.donated_PackTpl.info          IS 'Others information.';
 
 CREATE TABLE optim.donated_PackFileVers(
   -- armazena histórico de versões, requer VIEW contendo apenas registros de MAX(pack_item_accepted_date).
@@ -99,7 +143,14 @@ CREATE TABLE optim.donated_PackFileVers(
   ,UNIQUE(pack_id,pack_item,pack_item_accepted_date)
   ,UNIQUE(pack_id,pack_item,kx_pack_item_version) -- revisar se precisa.
 );
-
+COMMENT ON COLUMN optim.donated_PackFileVers.id                      IS 'id=pack_id*1000+pack_item*100+kx_pack_item_version';
+COMMENT ON COLUMN optim.donated_PackFileVers.hashedfname             IS 'sha256.ext of file.';
+COMMENT ON COLUMN optim.donated_PackFileVers.pack_id                 IS 'donated_PackTpl identifier.';
+COMMENT ON COLUMN optim.donated_PackFileVers.pack_item               IS 'make_conf_tpl->files->file corresponding to hashedfname.';
+COMMENT ON COLUMN optim.donated_PackFileVers.pack_item_accepted_date IS 'Date of approval of the donation.';
+COMMENT ON COLUMN optim.donated_PackFileVers.kx_pack_item_version    IS 'Version (serial) corresponding to pack_item_accepted_date. Trigger: next value.';
+COMMENT ON COLUMN optim.donated_PackFileVers.user_resp               IS 'User responsible for ingesting the file.';
+COMMENT ON COLUMN optim.donated_PackFileVers.info                    IS 'Others information.';
 ------------------------
 
 CREATE TABLE optim.feature_type (  -- replacing old optim.origin_content_type
@@ -111,7 +162,13 @@ CREATE TABLE optim.feature_type (  -- replacing old optim.origin_content_type
   info jsonb, -- is_useful, score, model_septable, description_pt, description_es, synonymous_pt, synonymous_es
   UNIQUE (ftname)
 );
--- DELETE FROM optim.feature_type;
+COMMENT ON COLUMN optim.feature_type.ftid        IS 'Feature type numeric identifier.';
+COMMENT ON COLUMN optim.feature_type.ftname      IS 'Feature type name.';
+COMMENT ON COLUMN optim.feature_type.geomtype    IS 'Feature type geometry type.';
+COMMENT ON COLUMN optim.feature_type.need_join   IS 'If feature type needs join. false=no, true=yes, null=both (at class)';
+COMMENT ON COLUMN optim.feature_type.description IS 'Feature type description.';
+COMMENT ON COLUMN optim.feature_type.info        IS 'Others information.';
+
 INSERT INTO optim.feature_type VALUES
   (0,'address',       'class', null,  'Cadastral address.','{"shortname_pt":"endereço","description_pt":"Endereço cadastral, representação por nome de via e numeração predial.","synonymous_pt":["endereço postal","endereço","planilha dos endereços","cadastro de endereços"]}'::jsonb),
   --(1,'address_full',  'none', true,   'Cadastral address (gid,via_id,via_name,number,postal_code,etc), joining with geoaddress_ext by a gid.', NULL),
@@ -185,6 +242,14 @@ CREATE TABLE optim.donated_PackComponent(
   UNIQUE(packvers_id,ftid,lineage_md5)
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
+COMMENT ON COLUMN optim.donated_PackComponent.id          IS 'bigserial identifier.';
+COMMENT ON COLUMN optim.donated_PackComponent.packvers_id IS 'donated_PackFileVers identifier.';
+COMMENT ON COLUMN optim.donated_PackComponent.ftid        IS 'Feature type identifier.';
+--COMMENT ON COLUMN optim.donated_PackComponent.is_evidence IS '';
+COMMENT ON COLUMN optim.donated_PackComponent.proc_step   IS 'Date of approval of the donation.';
+COMMENT ON COLUMN optim.donated_PackComponent.lineage     IS 'General information.';
+COMMENT ON COLUMN optim.donated_PackComponent.lineage_md5 IS 'md5 from the file.';
+COMMENT ON COLUMN optim.donated_PackComponent.kx_profile  IS 'Others information.';
 
 CREATE TABLE optim.donated_PackComponent_not_approved(
   -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
@@ -199,7 +264,14 @@ CREATE TABLE optim.donated_PackComponent_not_approved(
   UNIQUE(packvers_id,ftid,lineage_md5)
   --UNIQUE(packvers_id,ftid,is_evidence)  -- conferir como será o controle de múltiplos files ingerindo no mesmo layer.
 );
-
+COMMENT ON COLUMN optim.donated_PackComponent_not_approved.id          IS 'bigserial identifier.';
+COMMENT ON COLUMN optim.donated_PackComponent_not_approved.packvers_id IS 'donated_PackFileVers identifier.';
+COMMENT ON COLUMN optim.donated_PackComponent_not_approved.ftid        IS 'Feature type identifier.';
+--COMMENT ON COLUMN optim.donated_PackComponent_not_approved.is_evidence IS '';
+COMMENT ON COLUMN optim.donated_PackComponent_not_approved.proc_step   IS 'Date of approval of the donation.';
+COMMENT ON COLUMN optim.donated_PackComponent_not_approved.lineage     IS 'General information.';
+COMMENT ON COLUMN optim.donated_PackComponent_not_approved.lineage_md5 IS 'md5 from the file.';
+COMMENT ON COLUMN optim.donated_PackComponent_not_approved.kx_profile  IS 'Others information.';
 ------------------------
 
 DROP VIEW IF EXISTS optim.vw01info_feature_type CASCADE;
@@ -245,6 +317,9 @@ CREATE VIEW optim.vw01full_packfilevers AS
     ON dn.scope_osm_id=j.osm_id
   ORDER BY j.isolabel_ext, dn.local_serial, pt.pk_count
 ;
+COMMENT ON VIEW optim.vw01full_packfilevers
+  IS 'Join donated_packfilevers with donated_PackTpl, donor and vw01full_jurisdiction_geom.'
+;
 
 CREATE VIEW optim.vw01full_packfilevers_ftype AS
     SELECT pf.*, ft.ftid, ft.ftname, ft.geomtype, ft.need_join, ft.description, ft.info AS ftype_info
@@ -254,6 +329,9 @@ CREATE VIEW optim.vw01full_packfilevers_ftype AS
     ) pf
     LEFT JOIN optim.vw01info_feature_type ft
     ON ft.ftid = ( SELECT ftid::int FROM optim.feature_type WHERE ftname=lower(layer || '_' || (make_conf_tpl->'layers'->layer->>'subtype')) ) 
+;
+COMMENT ON VIEW optim.vw01full_packfilevers_ftype
+  IS 'Join vw01full_packfilevers with vw01info_feature_type.'
 ;
 
 ------------------------
@@ -273,10 +351,16 @@ FROM (
   ORDER BY pf.isolabel_ext
 ) AS g
 ;
+COMMENT ON VIEW optim.vw01report
+  IS 'Donated package report.'
+;
 
 CREATE or replace VIEW optim.vw02report_simple AS
 SELECT isolabel_ext, ftname
 FROM optim.vw01report
+;
+COMMENT ON VIEW optim.vw02report_simple
+  IS 'Simplifies optim.vw01report.'
 ;
 
 CREATE or replace VIEW optim.vw01report_median AS
@@ -311,6 +395,9 @@ FROM (
     ) s
 ) t
 GROUP BY isolabel_ext, pack_number, class_ftname
+;
+COMMENT ON VIEW optim.vw01report_median
+  IS 'Returns the number of files, median, average, minimum and maximum in kibibytes.'
 ;
 
 ------------------------
@@ -445,6 +532,9 @@ BEGIN
   RETURN (SELECT optim.fdw_generate_getclone2('donor', jurisdiction, 'optim', array['id','country_id', 'info', 'kx_vat_id'], null, null)) || (SELECT optim.fdw_generate2('donatedPack', jurisdiction, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'donor_label text', 'user_resp text', 'accepted_date date', 'escopo text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,null));
 END;
 $f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION optim.load_donor_pack
+  IS 'Generates a clone-structure FOREIGN TABLE for donor.csv and donatedPack.csv.'
+;
 
 CREATE or replace FUNCTION optim.replace_file_and_version(file text) RETURNS text AS $f$
 BEGIN
@@ -452,6 +542,9 @@ BEGIN
 END;
 $f$ LANGUAGE PLpgSQL;
 --SELECT optim.replace_file_and_version(pg_read_file('/var/gits/_dg/preserv-BR/data/RS/SantaMaria/_pk0019.01/make_conf.yaml'));
+COMMENT ON FUNCTION optim.replace_file_and_version
+  IS 'Replacing "version" and "file" with mustache placeholder.'
+;
 
 CREATE or replace FUNCTION optim.format_filepath(escopo text, donor_id bigint, pack_count int) RETURNS text AS $f$
 BEGIN
@@ -470,6 +563,9 @@ BEGIN
 END;
 $f$ LANGUAGE PLpgSQL;
 --SELECT optim.format_filepath('BR', 34);
+COMMENT ON FUNCTION optim.format_filepath
+  IS 'Generates filepath.'
+;
 
 CREATE or replace FUNCTION optim.insert_donor_pack(
     jurisdiction text
@@ -576,3 +672,6 @@ BEGIN
   RETURN (SELECT 'OK, approved.');
 END;
 $f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION optim.load_donor_pack
+  IS 'Insert from clone-structure FOREIGN TABLE from donor.csv and donatedPack.csv.'
+;
