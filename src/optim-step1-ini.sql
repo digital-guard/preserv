@@ -71,7 +71,7 @@ CREATE TABLE optim.auth_user (
 COMMENT ON COLUMN optim.auth_user.username IS 'username in host account.';
 COMMENT ON COLUMN optim.auth_user.info     IS 'Other account details on host.';
 
-INSERT INTO optim.auth_user(username) VALUES ('carlos'),('igor'),('enio'),('peter'),('claiton'); -- minimal one Linux's /home/username
+INSERT INTO optim.auth_user(username) VALUES ('carlos'),('igor'),('enio'),('peter'),('claiton'),('luis'); -- minimal one Linux's /home/username
 
 CREATE TABLE optim.donor (
   id integer NOT NULL PRIMARY KEY CHECK (id = country_id*1000000+local_serial),  -- by trigger!
@@ -606,15 +606,15 @@ BEGIN
                 )
             )
         ) AS donor_id, lower(user_resp) AS user_resp, pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(escopo, donor_id, pack_count))) AS original_tpl, yamlfile_to_jsonb(optim.format_filepath(escopo, donor_id, pack_count)) AS make_conf_tpl
-    FROM tmp_orig.fdw_donatedpack%s
+    FROM tmp_orig.fdw_donatedpack%s t
     WHERE file_exists(optim.format_filepath(escopo, donor_id, pack_count)) -- verificar make_conf.yaml ausentes
-    LIMIT 1
+          AND lst_vers=(select MAX(lst_vers) from tmp_orig.fdw_donatedpack%s where donor_id=t.donor_id )
     ON CONFLICT (donor_id,pk_count)
     DO UPDATE 
     SET original_tpl=EXCLUDED.original_tpl, make_conf_tpl=EXCLUDED.make_conf_tpl, kx_num_files=EXCLUDED.kx_num_files;
   $$;
 
-  EXECUTE format( q, jurisdiction, jurisdiction) ;
+  EXECUTE format( q, jurisdiction, jurisdiction, jurisdiction) ;
 
   q := $$
     -- popula optim.donated_PackFileVers a partir de optim.donated_PackTpl
