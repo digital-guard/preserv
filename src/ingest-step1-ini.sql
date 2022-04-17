@@ -1011,7 +1011,7 @@ CREATE or replace FUNCTION ingest.any_load(
         UNION
         (
             SELECT file_id, gid, properties, ST_MakeValid(geom) AS geom, B'000100000000' AS error_mask
-            FROM scan
+            FROM a0
             WHERE ST_IsClosed(geom) = FALSE AND GeometryType(geom) NOT IN ('LINESTRING','MULTILINESTRING')
         )
         UNION
