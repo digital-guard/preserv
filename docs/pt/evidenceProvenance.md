@@ -1,7 +1,7 @@
 
 # Registro proveniência do *hostname* da doação *online*
 
-> ✋ ESCOPO: procedimentos para registro de evidẽncia da *proveniência* dos dados, comprovando-se a **enquivalência entre doador e  proprietário do endereço Internet que comparece na doação *online***.
+> ✋ ESCOPO: procedimentos para registro de evidência da *proveniência* dos dados, comprovando-se a **enquivalência entre doador e  proprietário do endereço Internet que comparece na doação *online***.
 
 Os arquivos preservados pela Digital-Guard podem ser provenientes de diferentes origens, tipicamente *download* de páginas oficiais do doador, e anexos de e-mail enviados por preposto oficial do doador.
 
@@ -27,11 +27,11 @@ A cada projeto de preservação digital de metadados, `git.digital-guard.ogr/pre
 
 3. Se o **subdomínio** não existir na pasta do domínio, ou não estiver suficientemente atualizado, realizar os procedimentos:
 
-  3.1. Criar a respectiva pasta se necessário ([exemplo](https://github.com/digital-guard/preserv-BR/tree/main/data/_donorEvidence/ac.gov.br/riobranco.ac.gov.br));
+   3.1. Criar a respectiva pasta se necessário ([exemplo](https://github.com/digital-guard/preserv-BR/tree/main/data/_donorEvidence/ac.gov.br/riobranco.ac.gov.br));
 
-  3.2. incluir ou atualizar o arquivo `webArchives.csv` ([exemplo](https://github.com/digital-guard/preserv-BR/blob/main/data/_donorEvidence/ac.gov.br/riobranco.ac.gov.br/webArchives.csv)).
+   3.2. incluir ou atualizar o arquivo `webArchives.csv` ([exemplo](https://github.com/digital-guard/preserv-BR/blob/main/data/_donorEvidence/ac.gov.br/riobranco.ac.gov.br/webArchives.csv)).
 
-  3.3. incluir ou atualizar imagens de evidência   ([exemplo](https://github.com/digital-guard/preserv-BR/blob/main/data/_donorEvidence/sp.gov.br/prefeitura.sp.gov.br/localWhois-dominioSpGovBr-in2022-04-16.png)).
+   3.3. incluir ou atualizar imagens de evidência   ([exemplo](https://github.com/digital-guard/preserv-BR/blob/main/data/_donorEvidence/sp.gov.br/prefeitura.sp.gov.br/localWhois-dominioSpGovBr-in2022-04-16.png)).
 
 Em geral é suficiente comprovar domínio, para casos especiais o subdomínio e em casos muito especiais subsubdomínio. Neste Guia dada um desses casos será detalhado.
 
