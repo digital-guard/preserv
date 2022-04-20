@@ -504,15 +504,11 @@ $f$ LANGUAGE SQL;
 
 CREATE or replace FUNCTION ingest.feature_asis_assign_volume(
     p_file_id bigint,  -- ID at ingest.donated_PackComponent
-    p_usemedian boolean DEFAULT false,
-    p_usejurisdiction boolean DEFAULT false
+    p_usemedian boolean DEFAULT false
 ) RETURNS jsonb AS $f$
 DECLARE
     j jsonb;
 BEGIN
-    IF p_usejurisdiction
-    THEN
-    RAISE NOTICE 'feature_asis_assign_volume : %', p_usejurisdiction;
     WITH get_layer_type AS (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype)
     SELECT to_jsonb(t3) INTO j
     FROM (
@@ -537,11 +533,16 @@ BEGIN
             round( (ST_Area(ST_OrientedEnvelope(geom),true)/1000000)::numeric, 1)::int AS bbox_km2,
             round(size_mdn::numeric,3) AS size_mdn
             FROM (
-                SELECT count(*) n, (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=(SELECT isolabel_ext FROM ingest.vw03full_layer_file WHERE id=p_file_id)) as geom, CASE gtype --(gtype||iif(p_usemedian,'','_no'::text))
+                SELECT count(*) n,
+                CASE 
+                    WHEN (SELECT COUNT(*) FROM ingest.feature_asis WHERE file_id=p_file_id ) > 1000000  THEN (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=(SELECT isolabel_ext FROM ingest.vw03full_layer_file WHERE id=p_file_id))
+                    ELSE ST_Collect(ST_Force2D(geom))
+                END geom,
+                CASE gtype --(gtype||iif(p_usemedian,'','_no'::text))
                     WHEN 'poly'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Area(geom,true)) /1000000.0
                     WHEN 'line'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Length(geom,true)) /1000.0
                     ELSE  null::float
-                    END size_mdn
+                END size_mdn
                 FROM ingest.feature_asis, get_layer_type
                 WHERE file_id=p_file_id
                 GROUP BY gtype
@@ -549,56 +550,17 @@ BEGIN
         ) t2
     ) t3
     ;
-    ELSE
-    RAISE NOTICE 'feature_asis_assign_volume : %', p_usejurisdiction;
-    WITH get_layer_type AS (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype)
-    SELECT to_jsonb(t3) INTO j
-    FROM (
-        SELECT n, CASE gtype
-            WHEN 'poly'  THEN 'polygons'
-            WHEN 'line'  THEN 'segments'
-            WHEN 'point'  THEN 'points'
-            END n_unit,
-        size, CASE gtype
-            WHEN 'poly'  THEN 'km2'
-            WHEN 'line'  THEN 'km'
-            ELSE  ''
-            END size_unit,
-            bbox_km2,
-            size_mdn
-        FROM (
-            SELECT gtype, n, CASE gtype
-                WHEN 'poly'  THEN round( ST_Area(geom,true)/1000000.0)::int
-                WHEN 'line'  THEN round( ST_Length(geom,true)/1000.0)::int
-                ELSE  null::int
-            END size,
-            round( (ST_Area(ST_OrientedEnvelope(geom),true)/1000000)::numeric, 1)::int AS bbox_km2,
-            round(size_mdn::numeric,3) AS size_mdn
-            FROM (
-                SELECT count(*) n, st_collect(ST_Force2D(geom)) as geom, CASE gtype --(gtype||iif(p_usemedian,'','_no'::text))
-                    WHEN 'poly'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Area(geom,true)) /1000000.0
-                    WHEN 'line'  THEN percentile_disc (0.5) WITHIN GROUP(ORDER BY ST_Length(geom,true)) /1000.0
-                    ELSE  null::float
-                    END size_mdn
-                FROM ingest.feature_asis, get_layer_type
-                WHERE file_id=p_file_id
-                GROUP BY gtype
-            ) t1a, get_layer_type
-        ) t2
-    ) t3
-    ;
-    END IF;
+
     RETURN j;
 END
 $f$ language PLpgSQL;
 
 CREATE or replace FUNCTION ingest.feature_asis_assign(
-    p_file_id bigint,  -- ID at ingest.donated_PackComponent
-    p_usejurisdiction boolean DEFAULT false
+    p_file_id bigint  -- ID at ingest.donated_PackComponent
 ) RETURNS jsonb AS $f$
   SELECT jsonb_build_object(
         'feature_asis_summary',
-        ingest.feature_asis_assign_volume(p_file_id,true,p_usejurisdiction)
+        ingest.feature_asis_assign_volume(p_file_id,true)
         )
 $f$ LANGUAGE SQL;
 
@@ -1536,7 +1498,7 @@ CREATE or replace FUNCTION ingest.osm_load(
 
     UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
-        lineage = lineage || ingest.feature_asis_assign(q_file_id, true) || 
+        lineage = lineage || ingest.feature_asis_assign(q_file_id) || 
         jsonb_build_object('statistics',(stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) )
     WHERE id=q_file_id;
   END IF;
@@ -1764,8 +1726,6 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 ) RETURNS text  AS $f$
 BEGIN
     DELETE FROM ingest.publicating_geojsons_p2distrib;
-    CASE p_is_osm
-    WHEN TRUE THEN
     INSERT INTO ingest.publicating_geojsons_p2distrib
         SELECT t.hcode, t.n_items, t.n_keys,  t.jj, -- length(t.hcode) AS len,
         ST_Intersection(
@@ -1775,29 +1735,17 @@ BEGIN
         FROM hcode_distribution_reduce_recursive_raw_alt(
             ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix)),
             1,
-            (SELECT length((geohash_cover_list(geom))[1]) FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext),
+            (
+                CASE (SELECT COUNT(*) FROM ingest.feature_asis WHERE file_id=p_file_id ) > 1000000
+                WHEN TRUE THEN (SELECT length((geohash_cover_list(geom))[1]) FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
+                ELSE (SELECT length((geohash_cover_list( ST_Collect(ST_Force2D(geom)) ))[1]) FROM ingest.feature_asis WHERE file_id=$1)
+                END
+            ),
             $5,
             (SELECT (lineage->'hcode_distribution_parameters'->'p_threshold_sum')::int FROM ingest.donated_PackComponent WHERE id= p_file_id),
             (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1000::int ELSE 102400::int END)
         ) t
     ;
-    ELSE
-    INSERT INTO ingest.publicating_geojsons_p2distrib
-        SELECT t.hcode, t.n_items, t.n_keys,  t.jj, -- length(t.hcode) AS len,
-        ST_Intersection(
-            ST_SetSRID( ST_geomFromGeohash(replace(t.hcode, '*', '')) ,  4326),
-            (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
-        ) AS geom
-        FROM hcode_distribution_reduce_recursive_raw_alt(
-            ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix)),
-            1,
-            (SELECT length((geohash_cover_list( ST_Collect(ST_Force2D(geom))))[1]) FROM ingest.feature_asis WHERE file_id=$1),
-            $5,
-            (SELECT (lineage->'hcode_distribution_parameters'->'p_threshold_sum')::int FROM ingest.donated_PackComponent WHERE id= p_file_id),
-            (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1000::int ELSE 102400::int END)
-        ) t
-    ;
-    END CASE;
 
     PERFORM pg_catalog.pg_file_unlink(p_fileref || '/'|| (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) || '_*.geojson') FROM ingest.vw03full_layer_file WHERE id=$1;
 
