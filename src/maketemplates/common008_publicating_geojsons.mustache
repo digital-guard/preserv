@@ -8,7 +8,7 @@ publicating_geojsons_{{layername_root}}:
 	@ls -1 $(folder) > $(pg_io)/$(isolabel)_{{layername_root}}_ls_before.txt
 	@rm -rf $(folder)/*.geojson
 	@echo "--- Gerando arquivos em $(folder) ---"
-	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)','{{buffer_type}}',9,'$(pretty_opt)'{{#isOsm}},true{{/isOsm}});"
+	psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','$(isolabel)','$(folder)','{{buffer_type}}',9,'$(pretty_opt)');"
 
 	cd /var/gits/_dg/preserv/src; sudo bash fixaPermissoes.sh $(folder)
 	@echo " Save ls $(folder) after changes in $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt ---"
