@@ -684,8 +684,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_pck_fileref_sha256 text,
   p_id_profile_params int,
   p_ftype text DEFAULT NULL,
-  p_add_md5 boolean DEFAULT true,
-  p_is_osm boolean DEFAULT false
+  p_add_md5 boolean DEFAULT true
   -- proc_step = 1
   -- ,p_size_min int DEFAULT 5
 ) RETURNS bigint AS $f$
@@ -693,8 +692,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
  WITH filedata AS (
    SELECT p_pck_id, p_ftid,
           CASE
-            WHEN ((fmeta->'size')::int<5 OR (fmeta->>'hash_md5')='') AND NOT(p_is_osm) THEN NULL --guard
-            WHEN p_is_osm THEN md5('OpenStreetMap')
+            WHEN ((fmeta->'size')::int<5 OR (fmeta->>'hash_md5')='') THEN NULL --guard
             ELSE fmeta->>'hash_md5'
           END AS hash_md5,
           (fmeta - 'hash_md5') AS fmeta
@@ -726,14 +724,12 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_file text,
   p_ftid int,
   p_pck_id bigint,
-  p_add_md5 boolean DEFAULT true,
-  p_is_osm boolean DEFAULT false
+  p_add_md5 boolean DEFAULT true
 ) RETURNS bigint AS $f$
  WITH filedata AS (
    SELECT p_pck_id, p_ftid,
           CASE
-            WHEN ((fmeta->'size')::int<5 OR (fmeta->>'hash_md5')='') AND NOT(p_is_osm) THEN NULL --guard
-            WHEN p_is_osm THEN md5('OpenStreetMap')
+            WHEN ((fmeta->'size')::int<5 OR (fmeta->>'hash_md5')='') THEN NULL --guard
             ELSE fmeta->>'hash_md5'
           END AS hash_md5,
           (fmeta - 'hash_md5') AS fmeta
@@ -756,15 +752,13 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_file text,   -- 1.
   p_ftname text, -- 2. define o layer... um file pode ter mais de um layer??
   p_pck_id bigint,
-  p_add_md5 boolean DEFAULT true,
-  p_is_osm boolean DEFAULT false
+  p_add_md5 boolean DEFAULT true
 ) RETURNS bigint AS $wrap$
     SELECT ingest.getmeta_to_file(
       $1,
       (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower($2)),
       $3,
-      $4,
-      $5
+      $4
     );
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,boolean,boolean)
@@ -778,13 +772,12 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   p_pck_fileref_sha256 text,
   p_id_profile_params int,
   p_ftype text DEFAULT NULL, -- 6
-  p_add_md5 boolean DEFAULT true,
-  p_is_osm boolean DEFAULT false
+  p_add_md5 boolean DEFAULT true
 ) RETURNS bigint AS $wrap$
     SELECT ingest.getmeta_to_file(
       $1,
       (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower($2)),
-      $3, $4, $5, $6, $7, $8
+      $3, $4, $5, $6, $7
     );
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,text,int,text,boolean,boolean)
@@ -1268,9 +1261,9 @@ CREATE or replace FUNCTION ingest.osm_load(
     stats bigint[];
     stats_dup bigint[];
   BEGIN
-  q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params,null,false,true); -- not null when proc_step=1. Ideal retornar array.
+  q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params); -- not null when proc_step=1. Ideal retornar array.
   IF q_file_id IS NULL THEN
-    RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s\nor use make delete_file id=%s to delete data.\nSee ingest.vw03full_layer_file.',p_fileref,ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,false,true));
+    RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s\nor use make delete_file id=%s to delete data.\nSee ingest.vw03full_layer_file.',p_fileref,ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id));
   END IF;
   IF p_tabcols=array[]::text[] THEN  -- condição para solicitar todas as colunas
     p_tabcols = rel_columns(p_tabname);
@@ -1721,8 +1714,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 	p_fileref text,       --
 	p_buffer_type int DEFAULT 1,
-	p_size_max      int    DEFAULT 1,     -- 5. max size of hcode
-	p_is_osm boolean DEFAULT false
+	p_size_max      int    DEFAULT 1     -- 5. max size of hcode
 ) RETURNS text  AS $f$
 BEGIN
     DELETE FROM ingest.publicating_geojsons_p2distrib;
@@ -1963,12 +1955,11 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_fileref text,               -- e.g.
 	p_buffer_type int DEFAULT 1,  -- e.g.
 	p_size_max int DEFAULT 1,     -- e.g.
-	p_pretty_opt int DEFAULT 3,
-	p_is_osm boolean DEFAULT false
+	p_pretty_opt int DEFAULT 3
 ) RETURNS text  AS $f$
   SELECT ingest.publicating_geojsons_p1($1,$2);
   --SELECT ingest.publicating_geojsons_p2($1,$2,(SELECT CASE geomtype WHEN 'point' THEN false ELSE true END FROM ingest.vw03full_layer_file WHERE id=$1));
-  SELECT ingest.publicating_geojsons_p3($1,$2,$3,$4,$5,$7);
+  SELECT ingest.publicating_geojsons_p3($1,$2,$3,$4,$5);
   SELECT ingest.publicating_geojsons_p4($1,$2,$3);
   SELECT ingest.publicating_geojsons_p5($1,$2,$3,$4,$6);
   SELECT 'fim';
@@ -1980,10 +1971,9 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_fileref text,               -- e.g.
 	p_buffer_type int DEFAULT 1,  -- e.g.
 	p_size_max int DEFAULT 1,     -- e.g.
-	p_pretty_opt int DEFAULT 3,
-	p_is_osm boolean DEFAULT false
+	p_pretty_opt int DEFAULT 3
 ) RETURNS text AS $wrap$
-  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1)),$2,$3,$4,$5,$6,$7);
+  SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1)),$2,$3,$4,$5,$6);
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int,boolean)
   IS 'Wrap to ingest.publicating_geojsons'
