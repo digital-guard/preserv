@@ -890,8 +890,8 @@ CREATE or replace FUNCTION ingest.any_load(
   ELSE
     use_tabcols := false;
   END IF;
-  IF 'geom'=ANY(p_tabcols) THEN
-    p_tabcols := array_remove(p_tabcols,'geom');
+  IF p_geom_name=ANY(p_tabcols) THEN
+    p_tabcols := array_remove(p_tabcols,p_geom_name);
   END IF;
   q_query := format(
       $$
@@ -1017,7 +1017,12 @@ CREATE or replace FUNCTION ingest.any_load(
     iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
     feature_id_col,
     iIF( use_tabcols, 'to_jsonb(subq)'::text, E'\'{}\'::jsonb' ), -- properties
-    CASE WHEN lower(p_geom_name)='geom' THEN 'geom' ELSE p_geom_name||' AS geom' END,
+    CASE
+        WHEN lower(p_geom_name)= 'geom' AND p_method= 'geojson2sql' THEN 'ST_GeomFromGeoJSON(geom) AS geom'
+        WHEN lower(p_geom_name)= 'geom' AND p_method<>'geojson2sql' THEN 'geom'
+        WHEN lower(p_geom_name)<>'geom' AND p_method= 'geojson2sql' THEN 'ST_GeomFromGeoJSON(' || p_geom_name ||') AS geom'
+        WHEN lower(p_geom_name)<>'geom' AND p_method<>'geojson2sql' THEN p_geom_name ||' AS geom'   
+    END,
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
     buffer_type,
@@ -1184,7 +1189,7 @@ CREATE or replace FUNCTION ingest.any_load(
   END;
 $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],int,int,boolean,text,boolean)
-  IS 'Load (into ingest.feature_asis) shapefile or any other non-GeoJSON, of a separated table.'
+  IS 'Load (into ingest.feature_asis) shapefile or any other, of a separated table.'
 ;
 -- posto ipiranga logo abaixo..  sorvetorua.
 -- ex. SELECT ingest.any_load('/tmp/pg_io/NRO_IMOVEL.shp','geoaddress_none','pk027_geoaddress1',27,array['gid','textstring']);
@@ -2183,12 +2188,13 @@ BEGIN
         codec_extension := codec_extension0;
         codec_descr_mime := codec_descr_mime0;
 
-        dict := jsonb_set( dict, array['layers',key,'isCsv'], IIF(method='csv2sql',bt,bf) );
-        dict := jsonb_set( dict, array['layers',key,'isOgr'], IIF(method='ogr2ogr',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isCsv'],        IIF(method='csv2sql',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isOgr'],        IIF(method='ogr2ogr',bt,bf) );
         dict := jsonb_set( dict, array['layers',key,'isOgrWithShp'], IIF(method='ogrWshp',bt,bf) );
-        dict := jsonb_set( dict, array['layers',key,'isShp'], IIF(method='shp2sql',bt,bf) );
-        dict := jsonb_set( dict, array['layers',key,'isOsm'], IIF(method='osm2sql',bt,bf) );
-        dict := jsonb_set( dict, array['layers',key,'isGdb'], IIF(method='gdb2sql',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isShp'],        IIF(method='shp2sql',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isOsm'],        IIF(method='osm2sql',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isGdb'],        IIF(method='gdb2sql',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isGeojson'],    IIF(method='geojson2sql',bt,bf) );
         
         dict := jsonb_set( dict, array['layers',key,'isGeoaddress'], IIF(key='geoaddress',bt,bf) );
 
@@ -2344,6 +2350,7 @@ BEGIN
             CASE method
             WHEN 'csv2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('csv'::text) );
             WHEN 'shp2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('shp'::text) );
+            WHEN 'geojson2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('geojson'::text) );
             ELSE
                 --  do nothing
             END CASE;

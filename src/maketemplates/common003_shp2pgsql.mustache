@@ -65,3 +65,8 @@ endif
 {{#isOsm}}
 	@echo Executando osm2sql ...
 {{/isOsm}}
+{{#isGeojson}}
+	@echo Executando geojson2sql ...
+	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS {{tabname}}"
+	psql $(pg_uri_db) -c "CREATE TABLE {{tabname}} AS SELECT * FROM geojson_readfile_features_jgeom('$(sandbox)/{{orig_filename}}.geojson',null)"
+{{/isGeojson}}
