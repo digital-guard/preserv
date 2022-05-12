@@ -122,7 +122,7 @@ load_license_tables: pgio
 
 to_donated_packcomponent:
 	@echo "--- DUMP ingest.donated_packcomponent to $(pg_io)/dump_component_$(pg_db).sql ---"
-	pg_dump --inserts -t ingest.donated_packcomponent $(pg_db_uri) > $(pg_io)/dump_component_$(pg_db).sql
+	pg_dump --column-inserts --data-only -t ingest.donated_packcomponent $(pg_db_uri) > $(pg_io)/dump_component_$(pg_db).sql
 	@echo "--- Preparing $(pg_io)/dump_component_$(pg_db).sql ---"
 	bash to_donated_packcomponent.bash $(pg_io)/dump_component_$(pg_db).sql
 	@echo "--- INSERT $(pg_io)/dump_component_$(pg_db).sql INTO $(pg_datalake) optim.donated_PackComponent_not_approved ---"
