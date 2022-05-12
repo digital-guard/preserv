@@ -67,6 +67,15 @@ endif
 {{/isOsm}}
 {{#isGeojson}}
 	@echo Executando geojson2sql ...
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS {{tabname}}"
-	psql $(pg_uri_db) -c "CREATE TABLE {{tabname}} AS SELECT * FROM geojson_readfile_features_jgeom('$(sandbox)/{{orig_filename}}.geojson',null)"
+	FSIZE=$$(du -b '$(sandbox)/{{orig_filename}}.geojson' | cut -f 1) ; \
+	if [ $$FSIZE -gt 157286400 ]; then \
+	cp -s /var/gits/_dg/preserv/src/splitGeojson.bash $(sandbox); \
+	cd $(sandbox); bash splitGeojson.bash '{{orig_filename}}.geojson' 20000 ; \
+	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS {{tabname}}" ; \
+	psql $(pg_uri_db) -c "CREATE TABLE {{tabname}} AS SELECT * FROM geojson_readfile_features_jgeom('$(sandbox)/splited1_{{orig_filename}}.geojson',null) WHERE jgeom->'type' is not null" ; \
+	cd $(sandbox); find $(sandbox) -path "*splited*_{{orig_filename}}.geojson" ! -path "*splited1_{{orig_filename}}.geojson" -exec sh -c "psql $(pg_uri_db) -c \"INSERT INTO {{tabname}} SELECT * FROM geojson_readfile_features_jgeom('{}',null) WHERE jgeom->'type' is not null;\"" \; ; \
+	else \
+	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS {{tabname}}" ; \
+	psql $(pg_uri_db) -c "CREATE TABLE {{tabname}} AS SELECT * FROM geojson_readfile_features_jgeom('$(sandbox)/{{orig_filename}}.geojson',null) WHERE jgeom->'type' is not null" ; \
+	fi
 {{/isGeojson}}
