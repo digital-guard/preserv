@@ -1584,7 +1584,7 @@ BEGIN
         t.ghs,
         t.row_id::int AS gid, 
         CASE p_ftname
-        WHEN 'parcel' THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'bytes',length(St_asGeoJson(t.geom))) || address ) ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code) || address) END AS info,
+        WHEN 'parcel' THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'ref', ref, 'bytes',length(St_asGeoJson(t.geom))) || address ) ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'ref', ref) || address) END AS info,
         t.geom
   FROM (
       SELECT file_id, fa.geom,
@@ -1606,6 +1606,7 @@ BEGIN
       COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
       properties->>'via_name' AS via_name,
       properties->>'house_number' AS house_number,
+      properties->>'ref' AS ref,
       --COALESCE((properties->>'via_name') || ', ' || (properties->>'house_number'), properties->>'via_name', properties->>'house_number') AS address,
       CASE WHEN (properties->>'via_name' IS NULL) OR (properties->>'house_number' IS NULL) 
       THEN jsonb_strip_nulls(jsonb_build_object('via_name',properties->>'via_name', 'house_number', properties->>'house_number'))
