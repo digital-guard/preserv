@@ -2628,32 +2628,32 @@ CREATE or replace FUNCTION ingest.join(
             )
       ),
       duplicate_keys AS (
-        SELECT asis.properties->'%s'
+        SELECT cadis.properties->'%s'
         FROM
-        (
-            SELECT  *
-            FROM ingest.feature_asis
-            WHERE file_id IN
-            (
-                SELECT id
-                FROM ingest.donated_PackComponent
-                WHERE ftid IN
-                    (
-                    SELECT ftid::int
-                    FROM ingest.fdw_feature_type
-                    WHERE ftname=lower('%s')
-                    )
-                    AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
-            )
-        ) AS asis
+        --(
+            --SELECT  *
+            --FROM ingest.feature_asis
+            --WHERE file_id IN
+            --(
+                --SELECT id
+                --FROM ingest.donated_PackComponent
+                --WHERE ftid IN
+                    --(
+                    --SELECT ftid::int
+                    --FROM ingest.fdw_feature_type
+                    --WHERE ftname=lower('%s')
+                    --)
+                    --AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
+            --)
+        --) AS asis
 
-        INNER JOIN
+        --INNER JOIN
 
         cadis
 
-        ON asis.properties->'%s' = cadis.properties->'%s'
+        --ON asis.properties->'%s' = cadis.properties->'%s'
 
-        GROUP BY asis.properties->'%s'
+        GROUP BY cadis.properties->'%s'
 
         HAVING COUNT(*)>1
       ),
@@ -2674,25 +2674,25 @@ CREATE or replace FUNCTION ingest.join(
                 )
                 AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
             )
-            AND l.properties->'%s' NOT IN (  SELECT * FROM duplicate_keys  )
+            AND c.properties->'%s' NOT IN (  SELECT * FROM duplicate_keys  )
             RETURNING 1
             )
       SELECT COUNT(*) FROM layer_features
     $$,
     p_ftname_cad,
     p_fileref_cad_sha256,
-    p_join_col_layer,
-    p_ftname_layer,
-    p_fileref_layer_sha256,
-    p_join_col_layer,
-    p_join_col_cad,
-    p_join_col_layer,
-    p_join_col_cad,
-    p_join_col_layer,
     p_join_col_cad,
     p_ftname_layer,
     p_fileref_layer_sha256,
-    p_join_col_layer
+    p_join_col_layer,
+    p_join_col_cad,
+    p_join_col_cad,
+    p_join_col_cad,
+    p_join_col_layer,
+    p_join_col_cad,
+    p_ftname_layer,
+    p_fileref_layer_sha256,
+    p_join_col_cad
   );
 
   EXECUTE q_query INTO num_items;
