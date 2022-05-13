@@ -716,7 +716,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
       SELECT id, proc_step      FROM file_exists
   ) t WHERE proc_step=1
 $f$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,text,int,text,boolean,boolean)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,text,int,text,boolean)
   IS 'Reads file metadata and inserts it into ingest.donated_PackComponent. If proc_step=1 returns valid ID else NULL.'
 ;
 
@@ -744,7 +744,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
   )
   SELECT id FROM file_exists
 $f$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,boolean,boolean)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,int,bigint,boolean)
   IS 'Reads file metadata and return id if exists in ingest.donated_PackComponent.'
 ;
 
@@ -761,7 +761,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
       $4
     );
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,boolean,boolean)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,boolean)
   IS 'Wrap para ingest.getmeta_to_file(text,int,bigint) usando ftName ao invés de ftID.'
 ;
 
@@ -780,7 +780,7 @@ CREATE or replace FUNCTION ingest.getmeta_to_file(
       $3, $4, $5, $6, $7
     );
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,text,int,text,boolean,boolean)
+COMMENT ON FUNCTION ingest.getmeta_to_file(text,text,bigint,text,int,text,boolean)
   IS 'Wrap para ingest.getmeta_to_file() usando ftName ao invés de ftID.'
 ;
 -- ex. select ingest.getmeta_to_file('/tmp/a.csv',3,555);
@@ -1981,7 +1981,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 ) RETURNS text AS $wrap$
   SELECT ingest.publicating_geojsons((SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1)),$2,$3,$4,$5,$6);
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int,boolean)
+COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int)
   IS 'Wrap to ingest.publicating_geojsons'
 ;
 -- SELECT ingest.publicating_geojsons('geoaddress','BR-MG-BeloHorizonte','folder');
