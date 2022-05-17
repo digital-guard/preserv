@@ -54,10 +54,13 @@ message:
 	echo
 	echo " redirects_update: update download.redirects in default database dl."
 	echo " redirects_update pg_datalake=dl42t_main: update download.redirects in custom database dl42t_main."
+	echo " sha256_update: update sha256 in optim.donated_packfilevers."
+	echo "         usage: make sha256_update pg_datalake=<datalake with optim schema> id=<id from optim.donated_packfilevers> oldsha256=<sha256 that will be changed> newsha256=<sha256 that will replace oldsha256>"
+	echo
 	echo " publicating_geojsons: "
 	echo " build_fdwtable:"
 	echo " first_makefile: copying initial makefile in 'data/_pk*' directories"
-	echo " load_optim_csv pg_datalake=dl42t_main: update optim tables. "
+	echo " load_optim_csv pg_datalake=dl42t_main: load tables donor.csv and donatedPack.csv into pg_datalake optim tables, for all jurisdictions."
 	echo " load_codec_type: update codec_type table. "
 	echo " load_hcode_parameters: update hcode_parameters table. "
 	echo " load_license_tables: create or update tmp_pack_licenses table. "
@@ -158,8 +161,8 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_datalake_uri) -c "CREATE EXTENSION IF NOT EXISTS file_fdw;"
 	psql $(pg_datalake_uri) -c "CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;"
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/step01def-lib.sql
-	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction-16-03-22.sql
-	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction_geom-16-03-22.sql
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction-17-05-22.sql
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction_geom-17-05-22.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step2-ini.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step3-publication.sql
@@ -175,6 +178,8 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
 
 load_optim_csv:
+	@echo "Load tables donor.csv and donatedPack.csv into $(pg_datalake_uri), for all jurisdictions."
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step2-ini.sql
 
 build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=name
@@ -211,6 +216,15 @@ redirects_update: pgio
 	wget "https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk/gviz/tq?tqx=out:csv&sheet={de-para}" -O "$(pg_io)/de-para.csv"
 	psql $(pg_datalake_uri) -c "DELETE FROM download.redirects; COPY download.redirects FROM '$(pg_io)/de-para.csv' CSV HEADER;"
 
+sha256_update:
+	@echo "Update sha256 in optim.donated_packfilevers"
+	@echo "Old sha256: $(oldsha256)"
+	@echo "New sha256: $(newsha256)"
+	@echo "id: $(id)"
+	@echo "pg_datalake: $(pg_datalake)"
+	@echo "Usage: make sha256_update pg_datalake=<datalake with optim schema> id=<id from optim.donated_packfilevers> oldsha256=<sha256 that will be changed> newsha256=<sha256 that will replace oldsha256>"
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+	psql $(pg_datalake_uri) -c "UPDATE optim.donated_packfilevers SET hashedfname = '$(newsha256)' WHERE id = $(id) AND hashedfname = '$(oldsha256)';"
 
 ## ## ## ##
 ## -- REPORT tools --
