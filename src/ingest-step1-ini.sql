@@ -238,7 +238,7 @@ CREATE FOREIGN TABLE ingest.fdw_donor (
  country_id integer,
  local_serial integer,
  scope_osm_id bigint,
- kx_scope_label text,
+ scope_label text,
  shortname text,
  vat_id text,
  legalname text,
@@ -401,7 +401,7 @@ CREATE or replace VIEW ingest.vw02full_donated_packfilevers AS
 
 --DROP VIEW IF EXISTS ingest.vw03full_layer_file CASCADE;
 CREATE VIEW ingest.vw03full_layer_file AS
-  SELECT j.isolabel_ext,dn.kx_scope_label, pc.*, ft.ftname, ft.geomtype, j.housenumber_system_type, ft.need_join, ft.description, ft.info AS ft_info
+  SELECT j.isolabel_ext,dn.scope_label, pc.*, ft.ftname, ft.geomtype, j.housenumber_system_type, ft.need_join, ft.description, ft.info AS ft_info
   FROM ingest.donated_PackComponent pc
   INNER JOIN ingest.vw01info_feature_type ft
     ON pc.ftid=ft.ftid

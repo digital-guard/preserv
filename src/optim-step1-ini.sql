@@ -78,7 +78,7 @@ CREATE TABLE optim.donor (
   country_id int NOT NULL CHECK(country_id>0), -- ISO
   local_serial  int NOT NULL CHECK(local_serial>0), -- byu contry
   scope_osm_id bigint NOT NULL REFERENCES optim.jurisdiction(osm_id),
-  kx_scope_label text, -- city code or country code
+  scope_label text, -- city code or country code
   shortname text, -- abreviation or acronym (local)
   vat_id text,    -- in the Brazilian case is "CNPJ:number"
   legalName text NOT NULL, -- in the Brazilian case is Razao Social
@@ -89,17 +89,16 @@ CREATE TABLE optim.donor (
   UNIQUE(country_id,local_serial),
   UNIQUE(country_id,kx_vat_id),
   UNIQUE(country_id,legalName),
-  UNIQUE(country_id,kx_scope_label,shortname)
+  UNIQUE(country_id,scope_label,shortname)
 );
 COMMENT ON COLUMN optim.donor.id             IS 'id = country_id*1000000+local_serial';
 COMMENT ON COLUMN optim.donor.country_id     IS 'ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans).';
 COMMENT ON COLUMN optim.donor.local_serial   IS 'Numeric official ID like IBGE_ID of BR jurisdiction. For example ACRE is 12 and its cities are {1200013, 1200054,etc}.';
 COMMENT ON COLUMN optim.donor.scope_osm_id   IS 'osm_id of jurisdiction.';
-COMMENT ON COLUMN optim.donor.kx_scope_label IS 'OSM convention for admin_level tag in country.';
+COMMENT ON COLUMN optim.donor.scope_label    IS 'OSM convention for admin_level tag in country.';
 COMMENT ON COLUMN optim.donor.shortname      IS 'Abreviation or acronym (local)';
 COMMENT ON COLUMN optim.donor.vat_id         IS 'in the Brazilian case is CNPJ number.';
 COMMENT ON COLUMN optim.donor.legalName      IS 'in the Brazilian case is Razao Social.';
-
 COMMENT ON COLUMN optim.donor.wikidata_id    IS 'wikidata identifier without Q prefix.';
 COMMENT ON COLUMN optim.donor.url            IS 'Official home page of the organization.';
 COMMENT ON COLUMN optim.donor.info           IS 'Others information.';
@@ -135,7 +134,7 @@ CREATE TABLE optim.donated_PackFileVers(
   pack_item_accepted_date date NOT NULL, --  data tipo ano-mês-01, mês da homologação da doação
   kx_pack_item_version int NOT NULL DEFAULT 1, --  versão (serial) correspondente à pack_item_accepted_date. Trigguer: next value.
   user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pela ingestão do arquivo (testemunho)
-  -- escopo text NOT NULL, -- bbox or minimum bounding AdministrativeArea
+  -- scope text NOT NULL, -- bbox or minimum bounding AdministrativeArea
   -- license?  tirar do info e trazer para REFERENCES licenças.
   --- about text,
   info jsonb  -- livre
@@ -306,7 +305,7 @@ COMMENT ON VIEW optim.vw01full_jurisdiction_geom
 CREATE VIEW optim.vw01full_packfilevers AS
   SELECT pf.*,
          pt.donor_id, pt.pk_count, pt.original_tpl, pt.make_conf_tpl, pt.kx_num_files, pt.info AS packtpl_info,
-         dn.country_id, dn.local_serial, dn.scope_osm_id, dn.kx_scope_label, dn.shortname, dn.vat_id, dn.legalName, dn.wikidata_id, dn.url, dn.info AS donor_info, dn.kx_vat_id,
+         dn.country_id, dn.local_serial, dn.scope_osm_id, dn.scope_label, dn.shortname, dn.vat_id, dn.legalName, dn.wikidata_id, dn.url, dn.info AS donor_info, dn.kx_vat_id,
          j.osm_id, j.jurisd_base_id, j.jurisd_local_id, j.parent_id, j.admin_level, j.name, j.parent_abbrev, j.abbrev, j.wikidata_id AS jurisdiction_wikidata_id, j.lexlabel, j.isolabel_ext, j.ddd, j.housenumber_system_type, j.lex_urn, j.info AS jurisdiction_info, j.geom
   FROM optim.donated_packfilevers pf
   LEFT JOIN optim.donated_PackTpl pt
@@ -529,7 +528,7 @@ CREATE or replace FUNCTION optim.load_donor_pack(
     jurisdiction text
 ) RETURNS text AS $f$
 BEGIN
-  RETURN (SELECT optim.fdw_generate_getclone2('donor', jurisdiction, 'optim', array['id','country_id', 'info', 'kx_vat_id'], null, null)) || (SELECT optim.fdw_generate2('donatedPack', jurisdiction, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'donor_label text', 'user_resp text', 'accepted_date date', 'escopo text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,null));
+  RETURN (SELECT optim.fdw_generate_getclone2('donor', jurisdiction, 'optim', array['id','country_id', 'scope_osm_id', 'info', 'kx_vat_id'], null, null)) || (SELECT optim.fdw_generate2('donatedPack', jurisdiction, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'donor_label text', 'user_resp text', 'accepted_date date', 'scope text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,null));
 END;
 $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION optim.load_donor_pack
@@ -546,13 +545,13 @@ COMMENT ON FUNCTION optim.replace_file_and_version
   IS 'Replacing "version" and "file" with mustache placeholder.'
 ;
 
-CREATE or replace FUNCTION optim.format_filepath(escopo text, donor_id bigint, pack_count int) RETURNS text AS $f$
+CREATE or replace FUNCTION optim.format_filepath(scope text, donor_id bigint, pack_count int) RETURNS text AS $f$
 BEGIN
     RETURN (
         SELECT '/var/gits/_dg/preserv-' ||
-        CASE WHEN EXISTS (SELECT 1 FROM regexp_matches(escopo,'^EC-EC-[A-Z]-.*$'))
-        THEN regexp_replace(escopo, '^([A-Z][A-Z])-([A-Z][A-Z]-[A-Z])-(.*)$', '\1/data/\2/\3')
-        ELSE regexp_replace(replace(regexp_replace(escopo, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','')
+        CASE WHEN EXISTS (SELECT 1 FROM regexp_matches(scope,'^EC-EC-[A-Z]-.*$'))
+        THEN regexp_replace(scope, '^([A-Z][A-Z])-([A-Z][A-Z]-[A-Z])-(.*)$', '\1/data/\2/\3')
+        ELSE regexp_replace(replace(regexp_replace(scope, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','')
         END
          ||
         '/_pk' ||
@@ -576,19 +575,27 @@ DECLARE
 BEGIN
   q := $$
     -- popula optim.donor a partir de tmp_orig.fdw_donor
-    INSERT INTO optim.donor (country_id, local_serial, scope_osm_id, kx_scope_label, shortname, vat_id, legalname, wikidata_id, url)
-    SELECT (
-        SELECT jurisd_base_id
-        FROM optim.jurisdiction
-        WHERE osm_id = scope_osm_id) AS country_id, tmp_orig.fdw_donor%s.*
-    FROM tmp_orig.fdw_donor%s
-    --WHERE kx_scope_label <> 'INT' -- verificar escopo INT
+    INSERT INTO optim.donor (country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalname, wikidata_id, url)
+    SELECT
+        (
+            SELECT jurisd_base_id
+            FROM optim.jurisdiction
+            WHERE lower(isolabel_ext) = lower(scope_label)
+        ) AS country_id,
+        t.local_serial,
+        (
+            SELECT osm_id
+            FROM optim.jurisdiction
+            WHERE lower(isolabel_ext) = lower(scope_label)
+        ) AS scope_osm_id,
+        t.scope_label, t.shortname, t.vat_id, t.legalname, t.wikidata_id, t.url
+    FROM tmp_orig.fdw_donor%s t
     ON CONFLICT (country_id,local_serial)
     DO UPDATE 
-    SET scope_osm_id=EXCLUDED.scope_osm_id, kx_scope_label=EXCLUDED.kx_scope_label, shortName=EXCLUDED.shortName, vat_id=EXCLUDED.vat_id, legalName=EXCLUDED.legalName, wikidata_id=EXCLUDED.wikidata_id, url=EXCLUDED.url;
+    SET scope_osm_id=EXCLUDED.scope_osm_id, scope_label=EXCLUDED.scope_label, shortName=EXCLUDED.shortName, vat_id=EXCLUDED.vat_id, legalName=EXCLUDED.legalName, wikidata_id=EXCLUDED.wikidata_id, url=EXCLUDED.url;
   $$;
 
-  EXECUTE format( q, jurisdiction, jurisdiction) ;
+  EXECUTE format( q, jurisdiction) ;
 
   q := $$
     -- popula optim.donated_PackTpl a partir de tmp_orig.fdw_donatedPack
@@ -596,32 +603,24 @@ BEGIN
     SELECT (
         SELECT jurisd_base_id*1000000+donor_id
         FROM optim.jurisdiction
-        WHERE osm_id = (
-            SELECT scope_osm_id
-            FROM optim.donor
-            WHERE donor_id = local_serial AND country_id = (
-                SELECT jurisd_base_id
-                FROM optim.jurisdiction
-                WHERE admin_level = 2 AND lower(abbrev) = lower('%s')
-                )
-            )
-        ) AS donor_id, lower(user_resp) AS user_resp, pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(escopo, donor_id, pack_count))) AS original_tpl, yamlfile_to_jsonb(optim.format_filepath(escopo, donor_id, pack_count)) AS make_conf_tpl
+        WHERE lower(isolabel_ext) = lower(scope)
+        ) AS donor_id, lower(user_resp) AS user_resp, pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(scope, donor_id, pack_count))) AS original_tpl, yamlfile_to_jsonb(optim.format_filepath(scope, donor_id, pack_count)) AS make_conf_tpl
     FROM tmp_orig.fdw_donatedpack%s t
-    WHERE file_exists(optim.format_filepath(escopo, donor_id, pack_count)) -- verificar make_conf.yaml ausentes
+    WHERE file_exists(optim.format_filepath(scope, donor_id, pack_count)) -- verificar make_conf.yaml ausentes
           AND lst_vers=(select MAX(lst_vers) from tmp_orig.fdw_donatedpack%s where donor_id=t.donor_id )
     ON CONFLICT (donor_id,pk_count)
     DO UPDATE 
     SET original_tpl=EXCLUDED.original_tpl, make_conf_tpl=EXCLUDED.make_conf_tpl, kx_num_files=EXCLUDED.kx_num_files;
   $$;
 
-  EXECUTE format( q, jurisdiction, jurisdiction, jurisdiction) ;
+  EXECUTE format( q, jurisdiction, jurisdiction) ;
 
   q := $$
     -- popula optim.donated_PackFileVers a partir de optim.donated_PackTpl
     INSERT INTO optim.donated_PackFileVers (hashedfname, pack_id, pack_item, pack_item_accepted_date, kx_pack_item_version, user_resp)
     SELECT j->>'file'::text AS hashedfname, t.pack_id , (j->>'p')::int AS pack_item, accepted_date::date AS pack_item_accepted_date, lst_vers, lower(t.user_resp::text) AS user_resp
     FROM (
-        SELECT pt.id AS pack_id, pt.user_resp, fpt.accepted_date, fpt.lst_vers, jsonb_array_elements((yamlfile_to_jsonb(optim.format_filepath(fpt.escopo, fpt.donor_id, fpt.pack_count)))->'files')::jsonb AS j
+        SELECT pt.id AS pack_id, pt.user_resp, fpt.accepted_date, fpt.lst_vers, jsonb_array_elements((yamlfile_to_jsonb(optim.format_filepath(fpt.scope, fpt.donor_id, fpt.pack_count)))->'files')::jsonb AS j
         FROM optim.donated_packtpl pt
         LEFT JOIN optim.donor d
         ON pt.donor_id = d.id
@@ -632,11 +631,11 @@ BEGIN
                 WHERE country_id = (
                     SELECT jurisd_base_id
                     FROM optim.jurisdiction
-                    WHERE admin_level = 2 AND lower(abbrev) = lower('%s')
+                    WHERE lower(isolabel_ext) = lower(scope)
                     )
                 )
-            AND ((yamlfile_to_jsonb(optim.format_filepath(fpt.escopo, fpt.donor_id, fpt.pack_count)))->'pkversion')::int = lst_vers
-            AND file_exists(optim.format_filepath(fpt.escopo, fpt.donor_id, fpt.pack_count))
+            AND ((yamlfile_to_jsonb(optim.format_filepath(fpt.scope, fpt.donor_id, fpt.pack_count)))->'pkversion')::int = lst_vers
+            AND file_exists(optim.format_filepath(fpt.scope, fpt.donor_id, fpt.pack_count))
         ) AS t 
     WHERE j->'file' IS NOT NULL -- verificar hash null
     ON CONFLICT (hashedfname)
@@ -644,7 +643,7 @@ BEGIN
     SET pack_id=EXCLUDED.pack_id, pack_item=EXCLUDED.pack_item, pack_item_accepted_date=EXCLUDED.pack_item_accepted_date, user_resp=EXCLUDED.user_resp;
   $$;
   
-  EXECUTE format( q, jurisdiction, jurisdiction ) ;
+  EXECUTE format( q, jurisdiction ) ;
 
   RETURN (SELECT 'OK, inserted new itens at jurisdiction, donor and donatedPack. ');
 END;
