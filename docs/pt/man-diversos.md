@@ -290,3 +290,7 @@ Ao alterações no sha256 de arquivos make_conf.yaml:
 2. insrir nova entrada no arquivo donatePack.csv;
 3. excecutar https://github.com/digital-guard/preserv/blob/main/docs/pt/man-diversos.md#atualizar-tabelas-de-optim-atualmente-em-dl03t_main
 
+
+## Load arquivos do CutGeo a partir de um diretório
+
+find /var/gits/_dg/preservCutGeo-BR2021/data -maxdepth 5 -type d -iwholename "*_pk*\/*" -exec bash loadGeojson.bash {} ingestXX \;
