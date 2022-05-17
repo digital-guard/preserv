@@ -4,7 +4,7 @@ $json     = file_get_contents($json_url);
 $data     = json_decode($json,TRUE);
 
 if (isset($data[0]['fhash'])) {
-    if (isset($data[0]['furi'])) {
+    if (!empty($data[0]['furi'])) {
         header("Location: ".$data[0]['furi']);
     }
     else {
