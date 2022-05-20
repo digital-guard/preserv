@@ -1584,7 +1584,7 @@ BEGIN
         t.ghs,
         t.row_id::int AS gid, 
         CASE p_ftname
-        WHEN 'parcel' THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'ns_name', ns_name, 'nsvia_name', nsvia_name, 'ref', ref, 'bytes',length(St_asGeoJson(t.geom))) || address ) ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'ns_name', ns_name, 'nsvia_name', nsvia_name, 'ref', ref) || address) END AS info,
+        WHEN 'parcel' THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'ns_name', ns_name, 'nsvia_name', nsvia_name, 'postcode', postcode, 'ref', ref, 'bytes',length(St_asGeoJson(t.geom))) || address ) ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'ns_name', ns_name, 'nsvia_name', nsvia_name, 'postcode', postcode, 'ref', ref) || address) END AS info,
         t.geom
   FROM (
       SELECT file_id, fa.geom,
@@ -1608,6 +1608,7 @@ BEGIN
       properties->>'house_number' AS house_number,
       properties->>'ns_name' AS ns_name,
       properties->>'nsvia_name' AS nsvia_name,
+      properties->>'postcode' AS postcode,
       properties->>'ref' AS ref,
       --COALESCE((properties->>'via_name') || ', ' || (properties->>'house_number'), properties->>'via_name', properties->>'house_number') AS address,
       CASE WHEN (properties->>'via_name' IS NULL) OR (properties->>'house_number' IS NULL) 
