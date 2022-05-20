@@ -1804,9 +1804,9 @@ BEGIN
     );
   WHEN 'nsvia' THEN
     EXECUTE format(q_copy,
-    $$fa.properties->>'ns_name' AS name$$,
+    $$COALESCE(fa.properties->>'ns_name',fa.properties->>'nsvia_name') AS name$$,
     p_file_id,
-    $$fa.properties->>'ns_name'$$,
+    $$COALESCE(fa.properties->>'ns_name',fa.properties->>'nsvia_name')$$,
     p_fileref || '/distrib_name_ghs.csv'
     );
   WHEN 'genericvia', 'block', 'building' THEN
