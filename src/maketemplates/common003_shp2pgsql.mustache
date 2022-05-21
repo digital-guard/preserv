@@ -52,15 +52,15 @@ endif
 {{/isCsv}}
 {{#isOgr}}
 	@echo Executando ogr2ogr ...
-	sudo docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -lco GEOMETRY_NAME=geom -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " "/tmp/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}" {{{orig_tabname}}} -nln {{tabname}}
+	sudo docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -lco GEOMETRY_NAME=geom -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " "/tmp/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}" {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
 {{/isOgr}}
 {{#isGdb}}
 	@echo Executando ogr2ogr ...
-	sudo docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -lco GEOMETRY_NAME=geom -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " "/tmp/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}" {{{orig_tabname}}} -nln {{tabname}}
+	sudo docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -lco GEOMETRY_NAME=geom -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " "/tmp/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}" {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
 {{/isGdb}}
 {{#isOgrWithShp}}
 	@echo Executando ogr2ogr ...
-	docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " /tmp/{{{orig_tabname}}} {{{orig_tabname}}} -nln {{tabname}}
+	docker run --rm --network host -v $(sandbox):/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='$(pg_db)' host='localhost' port='5432' user='postgres' " /tmp/{{{orig_tabname}}} {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
 {{/isOgrWithShp}}
 {{#isOsm}}
 	@echo Executando osm2sql ...
