@@ -182,10 +182,19 @@ INSERT INTO optim.feature_type VALUES
   (11,'cadvia_cmpl',      'none', true,   'Cadastral via with metadata complementing via_ext (via_cod,via_name).', NULL),
   (12,'cadvia_noid',      'none', false,   'Via name (and optional metadata) with no ID for join with via_ext.', NULL),
 
+  (15,'cadgeopoint',       'class', null,  'Cadastral geopoint.','{"shortname_pt":"endereço","description_pt":"Endereço cadastral, representação por nome de via e numeração predial.","synonymous_pt":["endereço","planilha dos endereços","cadastro de endereços"]}'::jsonb),
+  (16,'cadgeopoint_cmpl',  'none', true,   'Cadastral geopoint, like geopoint_full with only partial core metadata.', NULL),
+  (17,'cadgeopoint_noid',  'none', false,  'Cadastral geopoint with some basic metadata but no standard gid for join with geopoint).', NULL),
+
   (20,'geoaddress',         'class', null,  'Geo-address point.', '{"shortname_pt":"endereço","description_pt":"Geo-endereço. Representação geográfica do endereço, como ponto.","synonymous_pt":["geo-endereço","ponto de endereço","endereço georreferenciado","ponto de endereçamento postal"]}'::jsonb),
   (21,'geoaddress_full',    'point', false, 'Geo-address point with all attributes, via_name and number.', NULL),
   (22,'geoaddress_ext',     'point', true,  'Geo-address point with no (or some) metadata, external metadata at address_cmpl or address_full.', NULL),
   (23,'geoaddress_none',    'point', false, 'Geo-address point-only, no metadata (or no core metadata).', NULL),
+
+  (25,'geopoint',         'class', null,  'Geo-point.', '{"shortname_pt":"endereço","description_pt":"Geo-endereço. Representação geográfica do endereço, como ponto.","synonymous_pt":["geo-endereço","ponto de endereço","endereço georreferenciado"]}'::jsonb),
+  (26,'geopoint_full',    'point', false, 'Geo-point with all attributes, via_name and number.', NULL),
+  (27,'geopoint_ext',     'point', true,  'Geo-point with no (or some) metadata, external metadata at cadgeopoint_cmpl or cadgeopoint_full.', NULL),
+  (28,'geopoint_none',    'point', false, 'Geo-point only, no metadata (or no core metadata).', NULL),
 
   (30,'via',           'class', null,  'Via line.', '{"shortname_pt":"eixo de via","description_pt":"Eixo de via. Logradouro representado por linha central, com nome oficial e codlog opcional.","synonymous_pt":["eixo de logradouro","ruas"]}'::jsonb),
   (31,'via_full',       'line', false, 'Via line, with all metadata (official name, optional code and others)', NULL),
