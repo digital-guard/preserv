@@ -306,10 +306,16 @@ CREATE TABLE ingest.tmp_geojson_feature (
   UNIQUE(file_id,feature_id)
 ); -- to be feature_asis after GeoJSON ingestion.
 
-CREATE OR REPLACE FUNCTION f(geom text, file_id bigint, ghs_size integer)
+CREATE OR REPLACE FUNCTION f(geom geometry, file_id bigint, ghs_size integer)
 RETURNS text AS $f$
-    --SELECT ST_Geohash(CASE WHEN (SELECT geomtype FROM ingest.vw03full_layer_file  WHERE id = file_id)='point' THEN geom ELSE ST_PointOnSurface(geom) END,ghs_size)
-    SELECT ST_Geohash(ST_PointOnSurface(geom),ghs_size)
+    SELECT ST_Geohash(
+      CASE GeometryType(geom)
+        WHEN 'POINT' THEN geom
+        WHEN 'LINESTRING' THEN ST_LineInterpolatePoint(geom,0.5)
+        WHEN 'MULTILINESTRING' THEN ST_LineInterpolatePoint(ST_GeometryN(geom,1),0.5)
+        ELSE ST_PointOnSurface(geom)
+      END
+      ,ghs_size)
 $f$ LANGUAGE SQL IMMUTABLE;
 
 CREATE TABLE ingest.feature_asis (
