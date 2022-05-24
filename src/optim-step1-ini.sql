@@ -282,7 +282,7 @@ CREATE VIEW optim.vw01info_feature_type AS
                   c.description as class_description,
                   c.info as class_info
            FROM optim.feature_type c
-           WHERE c.geomtype='class' AND c.ftid = 10*round(f.ftid/10)
+           WHERE c.geomtype='class' AND c.ftid = 5*round(f.ftid/5)
          ) t2
        ) AS info
   FROM optim.feature_type f
