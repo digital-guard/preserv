@@ -1,38 +1,38 @@
---CREATE SCHEMA    IF NOT EXISTS optim;
---CREATE SCHEMA    IF NOT EXISTS tmp_orig;
+CREATE SCHEMA    IF NOT EXISTS optim;
+CREATE SCHEMA    IF NOT EXISTS tmp_orig;
 
---CREATE EXTENSION IF NOT EXISTS file_fdw;
---CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;
+CREATE EXTENSION IF NOT EXISTS file_fdw;
+CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;
 
-------------------------
+----------------------
 
---CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
-  ---- need a view vw01current_jurisdiction to avoid the lost of non-current.
-  ---- https://schema.org/AdministrativeArea or https://schema.org/jurisdiction ?
-  ---- OSM use AdminLevel, etc. but LexML uses Jurisdiction.
-  --osm_id bigint PRIMARY KEY,    -- official or adapted geometry. AdministrativeArea.
-  --jurisd_base_id int NOT NULL,  -- ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans)
-  --jurisd_local_id int   NOT NULL, -- numeric official ID like IBGE_ID of BR jurisdiction.
-  ---- for example BR's ACRE is 12 and its cities are {1200013, 1200054,etc}.
-  --parent_id bigint REFERENCES optim.jurisdiction(osm_id), -- null for INT.
-  --admin_level smallint NOT NULL CHECK(admin_level>0 AND admin_level<100), -- 2=country (e.g. BR), at BR: 4=UFs, 8=municipios.
-  --name    text  NOT NULL CHECK(length(name)<60), -- city name for admin_level=8.
-  --parent_abbrev   text  NOT NULL, -- state is admin-level2, country level1
-  --abbrev text  CHECK(length(abbrev)>=2 AND length(abbrev)<=5), -- ISO and other abbreviations
-  --wikidata_id  bigint,  --  from '^Q\d+'
-  --lexlabel     text NOT NULL,  -- cache from name; e.g. 'sao.paulo'.
-  --isolabel_ext text NOT NULL,  -- cache from parent_abbrev (ISO) and name (camel case); e.g. 'BR-SP-SaoPaulo'.
-  --ddd          integer, -- Direct distance dialing
-  --housenumber_system_type text, -- housenumber system
-  --lex_urn text, -- housenumber system law
-  --info JSONb -- creation, extinction, postalCode_ranges, notes, etc.
-  --,UNIQUE(isolabel_ext)
-  --,UNIQUE(wikidata_id)
-  --,UNIQUE(jurisd_base_id,jurisd_local_id)
-  --,UNIQUE(jurisd_base_id,parent_abbrev,name) -- parent-abbrev é null ou cumulativo
-  --,UNIQUE(jurisd_base_id,parent_abbrev,lexlabel)
-  --,UNIQUE(jurisd_base_id,parent_abbrev,abbrev)
---);
+CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
+  -- need a view vw01current_jurisdiction to avoid the lost of non-current.
+  -- https://schema.org/AdministrativeArea or https://schema.org/jurisdiction ?
+  -- OSM use AdminLevel, etc. but LexML uses Jurisdiction.
+  osm_id bigint PRIMARY KEY,    -- official or adapted geometry. AdministrativeArea.
+  jurisd_base_id int NOT NULL,  -- ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans)
+  jurisd_local_id int   NOT NULL, -- numeric official ID like IBGE_ID of BR jurisdiction.
+  -- for example BR's ACRE is 12 and its cities are {1200013, 1200054,etc}.
+  parent_id bigint REFERENCES optim.jurisdiction(osm_id), -- null for INT.
+  admin_level smallint NOT NULL CHECK(admin_level>0 AND admin_level<100), -- 2=country (e.g. BR), at BR: 4=UFs, 8=municipios.
+  name    text  NOT NULL CHECK(length(name)<60), -- city name for admin_level=8.
+  parent_abbrev   text  NOT NULL, -- state is admin-level2, country level1
+  abbrev text  CHECK(length(abbrev)>=2 AND length(abbrev)<=5), -- ISO and other abbreviations
+  wikidata_id  bigint,  --  from '^Q\d+'
+  lexlabel     text NOT NULL,  -- cache from name; e.g. 'sao.paulo'.
+  isolabel_ext text NOT NULL,  -- cache from parent_abbrev (ISO) and name (camel case); e.g. 'BR-SP-SaoPaulo'.
+  ddd          integer, -- Direct distance dialing
+  housenumber_system_type text, -- housenumber system
+  lex_urn text, -- housenumber system law
+  info JSONb -- creation, extinction, postalCode_ranges, notes, etc.
+  ,UNIQUE(isolabel_ext)
+  ,UNIQUE(wikidata_id)
+  ,UNIQUE(jurisd_base_id,jurisd_local_id)
+  ,UNIQUE(jurisd_base_id,parent_abbrev,name) -- parent-abbrev é null ou cumulativo
+  ,UNIQUE(jurisd_base_id,parent_abbrev,lexlabel)
+  ,UNIQUE(jurisd_base_id,parent_abbrev,abbrev)
+);
 COMMENT ON COLUMN optim.jurisdiction.osm_id                  IS 'Relation identifier in OpenStreetMap.';
 COMMENT ON COLUMN optim.jurisdiction.jurisd_base_id          IS 'ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans).';
 COMMENT ON COLUMN optim.jurisdiction.jurisd_local_id         IS 'Numeric official ID like IBGE_ID of BR jurisdiction. For example ACRE is 12 and its cities are {1200013, 1200054,etc}.';
@@ -49,14 +49,14 @@ COMMENT ON COLUMN optim.jurisdiction.housenumber_system_type IS 'Housenumber sys
 COMMENT ON COLUMN optim.jurisdiction.lex_urn                 IS 'Housenumber system law.';
 COMMENT ON COLUMN optim.jurisdiction.info                    IS 'Others information.';
 
---CREATE TABLE optim.jurisdiction_geom (
-  --osm_id bigint PRIMARY KEY, 
-  --isolabel_ext text NOT NULL, 
-  --geom geometry(Geometry,4326),
-  --kx_ghs1_intersects text[],
-  --kx_ghs2_intersects text[],
-  --UNIQUE(isolabel_ext)
---);
+CREATE TABLE optim.jurisdiction_geom (
+  osm_id bigint PRIMARY KEY,
+  isolabel_ext text NOT NULL,
+  geom geometry(Geometry,4326),
+  kx_ghs1_intersects text[],
+  kx_ghs2_intersects text[],
+  UNIQUE(isolabel_ext)
+);
 COMMENT ON COLUMN optim.jurisdiction_geom.osm_id             IS 'Relation identifier in OpenStreetMap.';
 COMMENT ON COLUMN optim.jurisdiction_geom.isolabel_ext       IS 'ISO 3166-1 alpha-2 code and name (camel case); e.g. BR-SP-SaoPaulo.';
 COMMENT ON COLUMN optim.jurisdiction_geom.geom               IS 'Geometry for osm_id identifier';

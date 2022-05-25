@@ -156,13 +156,7 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	@echo "--- Running SQL pubLib ---"
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_datalake)
 	@echo "Creating optim schema at $(pg_datalake) database"
-	psql $(pg_datalake_uri) -c "CREATE SCHEMA    IF NOT EXISTS optim;"
-	psql $(pg_datalake_uri) -c "CREATE SCHEMA    IF NOT EXISTS tmp_orig;"
-	psql $(pg_datalake_uri) -c "CREATE EXTENSION IF NOT EXISTS file_fdw;"
-	psql $(pg_datalake_uri) -c "CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;"
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/step01def-lib.sql
-	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction-17-05-22.sql
-	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/dump_jurisdiction_geom-17-05-22.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step2-ini.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step3-publication.sql
