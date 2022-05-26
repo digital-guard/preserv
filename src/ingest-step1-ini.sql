@@ -2587,7 +2587,7 @@ CREATE TABLE download.redirects (
     filename_original text,
     package_path      text,
     fhash             text NOT NULL PRIMARY KEY, -- de_sha256
-    furi              text NOT NULL,             -- para_url
+    furi              text,                      -- para_url
     UNIQUE (fhash, furi)
 );
 
