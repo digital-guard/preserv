@@ -332,7 +332,7 @@ CREATE TABLE ingest.feature_asis_discarded (
   file_id bigint NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   feature_id int NOT NULL,
   properties jsonb,
-  geom geometry NOT NULL CHECK ( st_srid(geom)=4326 ),
+  geom geometry  CHECK ( st_srid(geom)=4326 ),
   kx_ghs9 text GENERATED ALWAYS AS (f(geom,file_id,9)) STORED,
   UNIQUE(file_id,feature_id)
 );
@@ -1671,6 +1671,14 @@ CREATE TABLE ingest.publicating_geojsons_p3exprefix(
  geom   geometry
 );
 
+CREATE TABLE ingest.publicating_geojsons_p3exprefix_aux(
+ kx_ghs9   text,
+ prefix text,
+ gid    integer,
+ info   jsonb,
+ geom   geometry
+);
+
 CREATE TABLE ingest.publicating_geojsons_p2distrib(
  hcode    text,
  n_items  integer,
@@ -1747,14 +1755,29 @@ BEGIN
 
     PERFORM pg_catalog.pg_file_unlink(p_fileref || '/'|| (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) || '_*.geojson') FROM ingest.vw03full_layer_file WHERE id=$1;
 
-    UPDATE ingest.publicating_geojsons_p3exprefix
-    SET prefix=t.prefix
-    FROM (
-        SELECT hcode AS prefix, unnest(jj) as kx_ghs9
+    --UPDATE ingest.publicating_geojsons_p3exprefix
+    --SET prefix=t.prefix
+    --FROM (
+        --SELECT hcode AS prefix, unnest(jj) as kx_ghs9
+        --FROM ingest.publicating_geojsons_p2distrib
+    --) t
+    --WHERE t.kx_ghs9 = publicating_geojsons_p3exprefix.kx_ghs9
+    --;
+
+    DELETE FROM ingest.publicating_geojsons_p3exprefix_aux;
+    INSERT INTO ingest.publicating_geojsons_p3exprefix_aux
+    SELECT p3.kx_ghs9, p2.prefix, p3.gid, p3.info, p3.geom
+    FROM ingest.publicating_geojsons_p3exprefix p3
+    LEFT JOIN
+      (
+        SELECT unnest(jj) as kx_ghs9, hcode AS prefix
         FROM ingest.publicating_geojsons_p2distrib
-    ) t
-    WHERE t.kx_ghs9 = publicating_geojsons_p3exprefix.kx_ghs9
-    ;
+      ) p2
+    ON p3.kx_ghs9 = p2.kx_ghs9;
+
+    DELETE FROM ingest.publicating_geojsons_p3exprefix;
+    INSERT INTO ingest.publicating_geojsons_p3exprefix
+    SELECT * FROM ingest.publicating_geojsons_p3exprefix_aux;
 
     UPDATE ingest.donated_PackComponent
     SET proc_step=4, 
@@ -1763,6 +1786,7 @@ BEGIN
     ;
 
     DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
+    DELETE FROM ingest.publicating_geojsons_p3exprefix_aux;
     RETURN 'p3';
 END
 $f$ language PLpgSQL; --fim p3
