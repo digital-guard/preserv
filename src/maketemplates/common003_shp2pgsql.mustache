@@ -34,12 +34,12 @@ endif
 {{#isCsv}}
 {{#isXlsx}}
 	@echo Convertendo de {{orig_filename}}.xlsx para {{orig_filename}}.csv em UTF8 com LF ...
-	xlsx2csv -i {{{method_opts}}} "$(sandbox)/{{orig_filename}}.xlsx" "$(sandbox)/{{orig_filename}}.csv"
+	xlsx2csv -i {{{method_opts}}} "$(sandbox)/{{orig_filename}}.xlsx" "$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}"
 {{/isXlsx}}
 {{^isXlsx}}
 {{#charset}}
 	@echo Alterando codificação para UTF8 e o tipo de quebra de linha de CRLF para LF ...
-	iconv -f {{charset}} -t UTF-8 $(sandbox)/{{orig_filename}}.csv | dos2unix > $(sandbox)/{{orig_filename}}.unix_utf8.csv
+	iconv -f {{charset}} -t UTF-8 $(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}} | dos2unix > $(sandbox)/{{orig_filename}}.unix_utf8.csv
 {{/charset}}
 	@echo Executando csv2sql ...
 {{#charset}}
@@ -47,7 +47,7 @@ endif
 {{/charset}}
 {{/isXlsx}}
 {{^charset}}
-	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.csv', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
 {{/charset}}
 {{/isCsv}}
 {{#isOgr}}
