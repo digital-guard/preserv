@@ -1617,9 +1617,13 @@ BEGIN
       properties->>'postcode' AS postcode,
       properties->>'ref' AS ref,
       --COALESCE((properties->>'via_name') || ', ' || (properties->>'house_number'), properties->>'via_name', properties->>'house_number') AS address,
-      CASE WHEN (properties->>'via_name' IS NULL) OR (properties->>'house_number' IS NULL) 
-      THEN jsonb_strip_nulls(jsonb_build_object('via_name',properties->>'via_name', 'house_number', properties->>'house_number'))
-      ELSE jsonb_build_object('address',(properties->>'via_name') || ', ' || (properties->>'house_number'))
+      CASE
+        WHEN          (properties->>'via_name'     IS NULL)
+              OR      (properties->>'house_number' IS NULL)
+              OR (trim(properties->>'house_number') = '')
+              OR (trim(properties->>'via_name')     = '')
+        THEN jsonb_strip_nulls(jsonb_build_object('via_name', NULLIF(trim(properties->>'via_name'),''), 'house_number', NULLIF(trim(properties->>'house_number'),'')))
+        ELSE jsonb_build_object('address',(properties->>'via_name') || ', ' || (properties->>'house_number'))
       END AS address,
       fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
