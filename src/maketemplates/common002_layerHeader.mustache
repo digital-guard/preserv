@@ -23,7 +23,10 @@ ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to download or Ctrl+C to quit or inform orig]" _press_enter_
 endif
 	@echo " Downloading file..."
-	wget -P $(orig) http://dl.digital-guard.org/{{sha256file}} && chown postgres:www-data $(orig)/{{sha256file}} && chmod 664 $(orig)/{{sha256file}}
+	wget -P $(orig) http://dl.digital-guard.org/{{sha256file}}
+	@echo " Fix permissions ..."
+	#cd /var/gits/_dg/preserv/src; sudo bash fixaPermissoes.sh $(orig)
+	sudo chown postgres:www-data $(orig)/{{sha256file}} && sudo chmod 664 $(orig)/{{sha256file}}
 	@echo " Download completed."
 endif
 
