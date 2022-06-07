@@ -311,12 +311,23 @@ COMMENT ON VIEW optim.vw01full_jurisdiction_geom
   IS 'Add geom to optim.jurisdiction.'
 ;
 
-CREATE VIEW optim.vw01full_packfilevers AS
+CREATE or replace VIEW optim.vw01full_packfilevers AS
   SELECT pf.*,
          pt.donor_id, pt.pk_count, pt.original_tpl, pt.make_conf_tpl, pt.kx_num_files, pt.info AS packtpl_info,
          dn.country_id, dn.local_serial, dn.scope_osm_id, dn.scope_label, dn.shortname, dn.vat_id, dn.legalName, dn.wikidata_id, dn.url, dn.info AS donor_info, dn.kx_vat_id,
          j.osm_id, j.jurisd_base_id, j.jurisd_local_id, j.parent_id, j.admin_level, j.name, j.parent_abbrev, j.abbrev, j.wikidata_id AS jurisdiction_wikidata_id, j.lexlabel, j.isolabel_ext, j.ddd, j.housenumber_system_type, j.lex_urn, j.info AS jurisdiction_info, j.geom
-  FROM optim.donated_packfilevers pf
+  FROM
+  (
+    SELECT *
+    FROM optim.donated_packfilevers
+    WHERE (pack_id,pack_item,kx_pack_item_version) IN
+    (
+        SELECT pack_id,pack_item, MAX(kx_pack_item_version)
+        FROM optim.donated_PackFileVers
+        GROUP BY pack_id, pack_item
+        ORDER BY pack_id, pack_item
+    )
+  ) pf
   LEFT JOIN optim.donated_PackTpl pt
     ON pf.pack_id=pt.id
   LEFT JOIN optim.donor dn

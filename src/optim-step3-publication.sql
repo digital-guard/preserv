@@ -1,5 +1,5 @@
-CREATE VIEW optim.vw03publication AS
-SELECT isolabel_ext, local_serial, pk_count, jsonb_build_object(
+CREATE or replace VIEW optim.vw03publication AS
+SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
     'isolabel_ext', isolabel_ext,
     'legalname', legalname,
     'vat_id', vat_id,
@@ -25,7 +25,7 @@ SELECT isolabel_ext, local_serial, pk_count, jsonb_build_object(
                 ))
     ) AS page
 FROM (
-  SELECT pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.local_serial, pf.pk_count,
+  SELECT pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.kx_pack_item_version, pf.local_serial, pf.pk_count,
   INITCAP(pf.user_resp) AS user_resp,
   row_number() OVER (PARTITION BY pf.isolabel_ext, pf.local_serial, pf.pk_count ORDER BY pf.ftype_info->'class_ftname' ASC ) AS row_num,
   pf.ftype_info->>'class_ftname' as class_ftname,
@@ -70,7 +70,7 @@ FROM (
   WHERE pf.ftid > 19
   ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
 ) t
-GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv, pack_number, path_cutgeo, pack_item_accepted_date, local_serial, pk_count
+GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv, pack_number, path_cutgeo, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count
 ;
 COMMENT ON VIEW optim.vw03publication
   IS 'Generate json for mustache template for preservDataViz pages.'
@@ -78,22 +78,23 @@ COMMENT ON VIEW optim.vw03publication
 
 CREATE or replace FUNCTION optim.publicating_page(
 	p_isolabel_ext  text, -- e.g. 'BR-AC-RioBranco'
+	p_pack_number text,
 	p_fileref text
 ) RETURNS text  AS $f$
   SELECT string_agg(output_write, ',')
   FROM (
-    SELECT volat_file_write(($2 || '/' || s.name), s.page) AS output_write
+    SELECT volat_file_write((p_fileref || '/' || s.name), s.page) AS output_write
     FROM (
         SELECT (page->'layer'->>'url_page') AS name, jsonb_mustache_render(pg_read_file('/var/gits/_dg/preservDataViz/src/preservCutGeo/pk_page.mustache'), r.page) AS page
         FROM (
             SELECT page || jsonb_build_object('layer',jsonb_array_elements(page->'layers')) AS page
             FROM optim.vw03publication
-            WHERE isolabel_ext=$1) r
+            WHERE isolabel_ext=p_isolabel_ext AND pack_number=p_pack_number) r
     ) s
   ) t;
 $f$ language SQL VOLATILE;
--- SELECT optim.publicating_page('BR-AC-RioBranco','/tmp/pg_io');
--- SELECT jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/template_page_publi.mustache'), (SELECT page FROM optim.vw03publication WHERE isolabel_ext='BR-AC-RioBranco'));
+-- SELECT optim.publicating_page('BR-AC-RioBranco','_pk0042.01','/tmp/pg_io');
+-- SELECT jsonb_mustache_render(pg_read_file('/var/gits/_dg/preservDataViz/src/preservCutGeo/pk_page.mustache'), (SELECT page FROM optim.vw03publication WHERE isolabel_ext='BR-AC-RioBranco' AND pack_number='_pk0042.01'));
 COMMENT ON FUNCTION optim.publicating_page
   IS 'Generate html file for preservDataViz pages.'
 ;

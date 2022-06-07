@@ -191,7 +191,7 @@ generate_pages:
 	@echo "--- fix_permissions $(folder)"
 	sudo bash fixaPermissoes.sh $(folder)
 	@echo "--- Generate pages in $(folder)"
-	@psql $(pg_datalake_uri) -c "SELECT optim.publicating_page('$(isolabel)','$(folder)');"
+	@psql $(pg_datalake_uri) -c "SELECT optim.publicating_page('$(isolabel)','$(pk)','$(folder)');"
 	@echo "--- Generate new index in $(folder)"
 	@psql $(pg_datalake_uri) -c "SELECT optim.publicating_index_page('$(folder)');"
 	@echo "--- fix_permissions $(folder)"
