@@ -1970,7 +1970,10 @@ BEGIN
                                     WHEN 'geoaddress' THEN SUM((info->'ghs_itemsDensity')::float)
                                     ELSE                   SUM((info->'size_unitDensity')::float)
                                     END),
-                'avg_density', AVG((info->'size_unitDensity')::float)) FROM ingest.publicating_geojsons_p5distrib ),
+                'avg_density', (CASE (SELECT ft_info->>'class_ftname' FROM ingest.vw03full_layer_file WHERE id=$1)
+                                    WHEN 'geoaddress' THEN AVG((info->'ghs_itemsDensity')::float)
+                                    ELSE                   AVG((info->'size_unitDensity')::float)
+                                    END)) FROM ingest.publicating_geojsons_p5distrib ),
         'date_generation', (date_trunc('second',NOW())),
         'ghs_info_mosaic', (SELECT jsonb_object_agg(ghs, info) FROM ingest.publicating_geojsons_p5distrib WHERE ghs IS NOT NULL)
         )
