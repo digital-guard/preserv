@@ -489,9 +489,37 @@ CREATE TRIGGER check_kx_num_files
     FOR EACH ROW EXECUTE PROCEDURE optim.mkdonated_PackTpl()
 ;
 
+CREATE FUNCTION optim.fdw_generate_direct_csv(
+  p_file text,  -- path+filename+ext
+  p_fdwname text, -- nome da tabela fwd
+  p_delimiter text DEFAULT ',',
+  p_addtxtype boolean DEFAULT true,
+  p_header boolean DEFAULT true
+) RETURNS text  AS $f$
+DECLARE
+ fpath text;
+ cols text[];
+ sepcols text;
+BEGIN
+ sepcols := iIF(p_addtxtype, '" text,"'::text, '","'::text);
+ cols := pg_csv_head(p_file, p_delimiter);
+ EXECUTE
+    format(
+      'DROP FOREIGN TABLE IF EXISTS %s; CREATE FOREIGN TABLE %s    (%s%s%s)',
+       p_fdwname, p_fdwname,   '"', array_to_string(cols,sepcols), iIF(p_addtxtype, '" text'::text, '"')
+     ) || format(
+       'SERVER files OPTIONS (filename %L, format %L, header %L, delimiter %L)',
+       p_file, 'csv', p_header::text, p_delimiter
+    );
+ RETURN p_fdwname;
+END;
+$f$ language PLpgSQL;
+COMMENT ON FUNCTION optim.fdw_generate_direct_csv
+  IS 'Generates a FOREIGN TABLE for simples and direct CSV ingestion.'
+;
 
--- funções fdw_generate2 e fdw_generate_getclone2 não inserem aspas duplas quando p_addtxtype=false
-CREATE or replace FUNCTION optim.fdw_generate2(
+-- funções fdw_generate e fdw_generate_getclone não inserem aspas duplas quando p_addtxtype=false
+CREATE or replace FUNCTION optim.fdw_generate(
   p_name text,  -- table name and CSV input filename
   p_jurisdiction text DEFAULT 'br',  -- or null
   p_schemaname text DEFAULT 'optim',
@@ -520,11 +548,11 @@ BEGIN
     return ' '|| fdwname || E' was created!\n source: '||f|| ' ';
 END;
 $f$ language PLpgSQL;
-COMMENT ON FUNCTION optim.fdw_generate2
+COMMENT ON FUNCTION optim.fdw_generate
   IS 'Generates a structure FOREIGN TABLE for ingestion.'
 ;
 
-CREATE or replace FUNCTION optim.fdw_generate_getclone2(
+CREATE or replace FUNCTION optim.fdw_generate_getclone(
   -- foreign-data wrapper generator
   p_tablename text,  -- cloned-table name
   p_jurisdiction text DEFAULT 'br',  -- or null
@@ -533,14 +561,14 @@ CREATE or replace FUNCTION optim.fdw_generate_getclone2(
   p_add text[] DEFAULT NULL, -- colunms to be added.
   p_path text DEFAULT NULL  -- default based on ids
 ) RETURNS text  AS $wrap$
-  SELECT optim.fdw_generate2(
+  SELECT optim.fdw_generate(
     $1,$2,$3,
     pg_tablestruct_dump_totext(p_schemaname||'.'||p_tablename,p_ignore,p_add),
     false, -- p_addtxtype
     p_path
   )
 $wrap$ language SQL;
-COMMENT ON FUNCTION optim.fdw_generate_getclone2
+COMMENT ON FUNCTION optim.fdw_generate_getclone
   IS 'Generates a clone-structure FOREIGN TABLE for ingestion. Wrap for fdw_generate().'
 ;
 
@@ -548,12 +576,14 @@ CREATE or replace FUNCTION optim.load_donor_pack(
     jurisdiction text
 ) RETURNS text AS $f$
 BEGIN
-  RETURN (SELECT optim.fdw_generate_getclone2('donor', jurisdiction, 'optim', array['id','country_id', 'scope_osm_id', 'info', 'kx_vat_id'], null, null)) || (SELECT optim.fdw_generate2('donatedPack', jurisdiction, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'donor_label text', 'user_resp text', 'accepted_date date', 'scope text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,null));
+  RETURN (SELECT optim.fdw_generate_direct_csv(concat('/var/gits/_dg/preserv', iIF(jurisdiction='INT', '', '-' || UPPER(jurisdiction)), '/data/donor.csv'),'tmp_orig.fdw_donor'|| lower(jurisdiction),',')) || (SELECT optim.fdw_generate('donatedPack', jurisdiction, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'donor_label text', 'user_resp text', 'accepted_date date', 'scope text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,null));
 END;
 $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION optim.load_donor_pack
   IS 'Generates a clone-structure FOREIGN TABLE for donor.csv and donatedPack.csv.'
 ;
+
+--SELECT ingest.fdw_generate_direct_csv('/var/gits/_dg/preserv-BR/data/donor.csv','tmp_orig.fdw_donorbr',',')
 
 CREATE or replace FUNCTION optim.replace_file_and_version(file text) RETURNS text AS $f$
 BEGIN
@@ -592,30 +622,47 @@ CREATE or replace FUNCTION optim.insert_donor_pack(
 DECLARE
   q text;
   ret text;
+  a text;
 BEGIN
   q := $$
     -- popula optim.donor a partir de tmp_orig.fdw_donor
-    INSERT INTO optim.donor (country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalname, wikidata_id, url)
+    INSERT INTO optim.donor (country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalname, wikidata_id, url, info)
     SELECT
         (
             SELECT jurisd_base_id
             FROM optim.jurisdiction
             WHERE lower(isolabel_ext) = lower(scope_label)
         ) AS country_id,
-        t.local_serial,
+        t.local_id::int AS local_serial,
         (
             SELECT osm_id
             FROM optim.jurisdiction
             WHERE lower(isolabel_ext) = lower(scope_label)
         ) AS scope_osm_id,
-        t.scope_label, t.shortname, t.vat_id, t.legalname, t.wikidata_id, t.url
-    FROM tmp_orig.fdw_donor%s t
+        t.scope_label,
+        t."shortName" AS shortname,
+        t.vat_id,
+        t."legalName" AS legalname,
+        t.wikidata_id::bigint,
+        t.url,
+        to_jsonb(subq) AS info
+    FROM tmp_orig.fdw_donor%s t, LATERAL (SELECT %s) subq
+    WHERE t.scope_label IS NOT NULL
+      AND t."legalName" IS NOT NULL
+      AND lower(t.scope_label) <> 'na'
+      AND lower(t."legalName") <> 'na'
+      AND lower(t.wikidata_id) <> 'na'
     ON CONFLICT (country_id,local_serial)
     DO UPDATE 
-    SET scope_osm_id=EXCLUDED.scope_osm_id, scope_label=EXCLUDED.scope_label, shortName=EXCLUDED.shortName, vat_id=EXCLUDED.vat_id, legalName=EXCLUDED.legalName, wikidata_id=EXCLUDED.wikidata_id, url=EXCLUDED.url;
+    SET scope_osm_id=EXCLUDED.scope_osm_id, scope_label=EXCLUDED.scope_label, shortName=EXCLUDED.shortName, vat_id=EXCLUDED.vat_id, legalName=EXCLUDED.legalName, wikidata_id=EXCLUDED.wikidata_id, url=EXCLUDED.url, info=EXCLUDED.info;
   $$;
 
-  EXECUTE format( q, jurisdiction) ;
+  EXECUTE format( $$ SELECT array_to_string((SELECT array_agg(x)
+  FROM (SELECT split_part(unnest(pg_tablestruct_dump_totext('tmp_orig.fdw_donor%s')),' ',1) ) t(x)
+  WHERE x NOT IN ('local_id','scope_label','shortName','vat_id','legalName','wikidata_id','url')),',')
+  FROM tmp_orig.fdw_donor%s $$, jurisdiction, jurisdiction ) INTO a;
+
+  EXECUTE format( q, jurisdiction, a ) ;
 
   q := $$
     -- popula optim.donated_PackTpl a partir de tmp_orig.fdw_donatedPack
