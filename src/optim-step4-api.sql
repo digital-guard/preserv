@@ -255,7 +255,7 @@ CREATE or replace VIEW api.stats_donated_pack_timeline AS
 ;
 
 -- Para tabela de licenças
-CREATE or replace VIEW api.stats_donated_pack_timeline AS
+CREATE or replace VIEW api.stats_donated_pack_licensegrouped AS
     SELECT license_family, license_is_explicit, COUNT(donor_id) AS donor_amount, SUM(quantidade_feicoes_bruta::int) AS data_amount
     FROM api.stats_donated_packcomponent
     WHERE ftname IN ('geoaddress_full', 'parcel_full')
