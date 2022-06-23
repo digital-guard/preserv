@@ -16,9 +16,159 @@ FROM optim.jurisdiction
 --curl "http://localhost:3103/jurisdiction?jurisd_base_id=eq.76&parent_abbrev=eq.CE" -H "Accept: text/csv"
 
 ---------
+-- Union de fdw_donor de todas as jurisdições
+CREATE or replace VIEW api.donors AS
+    (
+        SELECT 'br' AS jurisdiction, r.*
+        FROM tmp_orig.fdw_donorbr r
+    )
+    UNION ALL
+    (
+        SELECT 'ar' AS jurisdiction, r.*, null, null
+        FROM tmp_orig.fdw_donorar r
+    )
+    UNION ALL
+    (
+        SELECT 'bo' AS jurisdiction, r.*, null, null
+        FROM tmp_orig.fdw_donorbo r
+    )
+    UNION ALL
+    (
+        SELECT 'cl' AS jurisdiction, r.*, null, null
+        FROM tmp_orig.fdw_donorcl r
+    )
+    UNION ALL
+    (
+        SELECT 'co' AS jurisdiction, r.*, null, null
+        FROM tmp_orig.fdw_donorco r
+    )
+    UNION ALL
+    (
+        SELECT 'ec' AS jurisdiction, r.*, null, null
+        FROM tmp_orig.fdw_donorec r
+    )
+    UNION ALL
+    (
+        SELECT 'pe' AS jurisdiction, r.*, null, null
+        FROM tmp_orig.fdw_donorpe r
+    )
+    UNION ALL
+    (
+        SELECT 'py' AS jurisdiction, r.*, null, null
+        FROM tmp_orig.fdw_donorpy r
+    )
+    UNION ALL
+    (
+        SELECT 'sr' AS jurisdiction, r.*, null, null
+        FROM tmp_orig.fdw_donorsr r
+    )
+    UNION ALL
+    (
+        SELECT 'uy' AS jurisdiction, r.*, null, null
+        FROM tmp_orig.fdw_donoruy r
+    )
+    UNION ALL
+    (
+        SELECT 've' AS jurisdiction, r.*, null, null
+        FROM tmp_orig.fdw_donorve r
+    )
+;
 
+-- Union de fdw_donatedpack X fdw_donor de todas as jurisdições
+CREATE or replace VIEW api.donatedpacks_donor AS
+    (
+        SELECT 'br' AS jurisdiction, r.*, s.*
+        FROM tmp_orig.fdw_donatedpackbr r
+        LEFT JOIN tmp_orig.fdw_donorbr s
+        ON s.local_id::int = r.donor_id
+    )
+    UNION ALL
+    (
+        SELECT 'ar' AS jurisdiction, r.*, s.*, null, null
+        FROM tmp_orig.fdw_donatedpackar r
+        LEFT JOIN tmp_orig.fdw_donorar s
+        ON s.local_id::int = r.donor_id
+    )
+    UNION ALL
+    (
+        SELECT 'bo' AS jurisdiction, r.*, s.*, null, null
+        FROM tmp_orig.fdw_donatedpackbo r
+        LEFT JOIN tmp_orig.fdw_donorbo s
+        ON s.local_id::int = r.donor_id
+    )
+    UNION ALL
+    (
+        SELECT 'cl' AS jurisdiction, r.*, s.*, null, null
+        FROM tmp_orig.fdw_donatedpackcl r
+        LEFT JOIN tmp_orig.fdw_donorcl s
+        ON s.local_id::int = r.donor_id
+    )
+    UNION ALL
+    (
+        SELECT 'co' AS jurisdiction, r.*, s.*, null, null
+        FROM tmp_orig.fdw_donatedpackco r
+        LEFT JOIN tmp_orig.fdw_donorco s
+        ON s.local_id::int = r.donor_id
+    )
+    UNION ALL
+    (
+        SELECT 'ec' AS jurisdiction, r.*, s.*, null, null
+        FROM tmp_orig.fdw_donatedpackec r
+        LEFT JOIN tmp_orig.fdw_donorec s
+        ON s.local_id::int = r.donor_id
+    )
+    UNION ALL
+    (
+        SELECT 'pe' AS jurisdiction, r.*, s.*, null, null
+        FROM tmp_orig.fdw_donatedpackpe r
+        LEFT JOIN tmp_orig.fdw_donorpe s
+        ON s.local_id::int = r.donor_id
+    )
+    UNION ALL
+    (
+        SELECT 'py' AS jurisdiction, r.*, s.*, null, null
+        FROM tmp_orig.fdw_donatedpackpy r
+        LEFT JOIN tmp_orig.fdw_donorpy s
+        ON s.local_id::int = r.donor_id
+    )
+    UNION ALL
+    (
+        SELECT 'sr' AS jurisdiction, r.*, s.*, null, null
+        FROM tmp_orig.fdw_donatedpacksr r
+        LEFT JOIN tmp_orig.fdw_donorsr s
+        ON s.local_id::int = r.donor_id
+    )
+    UNION ALL
+    (
+        SELECT 'uy' AS jurisdiction, r.*, s.*, null, null
+        FROM tmp_orig.fdw_donatedpackuy r
+        LEFT JOIN tmp_orig.fdw_donoruy s
+        ON s.local_id::int = r.donor_id
+    )
+    UNION ALL
+    (
+        SELECT 've' AS jurisdiction, r.*, s.*, null, null
+        FROM tmp_orig.fdw_donatedpackve r
+        LEFT JOIN tmp_orig.fdw_donorve s
+        ON s.local_id::int = r.donor_id
+    )
+;
+
+--tabelão
 CREATE or replace VIEW api.stats_donated_packcomponent AS
-SELECT *
+SELECT a.*,
+    jurisdiction, pack_id, donor_id, pack_count, lst_vers, donor_label, user_resp, accepted_date, scope, about, author, contentreferencetime, license_is_explicit, license, uri_objtype, uri, isat_urbigis, status, statusupdatedate, local_id, scope_label, "shortName", vat_id, "legalName", wikidata_id, url, donor_date, donor_status,
+    CASE
+    WHEN license_is_explicit = 'yes' THEN 'explicit'
+    WHEN license_is_explicit = 'no'  THEN 'implicit'
+    ELSE ''
+    END AS license_type,
+    CASE
+    WHEN license ~* '^CC0.*$' /*AND license_family IS NULL*/ THEN 'cc0'
+    WHEN license ~* 'CC-BY'   /*AND license_family IS NULL*/ THEN 'by'
+    WHEN license ~* 'ODbL'    /*AND license_family IS NULL*/ THEN 'by-sa'
+    ELSE ''
+    END AS license_family
 FROM (
       SELECT pc.id,
       pc.packvers_id,
@@ -43,54 +193,74 @@ FROM (
       ON ft.ftid = pc.ftid
       --WHERE pc.ftid > 19
 ) a
-INNER JOIN
+LEFT JOIN
 (
-      SELECT *
-      FROM tmp_orig.fdw_donorbr d
-      INNER JOIN tmp_orig.fdw_donatedpackbr p
-      ON d.local_id::int = p.donor_id
+    SELECT d.*/*, family AS license_family*/
+    FROM api.donatedpacks_donor d
+    --LEFT JOIN
+    --(
+        --SELECT id_label, name, family, url, 'yes' AS license_is_explicit FROM tmp_orig.fdw_licenses
+        --UNION
+        --SELECT id_label, name, family, url_report AS url, 'no' AS license_is_explicit FROM tmp_orig.fdw_implieds
+    --) AS l
+    --ON lower(d.license) = l.id_label AND d.license_is_explicit = l.license_is_explicit
 ) b
 ON substring(to_char(a.packvers_id,'FM00000000000000'),4,8) = to_char(b.pack_id,'FM00000000')
-    AND substring(to_char(a.packvers_id,'FM00000000000000'),1,3) = '076'
-
-UNION ALL
-
-SELECT *
-FROM (
-      SELECT pc.id,
-      pc.packvers_id,
-      pc.proc_step,
-      pc.ftid,
-      pc.is_evidence,
-      (lineage->'statistics')[0]                                  AS quantidade_feicoes_bruta,
-      pc.kx_profile->'date_aprroved'                              AS date_aprroved,
-      pc.kx_profile->'publication_summary'->'size'                AS size,
-      pc.kx_profile->'publication_summary'->'bytes'               AS bytes,
-      pc.kx_profile->'publication_summary'->'itens'               AS itens,
-      pc.kx_profile->'publication_summary'->'size_unit'           AS size_unit,
-      pc.kx_profile->'publication_summary'->'avg_density'         AS avg_density,
-      pc.kx_profile->'publication_summary'->'size_unitDensity'    AS size_unitDensity,
-      ft.ftname,
-      split_part(ft.ftname,'_',1)                                 AS ftname_class,
-      ft.geomtype,
-      ft.need_join,
-      ft.description
-      FROM optim.donated_PackComponent pc
-      LEFT JOIN optim.feature_type ft
-      ON ft.ftid = pc.ftid
-      --WHERE pc.ftid > 19
-) a
-INNER JOIN
-(
-      SELECT r.*, null, null, s.*
-      FROM tmp_orig.fdw_donorco r
-      INNER JOIN tmp_orig.fdw_donatedpackco s
-      ON r.local_id::int = s.donor_id
-) b
-ON substring(to_char(a.packvers_id,'FM00000000000000'),4,8) = to_char(b.pack_id,'FM00000000')
-    AND substring(to_char(a.packvers_id,'FM00000000000000'),1,3) = '170'
+    AND substring(to_char(a.packvers_id,'FM00000000000000'),1,3)::int = (SELECT jurisd_base_id FROM optim.jurisdiction WHERE lower(isolabel_ext)=jurisdiction)
 ;
 --curl "http://localhost:3103/stats_donated_packcomponent?uri_objtype=like.*email*" -H "Accept: text/csv"
+
+-- Para gráfico donor_status X number of donors
+CREATE or replace VIEW api.stats_donors_prospection AS
+    SELECT *, SUM(amount) OVER (ORDER BY donor_status DESC ) AS accumulated_amount
+    FROM
+    (
+        SELECT CASE WHEN donor_status IS NULL THEN '-1' ELSE donor_status END AS donor_status,
+            CASE
+            WHEN donor_status = '0' THEN 'Donors contacted'
+            WHEN donor_status = '1' THEN 'Donors interested in collaborating'
+            WHEN donor_status = '2' THEN 'Donated pack received'
+            WHEN donor_status = '3' THEN 'Donated pack published'
+            ELSE 'Unknown'
+            END AS label,
+            COUNT(*) AS amount
+        FROM api.donors
+        GROUP BY donor_status
+    ) r
+    ORDER BY donor_status
+;
+
+-- Para gráfico layers X packages
+CREATE or replace VIEW api.stats_donated_packcomponent_classgrouped AS
+    SELECT ftname_class, COUNT(*) AS amount
+    FROM api.stats_donated_packcomponent
+    GROUP BY ftname_class
+;
+
+-- Para gráfico donated packages X date
+CREATE or replace VIEW api.stats_donated_pack_timeline AS
+    SELECT accepted_date, SUM(amount) OVER (ORDER BY accepted_date ASC ) AS accumulated_amount
+    FROM
+    (
+        SELECT accepted_date, COUNT(*) AS amount
+        FROM
+        (
+            SELECT accepted_date
+            FROM api.stats_donated_packcomponent
+            GROUP BY jurisdiction, pack_id, accepted_date
+        ) r
+        GROUP BY accepted_date
+    ) s
+    ORDER BY accepted_date
+;
+
+-- Para tabela de licenças
+CREATE or replace VIEW api.stats_donated_pack_timeline AS
+    SELECT license_family, license_is_explicit, COUNT(donor_id) AS donor_amount, SUM(quantidade_feicoes_bruta::int) AS data_amount
+    FROM api.stats_donated_packcomponent
+    WHERE ftname IN ('geoaddress_full', 'parcel_full')
+    GROUP BY license_family, license_is_explicit
+;
 
 ---------
 
