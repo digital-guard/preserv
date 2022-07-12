@@ -292,6 +292,26 @@ FROM (
 ) t
 ;
 
+CREATE VIEW vwisolabel_reduced AS
+  -- co unique names
+  (
+  SELECT 'CO-' || substring(isolabel_ext,8) as isolabel_reduced, MAX(isolabel_ext) AS isolabel_ext
+  FROM optim.jurisdiction j
+  WHERE isolevel::int >2 AND isolabel_ext like 'CO%'
+  GROUP BY 1 having count(*)=1 order by 1
+  )
+  UNION ALL
+  (
+  -- co state abbrev.
+  SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| substring(isolabel_ext,8) as isolabel_reduced, isolabel_ext
+  FROM optim.jurisdiction j
+  WHERE isolevel::int >2 AND isolabel_ext like 'CO-%' AND name not in ('Sabanalarga', 'Sucre', 'Guamal', 'Riosucio')
+  )
+;
+COMMENT ON VIEW vwisolabel_reduced
+ IS 'Shortened names used in the Colombia osmcodes.'
+;
+
 CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
    p_isolabel_ext text
 ) RETURNS jsonb AS $f$
@@ -323,14 +343,18 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
                     )::jsonb
             )
         )
-    FROM optim.vw01full_jurisdiction_geom
-    WHERE isolabel_ext = p_isolabel_ext
+    FROM optim.vw01full_jurisdiction_geom g
+    WHERE ( (lower(g.isolabel_ext) = lower(p_isolabel_ext) ) OR ( lower(g.isolabel_ext) = lower((SELECT isolabel_ext FROM vwisolabel_reduced WHERE lower(isolabel_reduced) = lower(p_isolabel_ext))) ) )
 $f$ LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION api.jurisdiction_geojson_from_isolabel(text)
   IS 'Return jurisdiction geojson from isolabel_ext.'
 ;
---SELECT api.jurisdiction_geojson_from_isolabel('BR-SP-Campinas');
-
+/*
+SELECT api.jurisdiction_geojson_from_isolabel('BR-SP-Campinas');
+SELECT api.jurisdiction_geojson_from_isolabel('CO-ANT-Itagui');
+SELECT api.jurisdiction_geojson_from_isolabel('CO-A-Itagui');
+SELECT api.jurisdiction_geojson_from_isolabel('CO-Itagui');
+*/
 
 CREATE or replace FUNCTION api.jurisdiction_geojson_from_lex_isoinlevel1(
    p_lex text
