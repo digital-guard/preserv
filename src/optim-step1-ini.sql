@@ -224,7 +224,12 @@ INSERT INTO optim.feature_type VALUES
 
   (80,'block',        'class', null, 'Urban block and similar structures, delimited by a polygon.', '{"shortname_pt":"quadra","description_pt":"Quadras ou divisões poligonais similares.","synonymous_pt":["quadra"]}'::jsonb),
   (81,'block_full',   'poly', false, 'Urban block with IDs and all other jurisdiction needs', NULL),
-  (82,'block_none',   'poly', false,  'Urban block with no ID', NULL)
+  (82,'block_none',   'poly', false,  'Urban block with no ID', NULL),
+
+  (90,'datagrid',        'class', null, 'Grid of cells.', '{"shortname_pt":"grid","description_pt":".","synonymous_pt":["bairro","loteamento"]}'::jsonb),
+  (91,'datagrid_full',   'point', false, 'Grid with metadata', NULL),
+  (92,'datagrid_ext',    'point', true,  'Grid with external metadata', NULL),
+  (93,'datagrid_none',   'point', true,  'Cell center only, no metadata', NULL)
 ;
 -- Para a iconografia do site:
 -- SELECT f.ftname as "feature type", t.geomtype as "geometry type", f.description from optim.feature_type f inner JOIN (select  substring(ftname from '^[^_]+') as ftgroup, geomtype  from optim.feature_type where geomtype!='class' group by 1,2) t ON t.ftgroup=f.ftname ;--where t.geomtype='class';
