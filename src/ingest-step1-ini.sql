@@ -1659,6 +1659,22 @@ BEGIN
       WHERE fa.file_id=p_file_id
   ) t
   ORDER BY gid;
+  WHEN 'datagrid' THEN
+  RETURN QUERY
+  SELECT
+        t.ghs,
+        t.row_id::int AS gid,
+        t.info,
+        t.geom
+  FROM (
+      SELECT fa.file_id, fa.geom,
+        ROW_NUMBER() OVER(ORDER BY gid) AS row_id,
+        fa.properties AS info,
+        fa.kx_ghs9    AS ghs
+      FROM ingest.feature_asis AS fa
+      WHERE fa.file_id=p_file_id
+  ) t
+  ORDER BY gid;
   END CASE;
 END;
 $f$ LANGUAGE PLpgSQL;
@@ -1850,6 +1866,7 @@ BEGIN
     $$fa.properties->>'name'$$,
     p_fileref || '/distrib_name_ghs.csv'
     );
+  ELSE NULL;
   END CASE;
 
   RETURN (SELECT 'Arquivos de file_id='|| p_file_id::text || ' publicados em ' || p_file_id::text || '/' || (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) ||'_*.geojson' FROM ingest.vw03full_layer_file WHERE id=$1)
