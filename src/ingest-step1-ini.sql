@@ -223,10 +223,12 @@ CREATE OR REPLACE FUNCTION ingest.buffer_geom(geom geometry, buffer_type integer
 RETURNS geometry AS $f$
     SELECT
         CASE
-        WHEN buffer_type=0 THEN geom                   -- no buffer
+        WHEN buffer_type=0 THEN geom                  -- no buffer
         WHEN buffer_type=1 THEN ST_Buffer(geom,0.001) --  ~100m
-        WHEN buffer_type=2 THEN ST_Buffer(geom,0.05)   -- ~5000m
-        ELSE geom                                      -- no buffer
+        WHEN buffer_type=2 THEN ST_Buffer(geom,0.05)  -- ~5000m
+        WHEN buffer_type=3 THEN ST_Buffer(geom,0.5)   -- ~50km
+        WHEN buffer_type=4 THEN ST_Buffer(geom,5)     -- ~500km
+        ELSE geom                                     -- no buffer
         END
 $f$ LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION ingest.buffer_geom(geometry,integer)

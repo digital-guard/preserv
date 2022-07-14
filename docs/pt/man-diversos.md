@@ -148,6 +148,8 @@ Esse comportamento pode ser alterado utilizando a chave buffer_type em layer do 
 - `buffer_type: 1`, valor default, aplica um buffer de aproximadamente 100 metros. Não é necessário informá-lo no _make_conf.yaml_. É inserido automaticamente pela função `jsonb_mustache_prepare` caso não seja informado. 
 - `buffer_type: 0`, sem buffer. Para utilizá-lo, deve-se informá-lo no _make_conf.yaml_
 - `buffer_type: 2`, aplica um buffer de aproximadamente 5000 metros. Para utilizá-lo, deve-se informá-lo no respectivo layer do _make_conf.yaml_
+- `buffer_type: 3`, aplica um buffer de aproximadamente 50 km. Para utilizá-lo, deve-se informá-lo no respectivo layer do _make_conf.yaml_
+- `buffer_type: 4`, aplica um buffer de aproximadamente 500 km. Para utilizá-lo, deve-se informá-lo no respectivo layer do _make_conf.yaml_
 
 ## Atualizar tabelas de optim (atualmente em `dl03t_main`):
 
