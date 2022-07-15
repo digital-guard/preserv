@@ -1888,37 +1888,8 @@ BEGIN
 
     DELETE FROM ingest.publicating_geojsons_p5distrib;
 
-    CASE (SELECT ft_info->>'class_ftname' FROM ingest.vw03full_layer_file WHERE id=p_file_id)
-    WHEN 'geoaddress' THEN
-        WITH geohash_GeomsMosaic AS (
-            SELECT * FROM  geohash_GeomsMosaic_jinfo(
-                            (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=$1),
-                            '{"density_km2":"val","area_km2":"val","area":"val"}  '::jsonb,
-                            (SELECT ingest.buffer_geom(geom,1) FROM ingest.vw01full_jurisdiction_geom where isolabel_ext=$2)
-                            )
-        )
-        INSERT INTO ingest.publicating_geojsons_p5distrib
-        SELECT  t.ghs,
-                (u.info || jsonb_build_object(
-                    'ghsval_unit','items',
-                    'ghs_bytes', bytes,
-                    'ghs_itemsDensity', ((u.info->'ghs_items')::float/(u.info->'area_km2')::float),
-                    'ghs_area', ((u.info->'area_km2')::float) )
-                ) AS info,
-                u.geom
-        FROM
-        (
-            SELECT  ghs,
-                    SUM(length(St_asGeoJson(ST_Intersection( r.geom, s.geom )))) AS bytes
-            FROM ingest.publicating_geojsons_p3exprefix r
-            LEFT JOIN geohash_GeomsMosaic s
-            ON r.prefix = s.ghs
-            GROUP BY ghs
-        ) t
-        LEFT JOIN geohash_GeomsMosaic u
-        ON t.ghs = u.ghs
-        ;
-    WHEN 'datagrid' THEN
+    CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=p_file_id)
+    WHEN 'point' THEN
         WITH geohash_GeomsMosaic AS (
             SELECT * FROM  geohash_GeomsMosaic_jinfo(
                             (SELECT kx_profile->'ghs_distrib_mosaic' from ingest.donated_packcomponent WHERE id=$1),
@@ -1984,18 +1955,8 @@ BEGIN
         ;
     END CASE;
 
-    CASE (SELECT ft_info->>'class_ftname' FROM ingest.vw03full_layer_file WHERE id=p_file_id)
-    WHEN 'geoaddress' THEN
-        PERFORM write_geojsonb_features(
-            format('SELECT * FROM ingest.publicating_geojsons_p5distrib'),
-            format('%s/geohashes.geojson',p_fileref),
-            't1.geom',
-            'ghs, (info->''ghs_items'')::int AS ghs_items, (info->''ghs_len'')::int AS ghs_len, round((info->''ghs_itemsDensity'')::float,0.01) AS ghs_itemsDensity, round((info->''ghs_area'')::float,0.01) AS ghs_area, (info->''ghs_bytes'') AS ghs_bytes, (info->''ghsval_unit'') AS ghsval_unit',
-            NULL,
-            NULL,
-            $5,
-            5);
-    WHEN 'datagrid' THEN
+    CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=p_file_id)
+    WHEN 'point' THEN
         PERFORM write_geojsonb_features(
             format('SELECT * FROM ingest.publicating_geojsons_p5distrib'),
             format('%s/geohashes.geojson',p_fileref),
@@ -2024,14 +1985,12 @@ BEGIN
                 'bytes', SUM((info->'ghs_bytes')::bigint),
                 'size', SUM((info->'size')::float),
                 'size_unit', MIN((info->>'size_unit')),
-                'size_unitDensity', (CASE (SELECT ft_info->>'class_ftname' FROM ingest.vw03full_layer_file WHERE id=$1)
-                                    WHEN 'geoaddress' THEN SUM((info->'ghs_itemsDensity')::float)
-                                    WHEN 'datagrid'   THEN SUM((info->'ghs_itemsDensity')::float)
+                'size_unitDensity', (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1)
+                                    WHEN 'point' THEN SUM((info->'ghs_itemsDensity')::float)
                                     ELSE                   SUM((info->'size_unitDensity')::float)
                                     END),
-                'avg_density', (CASE (SELECT ft_info->>'class_ftname' FROM ingest.vw03full_layer_file WHERE id=$1)
-                                    WHEN 'geoaddress' THEN AVG((info->'ghs_itemsDensity')::float)
-                                    WHEN 'datagrid'   THEN AVG((info->'ghs_itemsDensity')::float)
+                'avg_density', (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1)
+                                    WHEN 'point' THEN AVG((info->'ghs_itemsDensity')::float)
                                     ELSE                   AVG((info->'size_unitDensity')::float)
                                     END)) FROM ingest.publicating_geojsons_p5distrib ),
         'date_generation', (date_trunc('second',NOW())),
