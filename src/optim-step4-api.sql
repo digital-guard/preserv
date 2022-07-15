@@ -286,7 +286,7 @@ CASE
 END AS lex_isoinlevel2_abbrev
 FROM (
     SELECT s.isolabel_ext AS isolabel_ext_parent, s.lexlabel AS lexlabel_parent, r.isolabel_ext, r.abbrev, r.name, r.lexlabel, regexp_split_to_array (r.isolabel_ext,'(-)')::text[] AS a
-    FROM optim.vw01full_jurisdiction_geom r
+    FROM optim.jurisdiction r
     LEFT JOIN optim.jurisdiction s
     ON s.isolabel_ext = (SELECT a[1]||'-'||a[2] FROM regexp_split_to_array (r.isolabel_ext,'(-)') a)
 ) t
