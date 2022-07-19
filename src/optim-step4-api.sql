@@ -295,17 +295,22 @@ FROM (
 CREATE or replace VIEW vwisolabel_reduced AS
   -- co unique names
   (
-    SELECT 'CO-' || CASE WHEN split_part(isolabel_ext,'-',2) <> 'DC' THEN substring(isolabel_ext,8) ELSE substring(isolabel_ext,7) END AS isolabel_reduced, MAX(isolabel_ext) AS isolabel_ext
+    SELECT 'CO-' || split_part(isolabel_ext,'-',3) AS isolabel_reduced, MAX(isolabel_ext) AS isolabel_ext
     FROM optim.jurisdiction j
-    WHERE isolevel::int >2 AND isolabel_ext like 'CO%'
-    GROUP BY 1 having count(*)=1 order by 1
+    WHERE isolevel::int >2 AND isolabel_ext LIKE 'CO%'
+    GROUP BY 1
+    HAVING count(*)=1
+    ORDER BY 1
   )
   UNION ALL
   (
     -- co state abbrev.
-    SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| CASE WHEN split_part(isolabel_ext,'-',2) <> 'DC' THEN substring(isolabel_ext,8) ELSE substring(isolabel_ext,7) END AS isolabel_reduced, isolabel_ext
+    SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| split_part(isolabel_ext,'-',3) AS isolabel_reduced, MAX(isolabel_ext)
     FROM optim.jurisdiction j
-    WHERE isolevel::int >2 AND isolabel_ext like 'CO-%' AND name not in ('Sabanalarga', 'Sucre', 'Guamal', 'Riosucio')
+    WHERE isolevel::int >2 AND isolabel_ext LIKE 'CO-%' /*AND name NOT IN ('Sabanalarga', 'Sucre', 'Guamal', 'Riosucio')*/
+    GROUP BY 1
+    HAVING count(*)>1
+    ORDER BY 1
   )
   UNION ALL
   (
