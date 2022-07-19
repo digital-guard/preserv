@@ -331,7 +331,7 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
             (
                 ST_AsGeoJSONb(
                     geom,
-                    6,0,null,
+                    8,0,null,
                     jsonb_build_object(
                         'osm_id', osm_id,
                         'jurisd_base_id', jurisd_base_id,
