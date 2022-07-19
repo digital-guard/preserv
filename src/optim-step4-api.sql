@@ -309,7 +309,7 @@ CREATE or replace VIEW vwisolabel_reduced AS
     FROM optim.jurisdiction j
     WHERE isolevel::int >2 AND isolabel_ext LIKE 'CO-%' /*AND name NOT IN ('Sabanalarga', 'Sucre', 'Guamal', 'Riosucio')*/
     GROUP BY 1
-    HAVING count(*)>1
+    HAVING count(*)=1
     ORDER BY 1
   )
   UNION ALL
