@@ -369,7 +369,7 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
             )
         )
     FROM optim.vw01full_jurisdiction_geom g
-    WHERE ( (lower(g.isolabel_ext) = lower(p_isolabel_ext) ) OR ( lower(g.isolabel_ext) = lower((SELECT isolabel_ext FROM vwisolabel_reduced WHERE lower(isolabel_reduced) = lower(p_isolabel_ext))) ) )
+    WHERE ( (lower(g.isolabel_ext) = lower(p_isolabel_ext) ) OR ( lower(g.isolabel_ext) = lower((SELECT isolabel_ext FROM mvwjurisdiction_synonym WHERE lower(synonym) = lower(p_isolabel_ext))) ) )
 $f$ LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION api.jurisdiction_geojson_from_isolabel(text)
   IS 'Return jurisdiction geojson from isolabel_ext.'
