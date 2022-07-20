@@ -292,10 +292,10 @@ FROM (
 ) t
 ;
 
-CREATE or replace VIEW vwisolabel_reduced AS
+CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
   -- co unique names
   (
-    SELECT 'CO-' || split_part(isolabel_ext,'-',3) AS isolabel_reduced, MAX(isolabel_ext) AS isolabel_ext
+    SELECT 'CO-' || split_part(isolabel_ext,'-',3) AS synonym, MAX(isolabel_ext) AS isolabel_ext
     FROM optim.jurisdiction j
     WHERE isolevel::int >2 AND isolabel_ext LIKE 'CO%'
     GROUP BY 1
@@ -305,9 +305,9 @@ CREATE or replace VIEW vwisolabel_reduced AS
   UNION ALL
   (
     -- co state abbrev.
-    SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| split_part(isolabel_ext,'-',3) AS isolabel_reduced, MAX(isolabel_ext)
+    SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| split_part(isolabel_ext,'-',3), MAX(isolabel_ext)
     FROM optim.jurisdiction j
-    WHERE isolevel::int >2 AND isolabel_ext LIKE 'CO-%' /*AND name NOT IN ('Sabanalarga', 'Sucre', 'Guamal', 'Riosucio')*/
+    WHERE isolevel::int >2 AND isolabel_ext LIKE 'CO-%'
     GROUP BY 1
     HAVING count(*)=1
     ORDER BY 1
@@ -317,9 +317,24 @@ CREATE or replace VIEW vwisolabel_reduced AS
     -- co state abbrev.
     SELECT  'CO-DC', 'CO-DC-Bogota'
   )
+  UNION ALL
+  (
+    -- divipola
+    SELECT 'CO-' || jurisd_local_id, isolabel_ext
+    FROM optim.jurisdiction
+    WHERE isolabel_ext LIKE 'CO-%-%'
+  )
+  UNION ALL
+  (
+    -- ibgegeocodigo
+    SELECT 'BR-' || jurisd_local_id, isolabel_ext
+    FROM optim.jurisdiction
+    WHERE isolabel_ext LIKE 'BR-%-%'
+  )
 ;
-COMMENT ON VIEW vwisolabel_reduced
- IS 'Shortened names used in the Colombia osmcodes.'
+CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON mvwjurisdiction_synonym (synonym);
+COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
+ IS 'Synonymous names of jurisdictions.'
 ;
 
 CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
