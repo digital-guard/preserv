@@ -293,8 +293,9 @@ FROM (
 ;
 
 CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
-  -- co unique names
   (
+    -- co unique names
+    -- eg.: CO-Medellin
     SELECT 'CO-' || split_part(isolabel_ext,'-',3) AS synonym, MAX(isolabel_ext) AS isolabel_ext
     FROM optim.jurisdiction j
     WHERE isolevel::int >2 AND isolabel_ext LIKE 'CO%'
@@ -305,7 +306,7 @@ CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
   UNION ALL
   (
     -- co state abbrev.
-    SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| split_part(isolabel_ext,'-',3), MAX(isolabel_ext)
+    SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| split_part(isolabel_ext,'-',3) AS synonym, MAX(isolabel_ext) AS isolabel_ext
     FROM optim.jurisdiction j
     WHERE isolevel::int >2 AND isolabel_ext LIKE 'CO-%'
     GROUP BY 1
@@ -319,17 +320,61 @@ CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
   )
   UNION ALL
   (
-    -- divipola
+    -- CO-divipola (municipios)
     SELECT 'CO-' || jurisd_local_id, isolabel_ext
     FROM optim.jurisdiction
     WHERE isolabel_ext LIKE 'CO-%-%'
   )
   UNION ALL
   (
-    -- ibgegeocodigo
+    -- BR-ibgegeocodigo (municipios e estados)
     SELECT 'BR-' || jurisd_local_id, isolabel_ext
     FROM optim.jurisdiction
-    WHERE isolabel_ext LIKE 'BR-%-%'
+    WHERE isolabel_ext LIKE 'BR-%'
+  )
+  UNION ALL
+  (
+    -- BR isolevel=3 abbrev
+    SELECT substring(isolabel_ext,1,6) || abbrev, isolabel_ext
+    FROM optim.jurisdiction
+    WHERE isolabel_ext LIKE 'BR-%-%' AND abbrev IS NOT NULL
+  )
+  UNION ALL
+  (
+    (
+        -- Return jurisdiction geojson from lex. ISO 3166-1 alpha-2 country code
+        -- e.g.: br;sao.paulo;campinas
+        SELECT lex_isoinlevel1, isolabel_ext
+        FROM api.jurisdiction_lexlabel
+        WHERE lex_isoinlevel1 IS NOT NULL
+    )
+    UNION
+    (
+        -- Return jurisdiction geojson from lex. ISO 3166-1 alpha-2 code.
+        -- e.g.: br;sp;campinas
+        SELECT lex_isoinlevel2, isolabel_ext
+        FROM api.jurisdiction_lexlabel
+        WHERE lex_isoinlevel2 IS NOT NULL
+    )
+    UNION
+    (
+        -- Return jurisdiction geojson from lex. All abbrev.
+        -- e.g.: br;sp;cam br;sp
+        SELECT lex_isoinlevel2_abbrev, isolabel_ext
+        FROM api.jurisdiction_lexlabel
+        WHERE lex_isoinlevel2_abbrev IS NOT NULL
+    )
+  )
+  UNION ALL
+  (
+    -- br unique names
+    -- eg.: BR-Zortea
+    SELECT 'BR-' || split_part(isolabel_ext,'-',3) AS synonym, MAX(isolabel_ext) AS isolabel_ext
+    FROM optim.jurisdiction j
+    WHERE isolevel::int >2 AND isolabel_ext LIKE 'BR%'
+    GROUP BY 1
+    HAVING count(*)=1
+    ORDER BY 1
   )
 ;
 CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON mvwjurisdiction_synonym (synonym);
@@ -338,7 +383,7 @@ COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
 ;
 
 CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
-   p_isolabel_ext text
+   p_code text
 ) RETURNS jsonb AS $f$
     SELECT jsonb_build_object(
         'type', 'FeatureCollection',
@@ -369,7 +414,7 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
             )
         )
     FROM optim.vw01full_jurisdiction_geom g
-    WHERE ( (lower(g.isolabel_ext) = lower(p_isolabel_ext) ) OR ( lower(g.isolabel_ext) = lower((SELECT isolabel_ext FROM mvwjurisdiction_synonym WHERE lower(synonym) = lower(p_isolabel_ext))) ) )
+    WHERE ( (lower(g.isolabel_ext) = lower(p_code) ) OR ( lower(g.isolabel_ext) = lower((SELECT isolabel_ext FROM mvwjurisdiction_synonym WHERE lower(synonym) = lower(p_code))) ) )
 $f$ LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION api.jurisdiction_geojson_from_isolabel(text)
   IS 'Return jurisdiction geojson from isolabel_ext.'
@@ -380,34 +425,3 @@ SELECT api.jurisdiction_geojson_from_isolabel('CO-ANT-Itagui');
 SELECT api.jurisdiction_geojson_from_isolabel('CO-A-Itagui');
 SELECT api.jurisdiction_geojson_from_isolabel('CO-Itagui');
 */
-
-CREATE or replace FUNCTION api.jurisdiction_geojson_from_lex_isoinlevel1(
-   p_lex text
-) RETURNS jsonb AS $f$
-    SELECT api.jurisdiction_geojson_from_isolabel(( SELECT isolabel_ext FROM api.jurisdiction_lexlabel WHERE lex_isoinlevel1 = lower(p_lex) ))
-$f$ LANGUAGE SQL IMMUTABLE;
-COMMENT ON FUNCTION api.jurisdiction_geojson_from_lex_isoinlevel1(text)
-  IS 'Return jurisdiction geojson from lex. ISO 3166-1 alpha-2 country code.'
-;
---SELECT api.jurisdiction_geojson_from_lex_isoinlevel1('br;sao.paulo;campinas');
-
-CREATE or replace FUNCTION api.jurisdiction_geojson_from_lex_isoinlevel2(
-   p_lex text
-) RETURNS jsonb AS $f$
-    SELECT api.jurisdiction_geojson_from_isolabel(( SELECT isolabel_ext FROM api.jurisdiction_lexlabel WHERE lex_isoinlevel2 = lower(p_lex) ))
-$f$ LANGUAGE SQL IMMUTABLE;
-COMMENT ON FUNCTION api.jurisdiction_geojson_from_lex_isoinlevel2(text)
-  IS 'Return jurisdiction geojson from lex. ISO 3166-1 alpha-2 code.'
-;
---SELECT api.jurisdiction_geojson_from_lex_isoinlevel2('br;sp;campinas');
-
-CREATE or replace FUNCTION api.jurisdiction_geojson_from_lex_isoinlevel2_abbrev(
-   p_lex text
-) RETURNS jsonb AS $f$
-    SELECT api.jurisdiction_geojson_from_isolabel(( SELECT isolabel_ext FROM api.jurisdiction_lexlabel WHERE lex_isoinlevel2_abbrev = lower(p_lex) ))
-$f$ LANGUAGE SQL IMMUTABLE;
-COMMENT ON FUNCTION api.jurisdiction_geojson_from_lex_isoinlevel2_abbrev(text)
-  IS 'Return jurisdiction geojson from lex. All abbrev.'
-;
---SELECT api.jurisdiction_geojson_from_lex_isoinlevel2_abbrev('br;sp;cam');
---SELECT api.jurisdiction_geojson_from_lex_isoinlevel2_abbrev('br;sp');
