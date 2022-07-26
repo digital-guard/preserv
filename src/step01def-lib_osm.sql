@@ -53,7 +53,7 @@ CREATE or replace FUNCTION lib.name2lex(
   SELECT trim(replace(
     regexp_replace(
       lib.name2lex_pre($1,$2,$3,$4),
-      E' d[aeo] | d[oa]s | com | para |^d[aeo] | l[oa]s | de l[oa]s | del | la |^la | el |^el | / .+| [aeo]s | [aeo] |\-d\'| d\'|[\-\' ]',
+      E' d[aeo] | d[oa]s | com | para |^d[aeo] | l[oa]s | de l[oa]s | del | la | el | / .+| [aeo]s | [aeo] |\-d\'| d\'|[\-\' ]',
       '.',
       'g'
     ),
