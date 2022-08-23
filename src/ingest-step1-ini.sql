@@ -2253,6 +2253,11 @@ BEGIN
 
         dict := jsonb_set( dict, array['layers',key,'sha256file_name'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'name'));
 
+        IF jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0?'comments'
+        THEN
+          dict := jsonb_set( dict, array['layers',key,'sha256file_comments'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'comments'));
+        END IF;
+
         SELECT id FROM ingest.fdw_donated_packfilevers WHERE hashedfname = dict->'layers'->key->>'sha256file' INTO packvers_id;
 
         dict := jsonb_set( dict, array['layers',key,'fullPkID'] , to_jsonb(packvers_id));
@@ -2604,7 +2609,7 @@ $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_makefile('BR','16.1');
 -- SELECT ingest.lix_generate_makefile('PE','1');
 
-CREATE FUNCTION ingest.lix_generate_readme(
+CREATE or replace FUNCTION ingest.lix_generate_readme(
     jurisd text,
     pack_id text
 ) RETURNS text AS $f$
@@ -2615,7 +2620,23 @@ CREATE FUNCTION ingest.lix_generate_readme(
         readme text;
         output_file text;
     BEGIN
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml;
+    SELECT y || jsonb_build_object('layers' ,list)
+    FROM
+    (
+        SELECT jsonb_agg(t.k) AS list
+        FROM
+        (
+            SELECT jsonb_each((ingest.jsonb_mustache_prepare(y))->'layers') AS k
+            FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id
+        ) t
+    ) r,
+    LATERAL
+    (
+        SELECT ingest.jsonb_mustache_prepare(y) as y
+        FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id
+    ) s
+    INTO conf_yaml;
+
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
     SELECT readme_mk FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO readme;
 
@@ -2628,8 +2649,8 @@ CREATE FUNCTION ingest.lix_generate_readme(
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_generate_readme('/var/gits/_dg/','BR','16.1');
-
+-- SELECT ingest.lix_generate_readme('BR','16.1');
+-- SELECT ingest.lix_generate_readme('BR','21.1');
 -- ----------------------------
 
 CREATE TABLE download.redirects (
