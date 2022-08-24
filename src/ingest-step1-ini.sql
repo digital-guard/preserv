@@ -235,6 +235,45 @@ COMMENT ON FUNCTION ingest.buffer_geom(geometry,integer)
   IS 'Add standardized buffer to geometries.'
 ;
 
+CREATE FOREIGN TABLE ingest.vw03publication (
+ isolabel_ext text,
+ pack_number  text,
+ page         jsonb
+) SERVER foreign_server_dl03
+  OPTIONS (schema_name 'optim', table_name 'vw03publication');
+
+CREATE FOREIGN TABLE ingest.vwdonatedpacks_donor (
+ jurisdiction text    ,
+ pack_id              integer ,
+ donor_id             integer ,
+ pack_count           integer ,
+ lst_vers             integer ,
+ donor_label          text    ,
+ user_resp            text    ,
+ accepted_date        date    ,
+ scope                text    ,
+ about                text    ,
+ author               text    ,
+ contentreferencetime text    ,
+ license_is_explicit  text    ,
+ license              text    ,
+ uri_objtype          text    ,
+ uri                  text    ,
+ isat_urbigis         text    ,
+ status               text    ,
+ statusupdatedate     text    ,
+ local_id             text    ,
+ scope_label          text    ,
+ "shortName"          text    ,
+ vat_id               text    ,
+ "legalName"          text    ,
+ wikidata_id          text    ,
+ url                  text    ,
+ donor_date           text    ,
+ donor_status         text
+) SERVER foreign_server_dl03
+  OPTIONS (schema_name 'api', table_name 'donatedpacks_donor');
+
 CREATE FOREIGN TABLE ingest.fdw_donor (
  id integer,
  country_id integer,
@@ -251,7 +290,7 @@ CREATE FOREIGN TABLE ingest.fdw_donor (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'donor');
 
-CREATE FOREIGN TABLE ingest.fdW_donated_PackTpl (
+CREATE FOREIGN TABLE ingest.fdw_donated_PackTpl (
  id bigint,
  donor_id integer,
  user_resp text,
@@ -396,7 +435,8 @@ COMMENT ON VIEW ingest.vw02simple_feature_asis
 
 --DROP VIEW IF EXISTS ingest.vw02full_donated_packfilevers CASCADE;
 CREATE or replace VIEW ingest.vw02full_donated_packfilevers AS
-  SELECT pf.*, j.isolabel_ext, j.geom, '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path
+  SELECT pf.*, j.isolabel_ext, j.geom, '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_cutgeo,
+  '/var/gits/_dg/preserv-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv
   FROM ingest.fdw_donated_packfilevers pf
   LEFT JOIN ingest.fdw_donated_PackTpl pt
     ON pf.pack_id=pt.id
@@ -2163,6 +2203,8 @@ BEGIN
 
     IF dict?'pack_id'
     THEN
+        dict := jsonb_set( dict, array['pack_number_donatedpackcsv'] , to_jsonb(to_char((split_part(dict->>'pack_id','.',1)::int),'fm000') || to_char((split_part(dict->>'pack_id','.',2)::int),'fm00')));
+        dict := jsonb_set( dict, array['pack_number'] , to_jsonb(to_char((split_part(dict->>'pack_id','.',1)::int),'fm0000') || '.' || to_char((split_part(dict->>'pack_id','.',2)::int),'fm00')));
         dict := jsonb_set( dict, array['pack_id'], replace(dict->>'pack_id','.','')::jsonb);
         
         RAISE NOTICE 'pack_id : %', dict->>'pack_id';
@@ -2266,9 +2308,11 @@ BEGIN
         dict := jsonb_set( dict, array['layers',key,'tabname'] , to_jsonb('pk' || (dict->'layers'->key->>'fullPkID') || '_p' || (dict->'layers'->key->>'file') || '_' || key));
 
         dict := jsonb_set( dict, array['layers',key,'isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['layers',key,'path_root'] , to_jsonb((SELECT path || '/' || key FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['layers',key,'path_cutgeo'] , to_jsonb((SELECT path_cutgeo || '/' || key FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
 
-        
+        dict := jsonb_set( dict, array['path_preserv'] , to_jsonb((SELECT path_preserv FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+
         IF dict?'orig'
         THEN
             dict := jsonb_set( dict, array['layers',key,'sha256file_path'] , to_jsonb((dict->>'orig') || '/' || (dict->'layers'->key->>'sha256file') ));
@@ -2617,32 +2661,49 @@ CREATE or replace FUNCTION ingest.lix_generate_readme(
         q_query text;
         conf_yaml jsonb;
         f_yaml jsonb;
+        p_yaml jsonb;
         readme text;
         output_file text;
     BEGIN
-    SELECT y || jsonb_build_object('layers' ,list)
+
+    SELECT ingest.jsonb_mustache_prepare(y) AS y
+    FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id
+    INTO p_yaml;
+
+    SELECT p_yaml || jsonb_build_object('layers',list) || s.csv[0]
     FROM
     (
-        SELECT jsonb_agg(t.k) AS list
-        FROM
+      SELECT jsonb_agg(g.value) AS list
+      FROM
+      (
+        SELECT t.value || jsonb_build_object('publication_data',COALESCE(u.l,'{}'::jsonb)) AS value
+        FROM jsonb_each(p_yaml->'layers') t(key,value)
+        LEFT JOIN
         (
-            SELECT jsonb_each((ingest.jsonb_mustache_prepare(y))->'layers') AS k
-            FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id
-        ) t
+          SELECT jsonb_array_elements(page->'layers') AS l
+          FROM ingest.vw03publication
+          WHERE pack_number = ('_pk' || (p_yaml->>'pack_number')::text) AND  isolabel_ext = p_yaml->>'isolabel_ext'
+        ) u
+        ON u.l->'class_ftname' = t.value->'layername_root'
+      ) g
     ) r,
     LATERAL
     (
-        SELECT ingest.jsonb_mustache_prepare(y) as y
-        FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id
+      SELECT jsonb_agg(to_jsonb(t.*)) AS csv
+      FROM ingest.vwdonatedpacks_donor t
+      WHERE t.pack_id = (p_yaml->>'pack_number_donatedpackcsv')::int
     ) s
     INTO conf_yaml;
 
+    RAISE NOTICE 'conf: %', conf_yaml;
+
     SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
-    SELECT readme_mk FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO readme;
+    SELECT readme_mk  FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO readme;
 
     SELECT f_yaml->>'pg_io' || '/README-draft_' || jurisd || pack_id INTO output_file;
 
-    SELECT jsonb_mustache_render(readme, conf_yaml) INTO q_query;
+    SELECT jsonb_mustache_render(readme, conf_yaml) || (CASE WHEN file_exists(p_yaml->>'path_preserv' ||'/attachment.md') THEN pg_read_file(p_yaml->>'path_preserv' ||'/attachment.md') ELSE '' END)
+    INTO q_query;
 
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 
@@ -2651,6 +2712,7 @@ CREATE or replace FUNCTION ingest.lix_generate_readme(
 $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.lix_generate_readme('BR','16.1');
 -- SELECT ingest.lix_generate_readme('BR','21.1');
+-- SELECT ingest.lix_generate_readme('BR','30.1');
 -- ----------------------------
 
 CREATE TABLE download.redirects (

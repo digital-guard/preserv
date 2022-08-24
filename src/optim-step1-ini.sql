@@ -397,13 +397,13 @@ SELECT isolabel_ext, pack_number, class_ftname,
 FROM (
     SELECT isolabel_ext, pack_number, class_ftname, ghs, (SELECT size::bigint FROM pg_stat_file(path)) AS size_bytes
     FROM (
-        SELECT isolabel_ext, pack_number, class_ftname, ghs, path_root || pack_number || '/' || class_ftname || '/' || geom_type_abbr || '_' || ghs || '.geojson' AS path
+        SELECT isolabel_ext, pack_number, class_ftname, ghs, path_cutgeo || pack_number || '/' || class_ftname || '/' || geom_type_abbr || '_' || ghs || '.geojson' AS path
         FROM (
             SELECT pf.isolabel_ext,
                     to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS pack_number,
                     pf.ftype_info->>'class_ftname' as class_ftname,
                     jsonb_object_keys(pc.kx_profile->'ghs_distrib_mosaic') AS ghs,
-                    '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' AS path_root,
+                    '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' AS path_cutgeo,
                     CASE pf.geomtype
                         WHEN 'poly'  THEN 'pols'
                         WHEN 'line'  THEN 'lns'

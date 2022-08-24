@@ -48,7 +48,7 @@ ifneq ($(nointeraction),y)
 endif
 	mv $(mkme_output) ./makefile
 
-readme:
+readme: insert_make_conf
 	@echo "-- Create basic README-draft.md template --"
 	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_readme('$(country)','$(pack_id)');"
 	sudo chmod 777 $(readme_output)
