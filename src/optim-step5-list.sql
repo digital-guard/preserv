@@ -7,7 +7,6 @@ FROM
     to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS pack_number,
     to_char(pf.local_serial,'fm0000') AS flocal_serial,
     regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') AS path_yaml
-    
   FROM optim.vw01full_packfilevers pf
 ) pf2
 GROUP BY country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalName, wikidata_id, url, donor_info, kx_vat_id, isolevel
@@ -43,14 +42,41 @@ FROM
 ) u
 ;
 
+CREATE or replace VIEW optim.vw03generate_list_hash AS
+SELECT jsonb_build_object('pacotes',jsonb_agg(r.*)) AS y
+FROM  
+(
+  SELECT legalName, scope_label, hashedfname,
+    substring(pf.hashedfname, '^([0-9a-f]{7}).+$') AS hashedfname_7,
+    to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS pack_number,
+    to_char(pf.local_serial,'fm0000') AS flocal_serial,
+    regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') AS path_yaml,
+    pf.info AS info
+  FROM optim.vw01full_packfilevers pf
+  ORDER BY hashedfname
+) r
+;
+
 CREATE or replace FUNCTION optim.generate_list(
 	p_fileref text
 ) RETURNS text  AS $f$
-    SELECT volat_file_write(p_fileref, jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/list.mustache'), y)) AS output_write
+    SELECT volat_file_write(p_fileref, jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/list_jurisd.mustache'), y)) AS output_write
     FROM optim.vw02generate_list
     ;
 $f$ language SQL VOLATILE;
 COMMENT ON FUNCTION optim.generate_list
   IS 'Generate list page.'
 ;
--- SELECT optim.generate_list('/tmp/pg_io/list.txt');
+-- SELECT optim.generate_list('/tmp/pg_io/list_jurisd.txt');
+
+CREATE or replace FUNCTION optim.generate_list_hash(
+	p_fileref text
+) RETURNS text  AS $f$
+    SELECT volat_file_write(p_fileref, jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/list_hash.mustache'), y)) AS output_write
+    FROM optim.vw03generate_list_hash
+    ;
+$f$ language SQL VOLATILE;
+COMMENT ON FUNCTION optim.generate_list_hash
+  IS 'Generate list page.'
+;
+-- SELECT optim.generate_list_hash('/tmp/pg_io/list_hash.txt');
