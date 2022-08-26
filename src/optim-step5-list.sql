@@ -46,30 +46,7 @@ FROM
 CREATE or replace FUNCTION optim.generate_list(
 	p_fileref text
 ) RETURNS text  AS $f$
-    SELECT volat_file_write(p_fileref, jsonb_mustache_render('{{#paises}}
-* {{scope_label}}
-{{#iso1}}
-{{#iso1}}
-   - {{legalName}}
-     - [_pk{{flocal_serial}}](http://git.digital-guard.org/preserv-{{path_yaml}}/_pk{{pack_number}}/make_conf.yaml)
-   {{#pacotes}}
-       - [**{{info.name}}** (`{{hashedfname_7}}`)](http://dl.digital-guard.org/{{hashedfname}})
-  {{/pacotes}}
-{{/iso1}}
-{{/iso1}}
-{{#iso3}}
-{{#iso3}}
-   - {{jurisd}}
-{{#doadores}}
-     - {{legalName}}
-       - [_pk{{flocal_serial}}](http://git.digital-guard.org/preserv-{{path_yaml}}/_pk{{pack_number}}/make_conf.yaml)
-   {{#pacotes}}
-         - [**{{info.name}}** (`{{hashedfname_7}}`)](http://dl.digital-guard.org/{{hashedfname}})
-  {{/pacotes}}
-{{/doadores}}
-{{/iso3}}
-{{/iso3}}
-{{/paises}}', y)) AS output_write
+    SELECT volat_file_write(p_fileref, jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/list.mustache'), y)) AS output_write
     FROM optim.vw02generate_list
     ;
 $f$ language SQL VOLATILE;
