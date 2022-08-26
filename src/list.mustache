@@ -1,0 +1,24 @@
+{{#paises}}
+* {{scope_label}}
+{{#iso1}}
+{{#iso1}}
+   - {{legalName}}
+     - [_pk{{flocal_serial}}](http://git.digital-guard.org/preserv-{{path_yaml}}/make_conf.yaml)
+   {{#pacotes}}
+       - [**{{info.name}}** (`{{hashedfname_7}}`)](http://dl.digital-guard.org/{{hashedfname}})
+  {{/pacotes}}
+{{/iso1}}
+{{/iso1}}
+{{#iso3}}
+{{#iso3}}
+   - {{jurisd}}
+{{#doadores}}
+     - {{legalName}}
+       - [_pk{{flocal_serial}}](http://git.digital-guard.org/preserv-{{path_yaml}}/make_conf.yaml)
+   {{#pacotes}}
+         - [**{{info.name}}** (`{{hashedfname_7}}`)](http://dl.digital-guard.org/{{hashedfname}})
+  {{/pacotes}}
+{{/doadores}}
+{{/iso3}}
+{{/iso3}}
+{{/paises}}
