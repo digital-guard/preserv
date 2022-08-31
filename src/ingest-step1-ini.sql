@@ -2552,7 +2552,7 @@ CREATE or replace FUNCTION ingest.generate_makefile(
     BEGIN
 
     SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) INTO p_yaml;
-    SELECT pg_read_file(p_path || 'preserv/src/maketemplates/make_' || lower(p_yaml->>'schemaId_template') || 'ref027a.mustache.mk')  INTO mkme_srcTpl;
+    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/make_' || lower(p_yaml->>'schemaId_template') || '.mustache.mk')  INTO mkme_srcTpl;
     SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
     SELECT pg_read_file(p_path || '/preserv/src/maketemplates/commomLast.mustache.mk') INTO mkme_srcTplLast;
 
