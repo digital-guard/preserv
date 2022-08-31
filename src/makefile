@@ -94,7 +94,6 @@ endif
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/lib-dg_preserv.sql
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/step01def-lib_osm.sql
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/ingest-step1-ini.sql
-	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/ingest-step2-ini-make.sql
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/step07igt-osm.sql
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito

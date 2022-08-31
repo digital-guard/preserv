@@ -2076,97 +2076,6 @@ COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int)
 ;
 -- SELECT ingest.publicating_geojsons('geoaddress','BR-MG-BeloHorizonte','folder');
 
--- Armazena arquivos make_conf.yaml
-CREATE TABLE ingest.lix_conf_yaml (
-  jurisdiction text NOT NULL, -- jurisdição, por exemplo: BR
-  t text,                     -- versão texto de make_conf.yaml.
-  y jsonb                     -- arquivo make_conf.yaml. Pode ser substituído por make_conf_tpl de optim.donated_PackTpl. Tornando essa tabela desnecessária.
-);
-CREATE UNIQUE INDEX ON ingest.lix_conf_yaml (jurisdiction,(y->>'pack_id'));
-
--- Armazena templates para geração de makefile
-CREATE TABLE ingest.lix_mkme_srcTpl (
-  tplInputSchema_id text NOT NULL, -- identificador do template. por exemplo: ref027a
-  y text,                          -- template, por exemplo make_ref027a.mustache.mk
-  UNIQUE(tplInputSchema_id)
-);
-
--- Armazena conteúdos de arquivos referentes a uma jurisdição, para geração de makefile.
--- Pode ser absorvida por optim.jurisdiction
-CREATE TABLE ingest.lix_jurisd_tpl (
-  jurisdiction text NOT NULL, -- jurisdição, por exemplo: BR
-  tpl_last text,              -- commomLast.mustache.mk
-  first_yaml jsonb,           -- commomFirst.yaml da jurisdição.
-  readme_mk text,             -- template mustache para readme.
-  UNIQUE(jurisdiction)
-);
-
-CREATE or replace FUNCTION ingest.lix_insert(
-    file text
-    ) RETURNS void AS $wrap$
-    DECLARE
-    yl jsonb;
-    conf jsonb;
-    t text;
-    aux text;
-    p_type text;
-    jurisd text;
-    BEGIN
-        SELECT (regexp_matches(file, '([^/]*)$'))[1] INTO p_type;
-
-        SELECT (regexp_matches(file, '[^-]*-([^/-]*)/.*$'))[1] INTO jurisd;
-        IF jurisd IS NULL
-        THEN
-            jurisd := 'INT';
-        END IF;
-
-        --RAISE NOTICE 'type : %', p_type;
-        --RAISE NOTICE 'Jurisdiction : %', jurisd;
-
-        CASE p_type
-        WHEN 'make_conf.yaml' THEN
-        aux:= pg_read_file(file);
-        conf:= yaml_to_jsonb(aux);
-        INSERT INTO ingest.lix_conf_yaml (jurisdiction,t,y) VALUES (jurisd,aux,conf)
-        ON CONFLICT (jurisdiction,(y->>'pack_id')) DO UPDATE SET y = conf, t = aux;
-
-        WHEN (select (regexp_matches(p_type, 'make_ref[0-9]+[a-z]\.mustache.mk'))[1]) THEN
-        t:= pg_read_file(file);
-        INSERT INTO ingest.lix_mkme_srcTpl VALUES (SUBSTRING(file,'(ref[0-9]{1,3}[a-z])'),t)
-        ON CONFLICT (tplInputSchema_id) DO UPDATE SET tplInputSchema_id = t;
-
-        WHEN 'commomFirst.yaml' THEN
-        yl:= yamlfile_to_jsonb(file);
-        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, first_yaml) VALUES (jurisd,yl)
-        ON CONFLICT (jurisdiction) DO UPDATE SET first_yaml = yl;
-
-        WHEN 'commomLast.mustache.mk' THEN
-        t:= pg_read_file(file);
-        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, tpl_last) VALUES (jurisd,t)
-        ON CONFLICT (jurisdiction) DO UPDATE SET tpl_last = t;
-
-        WHEN 'readme.mustache' THEN
-        t:= pg_read_file(file);
-        INSERT INTO ingest.lix_jurisd_tpl (jurisdiction, readme_mk) VALUES (jurisd,t)
-        ON CONFLICT (jurisdiction) DO UPDATE SET readme_mk = t;
-
-        END CASE;
-    END;
-$wrap$ LANGUAGE PLpgSQL;
-
---SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/src/maketemplates/commomFirst.yaml');
---SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/src/maketemplates/readme.mustache');
---SELECT ingest.lix_insert('/var/gits/_dg/preserv-PE/src/maketemplates/commomFirst.yaml');
---SELECT ingest.lix_insert('/var/gits/_dg/preserv-PE/src/maketemplates/readme.mustache');
---SELECT ingest.lix_insert('/var/gits/_dg/preserv-CO/src/maketemplates/commomFirst.yaml');
---SELECT ingest.lix_insert('/var/gits/_dg/preserv-CO/src/maketemplates/readme.mustache');
---SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/make_ref027a.mustache.mk');
---SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/commomLast.mustache.mk');
---SELECT ingest.lix_insert('/var/gits/_dg/preserv/src/maketemplates/commomFirst.yaml');
-
---SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01/make_conf.yaml');
---SELECT ingest.lix_insert('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk0008.01/make_conf.yaml');
-
 
 CREATE or replace FUNCTION ingest.jsonb_mustache_prepare(
   dict jsonb,  -- input
@@ -2531,7 +2440,8 @@ $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk0001.01/make_conf.yaml') ); 
 
 CREATE or replace FUNCTION ingest.insert_bytesize(
-  dict jsonb  -- input
+  dict   jsonb,  -- input
+  p_path text DEFAULT '/var/www/preserv.addressforall.org/download' --folder with file
 ) RETURNS jsonb  AS $f$
 DECLARE
  a text;
@@ -2541,7 +2451,7 @@ BEGIN
     LOOP
         a := format($$ {files,%s,file} $$, i )::text[];
 
-        SELECT size::bigint FROM pg_stat_file(concat('/var/www/preserv.addressforall.org/download/',dict#>>a::text[])) INTO sz;
+        SELECT size::bigint FROM pg_stat_file(concat(p_path,'/',dict#>>a::text[])) INTO sz;
 
         a := format($$ {files,%s,size} $$, i );
         dict := jsonb_set( dict, a::text[],to_jsonb(sz));
@@ -2551,20 +2461,23 @@ END;
 $f$ language PLpgSQL;
 --SELECT ingest.insert_bytesize( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RS/SantaMaria/_pk0019.01/make_conf.yaml') );
 
-CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
-    jurisd text,
-    pack_id text
+CREATE or replace FUNCTION ingest.generate_make_conf_with_size(
+    jurisd  text,
+    pack_id text,
+    p_path_pack text,
+    p_path  text DEFAULT '/var/gits/_dg' -- git path
 ) RETURNS text AS $f$
     DECLARE
-        q_query text;
-        conf_yaml jsonb;
+        q_query     text;
+        conf_yaml   jsonb;
         conf_yaml_t text;
-        f_yaml jsonb;
+        f_yaml      jsonb;
         output_file text;
     BEGIN
 
-    SELECT y, t FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml, conf_yaml_t;
-    SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
+    SELECT pg_read_file(p_path_pack ||'/make_conf.yaml') INTO conf_yaml_t;
+    SELECT yaml_to_jsonb(conf_yaml_t) INTO conf_yaml;
+    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
 
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
 
@@ -2576,12 +2489,14 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_size(
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_generate_make_conf_with_size('BR','19.1');
+-- SELECT ingest.generate_make_conf_with_size('BR','19.1');
 
 
-CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
-    jurisd text,
-    pack_id text
+CREATE or replace FUNCTION ingest.generate_make_conf_with_license(
+    jurisd  text,
+    pack_id text,
+    p_path_pack text,
+    p_path  text DEFAULT '/var/gits/_dg'  -- git path
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
@@ -2593,9 +2508,9 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
         definition jsonb;
     BEGIN
 
-    SELECT y, t FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml, conf_yaml_t;
-    SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
-
+    SELECT pg_read_file(p_path_pack ||'/make_conf.yaml') INTO conf_yaml_t;
+    SELECT yaml_to_jsonb(conf_yaml_t) INTO conf_yaml;
+    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
 
     SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE tmp_pack_licenses.pack_id = (to_char(substring(conf_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(conf_yaml->>'pack_id','([^\.]*)$')::int,'fm00')) INTO definition;
@@ -2619,11 +2534,13 @@ CREATE or replace FUNCTION ingest.lix_generate_make_conf_with_license(
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_generate_make_conf_with_license('BR','16.1');
+-- SELECT ingest.generate_make_conf_with_license('BR','16.1');
 
-CREATE FUNCTION ingest.lix_generate_makefile(
-    jurisd text,
-    pack_id text
+CREATE or replace FUNCTION ingest.generate_makefile(
+    jurisd  text,
+    pack_id text,
+    p_path_pack text,
+    p_path  text DEFAULT '/var/gits/_dg'  -- git path
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
@@ -2634,10 +2551,10 @@ CREATE FUNCTION ingest.lix_generate_makefile(
         output_file text;
     BEGIN
 
-    SELECT y FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id INTO conf_yaml;
-    SELECT y FROM ingest.lix_mkme_srcTpl WHERE tplInputSchema_id = conf_yaml->>'schemaId_template' INTO mkme_srcTpl;
-    SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
-    SELECT tpl_last FROM ingest.lix_jurisd_tpl WHERE jurisdiction = 'INT' INTO mkme_srcTplLast;
+    SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) INTO p_yaml;
+    SELECT pg_read_file(p_path || 'preserv/src/maketemplates/make_' || lower(conf_yaml->>'schemaId_template') || 'ref027a.mustache.mk')  INTO mkme_srcTpl;
+    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
+    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/commomLast.mustache.mk') INTO mkme_srcTplLast;
 
     SELECT f_yaml->>'pg_io' || '/makeme_' || jurisd || pack_id INTO output_file;
 
@@ -2650,12 +2567,14 @@ CREATE FUNCTION ingest.lix_generate_makefile(
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_generate_makefile('BR','16.1');
--- SELECT ingest.lix_generate_makefile('PE','1');
+-- SELECT ingest.generate_makefile('BR','16.1');
+-- SELECT ingest.generate_makefile('PE','1');
 
-CREATE or replace FUNCTION ingest.lix_generate_readme(
-    jurisd text,
-    pack_id text
+CREATE or replace FUNCTION ingest.generate_readme(
+    jurisd  text,
+    pack_id text,
+    p_path_pack text,
+    p_path  text DEFAULT '/var/gits/_dg'  -- git path
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
@@ -2666,9 +2585,7 @@ CREATE or replace FUNCTION ingest.lix_generate_readme(
         output_file text;
     BEGIN
 
-    SELECT ingest.jsonb_mustache_prepare(y) AS y
-    FROM ingest.lix_conf_yaml WHERE jurisdiction = jurisd AND (y->>'pack_id') = pack_id
-    INTO p_yaml;
+    SELECT ingest.jsonb_mustache_prepare(yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' ))) INTO p_yaml;
 
     SELECT p_yaml || jsonb_build_object('layers',list) || s.csv[0]
     FROM
@@ -2697,8 +2614,8 @@ CREATE or replace FUNCTION ingest.lix_generate_readme(
 
     RAISE NOTICE 'conf: %', conf_yaml;
 
-    SELECT first_yaml FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO f_yaml;
-    SELECT readme_mk  FROM ingest.lix_jurisd_tpl WHERE jurisdiction = jurisd INTO readme;
+    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
+    SELECT pg_read_file(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/readme.mustache') INTO readme;
 
     SELECT f_yaml->>'pg_io' || '/README-draft_' || jurisd || pack_id INTO output_file;
 
@@ -2710,9 +2627,9 @@ CREATE or replace FUNCTION ingest.lix_generate_readme(
     RETURN q_query;
     END;
 $f$ LANGUAGE PLpgSQL;
--- SELECT ingest.lix_generate_readme('BR','16.1');
--- SELECT ingest.lix_generate_readme('BR','21.1');
--- SELECT ingest.lix_generate_readme('BR','30.1');
+-- SELECT ingest.generate_readme('BR','16.1');
+-- SELECT ingest.generate_readme('BR','21.1');
+-- SELECT ingest.generate_readme('BR','30.1');
 -- ----------------------------
 
 CREATE TABLE download.redirects (

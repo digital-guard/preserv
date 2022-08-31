@@ -6,6 +6,7 @@
 mkme_input    = $(shell ls -d "${PWD}/"make_conf.yaml)
 country       = $(shell ls -d "${PWD}" | cut -d'-' -f2 | cut -d'/' -f1)
 baseSrc       = /var/gits/_dg
+baseSrcPack   = $(shell ls -d "${PWD}")
 
 mkme_input0   = $(baseSrc)/preserv-$(country)/src/maketemplates/commomFirst.yaml
 
@@ -32,12 +33,11 @@ info:
 	@printf "readme: gera rascunho de Readme.md para conjunto de dados.\n"
 	@printf "insert_size: Insere tamanho em bytes em files no arquivo make_conf.yaml.\n"
 	@printf "insert_license: Insere detalhes sobre licenças no arquivo make_conf.yaml.\n"
-	@printf "insert_make_conf: carrega na base de dados o arquivo make_conf.yaml.\n"
 	@printf "delete_file: deleta arquivo ingestado, a partir do sha256.\n"
 
-me: insert_make_conf
+me:
 	@echo "-- Updating this make --"
-	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_makefile('$(country)','$(pack_id)');"
+	psql $(pg_uri_db) -c "SELECT ingest.generate_makefile('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)');"
 	sudo chmod 777 $(mkme_output)
 	@echo " Check diff, the '<' lines are the new ones... Something changed?"
 	@diff $(mkme_output) ./makefile || :
@@ -48,9 +48,9 @@ ifneq ($(nointeraction),y)
 endif
 	mv $(mkme_output) ./makefile
 
-readme: insert_make_conf
+readme:
 	@echo "-- Create basic README-draft.md template --"
-	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_readme('$(country)','$(pack_id)');"
+	psql $(pg_uri_db) -c "SELECT ingest.generate_readme('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)');"
 	sudo chmod 777 $(readme_output)
 	@echo " Check diff, the '<' lines are the new ones... Something changed?"
 	@diff $(readme_output) ./README-draft.md || :
@@ -59,9 +59,9 @@ readme: insert_make_conf
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	mv $(readme_output) ./README-draft.md
 
-insert_size: insert_make_conf
+insert_size:
 	@echo "-- Updating make_conf with files size --"
-	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_make_conf_with_size('$(country)','$(pack_id)');"
+	psql $(pg_uri_db) -c "SELECT ingest.generate_make_conf_with_size('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)');"
 	sudo chmod 777 $(conf_output)
 	@echo " Check diff, the '<' lines are the new ones... Something changed?"
 	@diff $(conf_output) ./make_conf.yaml || :
@@ -70,9 +70,9 @@ insert_size: insert_make_conf
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	mv $(conf_output) ./make_conf.yaml
 
-insert_license: insert_make_conf
+insert_license:
 	@echo "-- Updating make_conf with files licenses --"
-	psql $(pg_uri_db) -c "SELECT ingest.lix_generate_make_conf_with_license('$(country)','$(pack_id)');"
+	psql $(pg_uri_db) -c "SELECT ingest.generate_make_conf_with_license('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)');"
 	sudo chmod 777 $(conf_output)
 	@echo " Check diff, the '<' lines are the new ones... Something changed?"
 	@diff $(conf_output) ./make_conf.yaml || :
@@ -80,15 +80,6 @@ insert_license: insert_make_conf
 	@echo " mv $(conf_output) ./make_conf.yaml"
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	mv $(conf_output) ./make_conf.yaml
-
-insert_make_conf:
-	@echo "-- Load make_conf.yaml into the database. --"
-	@echo "Usage: make insert_make_conf"
-	@echo "pack_id: $(pack_id)"
-ifneq ($(nointeraction),y)
-	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
-endif
-	psql $(pg_uri_db) -c "SELECT ingest.lix_insert('$(mkme_input)');"
 
 delete_file:
 	@echo "Usage: make delete_file id=<id de donated_packcomponent>"
