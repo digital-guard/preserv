@@ -2500,34 +2500,34 @@ CREATE or replace FUNCTION ingest.generate_make_conf_with_license(
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
-        conf_yaml jsonb;
-        conf_yaml_t text;
+        p_yaml jsonb;
+        p_yaml_t text;
         f_yaml jsonb;
         output_file text;
         license_evidences jsonb;
         definition jsonb;
     BEGIN
 
-    SELECT pg_read_file(p_path_pack ||'/make_conf.yaml') INTO conf_yaml_t;
-    SELECT yaml_to_jsonb(conf_yaml_t) INTO conf_yaml;
+    SELECT pg_read_file(p_path_pack ||'/make_conf.yaml') INTO p_yaml_t;
+    SELECT yaml_to_jsonb(p_yaml_t) INTO p_yaml;
     SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
 
-    SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE tmp_pack_licenses.pack_id = (to_char(substring(conf_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(conf_yaml->>'pack_id','([^\.]*)$')::int,'fm00')) INTO definition;
+    SELECT to_jsonb(ARRAY[name, family, url]) FROM tmp_pack_licenses WHERE tmp_pack_licenses.pack_id = (to_char(substring(p_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(p_yaml->>'pack_id','([^\.]*)$')::int,'fm00')) INTO definition;
 
-    --conf_yaml := jsonb_set( conf_yaml, array['files_license'], files_license);
-    --SELECT jsonb_to_yaml(conf_yaml::text) INTO q_query;
+    --p_yaml := jsonb_set( p_yaml, array['files_license'], files_license);
+    --SELECT jsonb_to_yaml(p_yaml::text) INTO q_query;
 
-    IF conf_yaml?'license_evidences'
+    IF p_yaml?'license_evidences'
     THEN
-        license_evidences := conf_yaml->'license_evidences' || jsonb_build_object('definition',definition);
+        license_evidences := p_yaml->'license_evidences' || jsonb_build_object('definition',definition);
     ELSE
         license_evidences := jsonb_build_object('license_evidences',jsonb_build_object('definition',definition));
 
         --license_evidences := jsonb_set( '{}'::jsonb, array['license_evidences','definition'], definition );
     END IF;
 
-    SELECT conf_yaml_t || jsonb_to_yaml(license_evidences::text)::text INTO q_query;
+    SELECT p_yaml_t || jsonb_to_yaml(license_evidences::text)::text INTO q_query;
 
     --SELECT volat_file_write(output_file,q_query) INTO q_query;
 
@@ -2544,7 +2544,7 @@ CREATE or replace FUNCTION ingest.generate_makefile(
 ) RETURNS text AS $f$
     DECLARE
         q_query text;
-        conf_yaml jsonb;
+        p_yaml jsonb;
         f_yaml jsonb;
         mkme_srcTplLast text;
         mkme_srcTpl text;
@@ -2552,15 +2552,15 @@ CREATE or replace FUNCTION ingest.generate_makefile(
     BEGIN
 
     SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) INTO p_yaml;
-    SELECT pg_read_file(p_path || 'preserv/src/maketemplates/make_' || lower(conf_yaml->>'schemaId_template') || 'ref027a.mustache.mk')  INTO mkme_srcTpl;
+    SELECT pg_read_file(p_path || 'preserv/src/maketemplates/make_' || lower(p_yaml->>'schemaId_template') || 'ref027a.mustache.mk')  INTO mkme_srcTpl;
     SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
     SELECT pg_read_file(p_path || '/preserv/src/maketemplates/commomLast.mustache.mk') INTO mkme_srcTplLast;
 
     SELECT f_yaml->>'pg_io' || '/makeme_' || jurisd || pack_id INTO output_file;
 
-    conf_yaml := jsonb_set( conf_yaml, array['jurisdiction'], to_jsonb(jurisd) );
+    p_yaml := jsonb_set( p_yaml, array['jurisdiction'], to_jsonb(jurisd) );
 
-    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, ingest.jsonb_mustache_prepare(f_yaml || conf_yaml)),E'\u130C9',$$\"$$) INTO q_query; -- "
+    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, ingest.jsonb_mustache_prepare(f_yaml || p_yaml)),E'\u130C9',$$\"$$) INTO q_query; -- "
 
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 
