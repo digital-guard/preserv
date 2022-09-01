@@ -271,7 +271,7 @@ wget_files:
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	mkdir -p $(orig)
 {{#files}}
-	@cd $(orig); wget http://preserv.addressforall.org/download/{{file}} && chmod o+rw {{file}}
+	@cd $(orig); wget http://dl.digital-guard.org/{{file}} && chmod o+rw {{file}}
 {{/files}}
 	@echo "Please, if orig not default, run 'make _target_ orig=$(orig)'"
 
