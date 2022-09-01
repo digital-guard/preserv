@@ -2470,7 +2470,7 @@ CREATE or replace FUNCTION ingest.generate_make_conf_with_size(
     jurisd      text,
     pack_id     text,
     p_path_pack text,
-    p_path      text DEFAULT '/var/gits/_dg' -- git path
+    p_path      text DEFAULT '/var/gits/_dg', -- git path
     p_orig      text DEFAULT '/tmp'
 ) RETURNS text AS $f$
     DECLARE
