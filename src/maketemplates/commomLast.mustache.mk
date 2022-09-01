@@ -61,7 +61,7 @@ readme:
 
 insert_size:
 	@echo "-- Updating make_conf with files size --"
-	psql $(pg_uri_db) -c "SELECT ingest.generate_make_conf_with_size('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)');"
+	psql $(pg_uri_db) -c "SELECT ingest.generate_make_conf_with_size('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)','$(orig)');"
 	sudo chmod 777 $(conf_output)
 	@echo " Check diff, the '<' lines are the new ones... Something changed?"
 	@diff $(conf_output) ./make_conf.yaml || :

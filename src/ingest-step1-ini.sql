@@ -2446,7 +2446,7 @@ $f$ language PLpgSQL;
 
 CREATE or replace FUNCTION ingest.insert_bytesize(
   dict   jsonb,  -- input
-  p_path text DEFAULT '/var/www/preserv.addressforall.org/download' --folder with file
+  p_orig text DEFAULT '/tmp' --folder with file
 ) RETURNS jsonb  AS $f$
 DECLARE
  a text;
@@ -2456,7 +2456,7 @@ BEGIN
     LOOP
         a := format($$ {files,%s,file} $$, i )::text[];
 
-        SELECT size::bigint FROM pg_stat_file(concat(p_path,'/',dict#>>a::text[])) INTO sz;
+        SELECT size::bigint FROM pg_stat_file(concat(p_orig,'/',dict#>>a::text[])) INTO sz;
 
         a := format($$ {files,%s,size} $$, i );
         dict := jsonb_set( dict, a::text[],to_jsonb(sz));
@@ -2467,10 +2467,11 @@ $f$ language PLpgSQL;
 --SELECT ingest.insert_bytesize( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RS/SantaMaria/_pk0019.01/make_conf.yaml') );
 
 CREATE or replace FUNCTION ingest.generate_make_conf_with_size(
-    jurisd  text,
-    pack_id text,
+    jurisd      text,
+    pack_id     text,
     p_path_pack text,
-    p_path  text DEFAULT '/var/gits/_dg' -- git path
+    p_path      text DEFAULT '/var/gits/_dg' -- git path
+    p_orig      text DEFAULT '/tmp'
 ) RETURNS text AS $f$
     DECLARE
         q_query     text;
@@ -2487,7 +2488,7 @@ CREATE or replace FUNCTION ingest.generate_make_conf_with_size(
     SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
 
     --SELECT jsonb_to_yaml(ingest.insert_bytesize(conf_yaml)::text) INTO q_query;
-    SELECT regexp_replace( conf_yaml_t , '\n*files: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || jsonb_to_yaml((jsonb_build_object('files',ingest.insert_bytesize(conf_yaml)->'files'))::text) || E'\n', 'n') INTO q_query;
+    SELECT regexp_replace( conf_yaml_t , '\n*files: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || jsonb_to_yaml((jsonb_build_object('files',ingest.insert_bytesize(conf_yaml,p_orig)->'files'))::text) || E'\n', 'n') INTO q_query;
     
     SELECT volat_file_write(output_file,q_query) INTO q_query;
 
@@ -2495,7 +2496,6 @@ CREATE or replace FUNCTION ingest.generate_make_conf_with_size(
     END;
 $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.generate_make_conf_with_size('BR','19.1');
-
 
 CREATE or replace FUNCTION ingest.generate_make_conf_with_license(
     jurisd  text,
