@@ -2156,6 +2156,11 @@ BEGIN
         END IF;
     END IF;
 
+    IF dict?'to-do'
+    THEN
+        dict := jsonb_set( dict, array['has_to-do'], bt);
+    END IF;
+
     FOREACH key IN ARRAY jsonb_object_keys_asarray(dict->'layers')
     LOOP
         method := dict->'layers'->key->>'method';
@@ -2199,6 +2204,16 @@ BEGIN
         dict := jsonb_set( dict, array['layers',key,'isGeojson'],    IIF(method='geojson2sql',bt,bf) );
         
         dict := jsonb_set( dict, array['layers',key,'isGeoaddress'], IIF(key='geoaddress',bt,bf) );
+
+        IF dict->'layers'->key?'standardized_fields'
+        THEN
+            dict := jsonb_set( dict, array['layers',key,'has_standardized_fields'], bt);
+        END IF;
+
+        IF dict->'layers'->key?'other_fields'
+        THEN
+            dict := jsonb_set( dict, array['layers',key,'has_other_fields'], bt);
+        END IF;
 
         dict := jsonb_set( dict, array['layers',key,'sha256file'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'));
 
@@ -2432,11 +2447,6 @@ BEGIN
 END;
 $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01/make_conf.yaml') );
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/MG/BeloHorizonte/_pk0008.01/make_conf.yaml') );
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk001/make_conf.yaml');
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/SP/SaoPaulo/_pk0033.01/make_conf.yaml') );
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/PR/Araucaria/_pk0061.01/make_conf.yaml') );
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/_pk0004.01/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk0001.01/make_conf.yaml') ); 
 
 CREATE or replace FUNCTION ingest.insert_bytesize(
@@ -2590,7 +2600,7 @@ CREATE or replace FUNCTION ingest.generate_readme(
     SELECT p_yaml || jsonb_build_object('layers',list) || s.csv[0]
     FROM
     (
-      SELECT jsonb_agg(g.value) AS list
+      SELECT jsonb_agg(g) AS list
       FROM
       (
         SELECT t.value || jsonb_build_object('publication_data',COALESCE(u.l,'{}'::jsonb)) AS value
@@ -2628,7 +2638,7 @@ CREATE or replace FUNCTION ingest.generate_readme(
     END;
 $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.generate_readme('BR','16.1');
--- SELECT ingest.generate_readme('BR','21.1');
+-- SELECT ingest.generate_readme('BR','21.1','/var/gits/_dg/preserv-BR/data/SP/Atibaia/_pk0021.01','/var/gits/_dg');
 -- SELECT ingest.generate_readme('BR','30.1');
 -- ----------------------------
 
