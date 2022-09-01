@@ -7,7 +7,7 @@
 	@echo " Nome-hash do arquivo-{{file}}: {{sha256file}}"
 	@echo " Tabela do layer: {{tabname}}"
 	@echo " Sub-arquivos do arquivo-{{file}} com o conteúdo alvo: {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}*{{orig_filename}}*{{/orig_filename_string_extract}}"
-	@echo " Tema dos sub-arquivos: {{#file_data}}{{file_data.name}}{{/file_data.name}}"
+	@echo " Tema dos sub-arquivos: {{#file_data}}{{file_data.name}}{{/file_data}}"
 	@echo "Run with tmux and sudo! (DANGER: seems not idempotent on psql)"
 	@whoami
 	@echo "Above user is root? If not, you have permissions for all paths?"
