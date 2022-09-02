@@ -318,6 +318,10 @@ COMMENT ON VIEW optim.vw01full_jurisdiction_geom
 
 CREATE or replace VIEW optim.vw01full_packfilevers AS
   SELECT pf.*,
+         to_char(dn.local_serial,'fm0000') AS local_serial_formated, -- e.g.: 0042
+         to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS pack_number, -- e.g.: 0042.01
+         substring(pf.hashedfname, '^([0-9a-f]{7}).+$') AS hashedfname_7,
+         substring(pf.hashedfname, '^([0-9a-f]{64,64})\.[a-z0-9]+$') AS hashedfname_without_ext,
          pt.donor_id, pt.pk_count, pt.original_tpl, pt.make_conf_tpl, pt.kx_num_files, pt.info AS packtpl_info,
          dn.country_id, dn.local_serial, dn.scope_osm_id, dn.scope_label, dn.shortname, dn.vat_id, dn.legalName, dn.wikidata_id, dn.url, dn.info AS donor_info, dn.kx_vat_id,
          j.osm_id, j.jurisd_base_id, j.jurisd_local_id, j.parent_id, j.admin_level, j.name, j.parent_abbrev, j.abbrev, j.wikidata_id AS jurisdiction_wikidata_id, j.lexlabel, j.isolabel_ext, j.ddd, j.housenumber_system_type, j.lex_urn, j.info AS jurisdiction_info, j.geom, j.isolevel
@@ -343,6 +347,14 @@ CREATE or replace VIEW optim.vw01full_packfilevers AS
 ;
 COMMENT ON VIEW optim.vw01full_packfilevers
   IS 'Join donated_packfilevers with donated_PackTpl, donor and vw01full_jurisdiction_geom.'
+;
+
+CREATE or replace VIEW optim.vw01full_packfilevers_withoutgeom AS
+  SELECT hashedfname, pack_number, hashedfname_7, local_serial_formated, hashedfname_without_ext, pack_id, pack_item, pack_item_accepted_date, kx_pack_item_version, user_resp, info, donor_id, pk_count, original_tpl, make_conf_tpl, kx_num_files, packtpl_info, country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalname, wikidata_id, url, donor_info, kx_vat_id, osm_id, jurisd_base_id, jurisd_local_id, parent_id, admin_level, name, parent_abbrev, abbrev, jurisdiction_wikidata_id, lexlabel, isolabel_ext, ddd, housenumber_system_type, lex_urn, jurisdiction_info, isolevel
+  FROM optim.vw01full_packfilevers
+;
+COMMENT ON VIEW optim.vw01full_packfilevers_withoutgeom
+  IS 'vw01full_packfilevers without geom jurisdiction'
 ;
 
 CREATE VIEW optim.vw01full_packfilevers_ftype AS
@@ -399,8 +411,7 @@ FROM (
     FROM (
         SELECT isolabel_ext, pack_number, class_ftname, ghs, path_cutgeo || pack_number || '/' || class_ftname || '/' || geom_type_abbr || '_' || ghs || '.geojson' AS path
         FROM (
-            SELECT pf.isolabel_ext,
-                    to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS pack_number,
+            SELECT pf.isolabel_ext, pf.pack_number,
                     pf.ftype_info->>'class_ftname' as class_ftname,
                     jsonb_object_keys(pc.kx_profile->'ghs_distrib_mosaic') AS ghs,
                     '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' AS path_cutgeo,

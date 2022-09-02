@@ -25,7 +25,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
                 ))
     ) AS page
 FROM (
-  SELECT pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.kx_pack_item_version, pf.local_serial, pf.pk_count,
+  SELECT pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.kx_pack_item_version, pf.local_serial, pf.pk_count, pf.pack_number,
   INITCAP(pf.user_resp) AS user_resp,
   row_number() OVER (PARTITION BY pf.isolabel_ext, pf.local_serial, pf.pk_count ORDER BY pf.ftype_info->'class_ftname' ASC ) AS row_num,
   pf.ftype_info->>'class_ftname' as class_ftname,
@@ -33,8 +33,8 @@ FROM (
   pf.ftype_info->'class_info'->>'description_pt' as description,
   pf.make_conf_tpl->'license_evidences' AS license_evidences,
   pf.hashedfname, 
-  substring(pf.hashedfname, '^([0-9a-f]{64,64})\.[a-z0-9]+$') AS hashedfname_without_ext, 
-  substring(pf.hashedfname, '^([0-9a-f]{7}).+$') || '...' || substring(pf.hashedfname, '^.+\.([a-z0-9]+)$') AS hashedfname_7_ext,
+  pf.hashedfname_without_ext,
+  hashedfname_7 || '...' || substring(pf.hashedfname, '^.+\.([a-z0-9]+)$') AS hashedfname_7_ext,
   CASE pf.geomtype
             WHEN 'poly'  THEN 'pols'
             WHEN 'line'  THEN 'lns'
@@ -59,9 +59,8 @@ FROM (
             'isGeoaddress', iif(pf.ftype_info->>'class_ftname'='geoaddress','true'::jsonb,'false'::jsonb),
         'bytes_mb', (pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0
   ) || (pc.kx_profile->'publication_summary') AS publication_summary,
-  regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS path_preserv,
-  to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS pack_number,
-  'preservCutGeo-' || regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS path_cutgeo
+  regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || pf.local_serial_formated || '.' || to_char(pf.pk_count,'fm00') AS path_preserv,
+  'preservCutGeo-' || regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || pf.local_serial_formated || '.' || to_char(pf.pk_count,'fm00') AS path_cutgeo
 
   FROM optim.vw01full_packfilevers_ftype pf
   INNER JOIN optim.donated_PackComponent pc
@@ -117,9 +116,8 @@ CREATE or replace FUNCTION optim.publicating_index_page(
                     SELECT *, row_number() OVER (PARTITION BY isolabel_ext, pack_number ORDER BY class_ftname ASC ) AS row_num
                     FROM
                     (
-                    SELECT pf.isolabel_ext,
-                            to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS pack_number,
-                            pf.ftype_info->>'class_ftname' as class_ftname
+                    SELECT pf.isolabel_ext, pf.pack_number,
+                           pf.ftype_info->>'class_ftname' as class_ftname
                     FROM optim.vw01full_packfilevers_ftype pf
                     INNER JOIN optim.donated_PackComponent pc
                     ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid

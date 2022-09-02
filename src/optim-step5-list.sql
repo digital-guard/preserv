@@ -1,58 +1,58 @@
 CREATE or replace VIEW optim.vw01generate_list AS
-SELECT scope_label, isolevel, jsonb_build_object('legalName',legalName,'pack_number', MAX(pack_number), 'path_yaml', MAX(path_yaml), 'flocal_serial', MAX(flocal_serial), 'pacotes',jsonb_agg(pf2.*)) AS pacotes
+SELECT scope_label, isolevel, jsonb_build_object('legalName',legalName,'pack_number', MAX(pack_number), 'path_yaml', MAX(path_yaml), 'local_serial_formated', MAX(local_serial_formated), 'pacotes',jsonb_agg(pf2.*)) AS pacotes
 FROM  
 (
   SELECT pf.*,
-    substring(pf.hashedfname, '^([0-9a-f]{7}).+$') AS hashedfname_7,
-    to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS pack_number,
-    to_char(pf.local_serial,'fm0000') AS flocal_serial,
     regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') AS path_yaml
-  FROM optim.vw01full_packfilevers pf
+  FROM optim.vw01full_packfilevers_withoutgeom pf
 ) pf2
 GROUP BY country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalName, wikidata_id, url, donor_info, kx_vat_id, isolevel
 ORDER BY scope_label, legalName
 ;
 
 CREATE or replace VIEW optim.vw02generate_list AS
-SELECT jsonb_build_object('paises',jsonb_agg(u.*)) AS y
+SELECT jsonb_build_object('paises',jsonb_build_object('scope_label', scope_label, 'iso1', iso1, 'iso3', iso3, 'jurisd', jurisd)) AS y 
 FROM
 (
-  SELECT COALESCE(s.scope_label,r.scope_label) AS scope_label, iso3, iso1
-  FROM
-  (
-    SELECT scope_label, jsonb_build_object('jurisd', scope_label,'iso3',jsonb_agg(iso3)) AS iso3
+    SELECT COALESCE(s.scope_label,r.scope_label) AS scope_label, iso3, iso1, jurisd
     FROM
     (
-      SELECT split_part(scope_label,'-',1)  AS scope_label, jsonb_build_object('jurisd',scope_label,'doadores',jsonb_agg(pacotes)) AS iso3
-      FROM optim.vw01generate_list
-      WHERE scope_label LIKE '%-%-%'
+      SELECT scope_label, jsonb_agg(iso3) AS iso3
+      FROM
+      (
+        SELECT split_part(scope_label,'-',1)  AS scope_label, jsonb_build_object('jurisd',scope_label,'doadores',jsonb_agg(pacotes)) AS iso3
+        FROM optim.vw01generate_list
+        WHERE scope_label LIKE '%-%-%'
+        GROUP BY scope_label
+        ORDER BY scope_label
+      ) m
       GROUP BY scope_label
-      ORDER BY scope_label
-    ) m
-    GROUP BY scope_label
-  ) s
-  FULL OUTER JOIN
-  (
-    SELECT scope_label, jsonb_build_object('jurisd',scope_label,'iso1',jsonb_agg(pacotes)) AS iso1
-    FROM optim.vw01generate_list
-    WHERE isolevel = 1
-    GROUP BY scope_label
-  ) r
-  ON s.scope_label = r.scope_label
-) u
+    ) s
+    FULL OUTER JOIN
+    (
+      SELECT scope_label, jsonb_agg(pacotes) AS iso1
+      FROM optim.vw01generate_list
+      WHERE isolevel = 1
+      GROUP BY scope_label
+    ) r
+    ON s.scope_label = r.scope_label,
+    LATERAL
+    (
+      SELECT jsonb_agg(h.*)->0 AS jurisd
+      FROM optim.jurisdiction h
+      WHERE  abbrev = COALESCE(s.scope_label,r.scope_label) AND isolevel=1
+    ) v
+) t
 ;
 
 CREATE or replace VIEW optim.vw03generate_list_hash AS
 SELECT jsonb_build_object('pacotes',jsonb_agg(r.*)) AS y
 FROM  
 (
-  SELECT legalName, scope_label, hashedfname,
-    substring(pf.hashedfname, '^([0-9a-f]{7}).+$') AS hashedfname_7,
-    to_char(pf.local_serial,'fm0000') || '.' || to_char(pf.pk_count,'fm00') AS pack_number,
-    to_char(pf.local_serial,'fm0000') AS flocal_serial,
+  SELECT legalName, scope_label, hashedfname, hashedfname_7, pack_number, local_serial_formated,
     regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') AS path_yaml,
     pf.info AS info
-  FROM optim.vw01full_packfilevers pf
+  FROM optim.vw01full_packfilevers_withoutgeom pf
   ORDER BY hashedfname
 ) r
 ;
