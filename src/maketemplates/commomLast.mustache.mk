@@ -18,28 +18,29 @@ endif
 pg_io         = $(shell grep 'pg_io'   < $(mkme_input0) | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
 pg_uri        = $(shell grep 'pg_uri'  < $(mkme_input0) | cut -f2- -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
 pg_db         = $(shell grep 'pg_db'   < $(mkme_input0) | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
+orig          = $(shell grep 'orig'    < $(mkme_input0) | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
 pack_id       = $(shell grep 'pack_id' < $(mkme_input)  | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
 
 pg_uri_db     = $(pg_uri)/$(pg_db)
 
 mkme_output   = $(pg_io)/makeme_$(country)$(pack_id)
-readme_output = $(pg_io)/README-draft_$(country)$(pack_id)
+readme_output = $(pg_io)/README_$(country)$(pack_id)
 conf_output   = $(pg_io)/make_conf_$(country)$(pack_id)
 
 info:
 	@echo "=== Targets ==="
-	@printf "me: gera makefile para ingestão dos dados, a partir de make_conf.yaml.\n"
-	@printf "info: exibe resumo de targes implementados.\n"
-	@printf "readme: gera rascunho de Readme.md para conjunto de dados.\n"
-	@printf "insert_size: Insere tamanho em bytes em files no arquivo make_conf.yaml.\n"
-	@printf "insert_license: Insere detalhes sobre licenças no arquivo make_conf.yaml.\n"
-	@printf "delete_file: deleta arquivo ingestado, a partir do sha256.\n"
+	@printf "info: resumo dos targets.\n"
+	@printf "me: gera makefile para ingestão de make_conf.yaml.\n"
+	@printf "readme: gera README.md do pacote de dados.\n"
+	@printf "insert_size: insere size bytes em files de make_conf.yaml.\n"
+	@printf "insert_license: insere detalhes sobre licenças em make_conf.yaml.\n"
+	@printf "delete_file: deleta layer ingestado.\n"
 
 me:
-	@echo "-- Updating this make --"
+	@echo "-- Generating makefile --"
 	psql $(pg_uri_db) -c "SELECT ingest.generate_makefile('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)');"
 	sudo chmod 777 $(mkme_output)
-	@echo " Check diff, the '<' lines are the new ones... Something changed?"
+	@echo " Check diff, the '<' lines are the new ones. Something changed?"
 	@diff $(mkme_output) ./makefile || :
 	@echo "If some changes, and no error in the changes, move the script:"
 	@echo " mv $(mkme_output) ./makefile"
@@ -49,39 +50,46 @@ endif
 	mv $(mkme_output) ./makefile
 
 readme:
-	@echo "-- Create basic README-draft.md template --"
+	@echo "-- Generating README.md --"
 	psql $(pg_uri_db) -c "SELECT ingest.generate_readme('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)');"
 	sudo chmod 777 $(readme_output)
-	@echo " Check diff, the '<' lines are the new ones... Something changed?"
-	@diff $(readme_output) ./README-draft.md || :
+	@echo " Check diff, the '<' lines are the new ones. Something changed?"
+	@diff $(readme_output) ./README.md || :
 	@echo "If some changes, and no error in the changes, move the readme:"
-	@echo " mv $(readme_output) ./README-draft.md"
+	@echo " mv $(readme_output) ./README.md"
+ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
-	mv $(readme_output) ./README-draft.md
+endif
+	mv $(readme_output) ./README.md
 
 insert_size:
-	@echo "-- Updating make_conf with files size --"
+	@echo "-- Inserting size in files of make_conf --"
 	psql $(pg_uri_db) -c "SELECT ingest.generate_make_conf_with_size('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)','$(orig)');"
 	sudo chmod 777 $(conf_output)
-	@echo " Check diff, the '<' lines are the new ones... Something changed?"
+	@echo " Check diff, the '<' lines are the new ones. Something changed?"
 	@diff $(conf_output) ./make_conf.yaml || :
 	@echo "If some changes, and no error in the changes, move the script:"
 	@echo " mv $(conf_output) ./make_conf.yaml"
+ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+endif
 	mv $(conf_output) ./make_conf.yaml
 
 insert_license:
-	@echo "-- Updating make_conf with files licenses --"
+	@echo "-- Inserting files_licenses in make_conf --"
 	psql $(pg_uri_db) -c "SELECT ingest.generate_make_conf_with_license('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)');"
 	sudo chmod 777 $(conf_output)
-	@echo " Check diff, the '<' lines are the new ones... Something changed?"
+	@echo " Check diff, the '<' lines are the new ones. Something changed?"
 	@diff $(conf_output) ./make_conf.yaml || :
 	@echo "If some changes, and no error in the changes, move the script:"
 	@echo " mv $(conf_output) ./make_conf.yaml"
+ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+endif
 	mv $(conf_output) ./make_conf.yaml
 
 delete_file:
+	@echo "-- Deleting donated donated packcomponent --"
 	@echo "Usage: make delete_file id=<id de donated_packcomponent>"
 	@echo "id: $(id)"
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
