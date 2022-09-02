@@ -11,7 +11,7 @@ ORDER BY scope_label, legalName
 ;
 
 CREATE or replace VIEW optim.vw02generate_list AS
-SELECT jsonb_build_object('paises',jsonb_build_object('scope_label', scope_label, 'iso1', iso1, 'iso3', iso3, 'jurisd', jurisd)) AS y 
+SELECT jsonb_build_object('paises',jsonb_agg(jsonb_build_object('scope_label', scope_label, 'iso1', iso1, 'iso3', iso3, 'jurisd', jurisd))) AS y 
 FROM
 (
     SELECT COALESCE(s.scope_label,r.scope_label) AS scope_label, iso3, iso1, jurisd
