@@ -177,7 +177,7 @@ COMMENT ON TABLE ingest.via_line
 
 ---------
 
-CREATE FOREIGN TABLE ingest.fdw_jurisdiction (
+CREATE FOREIGN TABLE ingest.vw01full_jurisdiction_geom (
  osm_id          bigint,
  jurisd_base_id  integer,
  jurisd_local_id integer,
@@ -194,28 +194,12 @@ CREATE FOREIGN TABLE ingest.fdw_jurisdiction (
  lex_urn         text,
  info            jsonb,
  name_en         text,
- isolevel        text
-) SERVER foreign_server_dl03
-  OPTIONS (schema_name 'optim', table_name 'jurisdiction')
-;
-
-CREATE FOREIGN TABLE ingest.fdw_jurisdiction_geom (
- osm_id          bigint,
- isolabel_ext    text,
- geom            geometry(Geometry,4326),
- kx_ghs1_intersects text[],
- kx_ghs2_intersects text[]
+ isolevel        text,
+ geom            geometry(Geometry,4326)
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
 ;
-
-CREATE VIEW ingest.vw01full_jurisdiction_geom AS
-    SELECT j.*, g.geom
-    FROM ingest.fdw_jurisdiction j
-    LEFT JOIN ingest.fdw_jurisdiction_geom g
-    ON j.osm_id = g.osm_id
-;
-COMMENT ON VIEW ingest.vw01full_jurisdiction_geom
+COMMENT ON FOREIGN TABLE ingest.vw01full_jurisdiction_geom
   IS 'Add geom to ingest.fdw_jurisdiction.'
 ;
 
@@ -241,6 +225,61 @@ CREATE FOREIGN TABLE ingest.vw03publication (
  page         jsonb
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'vw03publication');
+
+
+CREATE FOREIGN TABLE ingest.vw02full_donated_packfilevers (
+  id                       bigint,
+  hashedfname              text,
+  pack_id                  bigint,
+  pack_item                integer,
+  pack_item_accepted_date  date,
+  kx_pack_item_version     integer,
+  user_resp                text,
+  info                     jsonb,
+  local_serial_formated    text,
+  pack_number              text,
+  path_cutgeo_server       text,
+  path_preserv_server      text,
+  path_preserv_git         text,
+  path_cutgeo_git          text,
+  hashedfname_7            text,
+  hashedfname_without_ext  text,
+  donor_id                 integer,
+  pk_count                 integer,
+  original_tpl             text,
+  make_conf_tpl            jsonb,
+  kx_num_files             integer,
+  packtpl_info             jsonb,
+  country_id               integer,
+  local_serial             integer,
+  scope_osm_id             bigint,
+  scope_label              text,
+  shortname                text,
+  vat_id                   text,
+  legalname                text,
+  wikidata_id              bigint,
+  url                      text,
+  donor_info               jsonb,
+  kx_vat_id                text,
+  osm_id                   bigint,
+  jurisd_base_id           integer,
+  jurisd_local_id          integer,
+  parent_id                bigint,
+  admin_level              smallint,
+  name                     text,
+  parent_abbrev            text,
+  abbrev                   text,
+  jurisdiction_wikidata_id bigint,
+  lexlabel                 text,
+  isolabel_ext             text,
+  ddd                      integer,
+  housenumber_system_type  text,
+  lex_urn                  text,
+  jurisdiction_info        jsonb,
+  geom                     geometry(Geometry,4326),
+  isolevel                 integer
+) SERVER foreign_server_dl03
+  OPTIONS (schema_name 'optim', table_name 'vw01full_packfilevers');
 
 CREATE FOREIGN TABLE ingest.vwdonatedpacks_donor (
  jurisdiction text    ,
@@ -273,46 +312,6 @@ CREATE FOREIGN TABLE ingest.vwdonatedpacks_donor (
  donor_status         text
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'api', table_name 'donatedpacks_donor');
-
-CREATE FOREIGN TABLE ingest.fdw_donor (
- id integer,
- country_id integer,
- local_serial integer,
- scope_osm_id bigint,
- scope_label text,
- shortname text,
- vat_id text,
- legalname text,
- wikidata_id bigint,
- url text,
- info jsonb,
- kx_vat_id text
-) SERVER foreign_server_dl03
-  OPTIONS (schema_name 'optim', table_name 'donor');
-
-CREATE FOREIGN TABLE ingest.fdw_donated_PackTpl (
- id bigint,
- donor_id integer,
- user_resp text,
- pk_count integer,
- original_tpl text,
- make_conf_tpl jsonb,
- kx_num_files integer,
- info jsonb
-) SERVER foreign_server_dl03
-  OPTIONS (schema_name 'optim', table_name 'donated_packtpl');
-
-CREATE FOREIGN TABLE ingest.fdw_donated_PackFileVers (
- id bigint,
- hashedfname text,
- pack_id bigint,
- pack_item integer,
- pack_item_accepted_date date,
- kx_pack_item_version integer,
- user_resp text,
- info jsonb
-) SERVER foreign_server_dl03
-  OPTIONS (schema_name 'optim', table_name 'donated_packfilevers');
 
 CREATE FOREIGN TABLE ingest.fdw_feature_type (
  ftid smallint,
@@ -433,35 +432,15 @@ COMMENT ON VIEW ingest.vw02simple_feature_asis
 -- Homologando o uso do feature_id como gid, n=n2:
 --  SELECT count(*) n, count(distinct feature_id::text||','||file_id::text) n2 FROM ingest.feature_asis;
 
---DROP VIEW IF EXISTS ingest.vw02full_donated_packfilevers CASCADE;
-CREATE or replace VIEW ingest.vw02full_donated_packfilevers AS
-  SELECT pf.*, j.isolabel_ext, j.geom, '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_cutgeo,
-  '/var/gits/_dg/preserv-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv
-  FROM ingest.fdw_donated_packfilevers pf
-  LEFT JOIN ingest.fdw_donated_PackTpl pt
-    ON pf.pack_id=pt.id
-  LEFT JOIN ingest.fdw_donor dn
-    ON pt.donor_id=dn.id
-  LEFT JOIN ingest.vw01full_jurisdiction_geom j
-    ON dn.scope_osm_id=j.osm_id
-  ORDER BY j.isolabel_ext
-;
-
 --DROP VIEW IF EXISTS ingest.vw03full_layer_file CASCADE;
 CREATE VIEW ingest.vw03full_layer_file AS
-  SELECT j.isolabel_ext,dn.scope_label, pc.*, ft.ftname, ft.geomtype, j.housenumber_system_type, ft.need_join, ft.description, ft.info AS ft_info
+  SELECT pf.isolabel_ext, pf.scope_label, pc.*, ft.ftname, ft.geomtype, pf.housenumber_system_type, ft.need_join, ft.description, ft.info AS ft_info
   FROM ingest.donated_PackComponent pc
   INNER JOIN ingest.vw01info_feature_type ft
     ON pc.ftid=ft.ftid
-  LEFT JOIN ingest.fdw_donated_packfilevers pf
+  LEFT JOIN ingest.vw02full_donated_packfilevers pf
     ON pc.packvers_id=pf.id
-  LEFT JOIN ingest.fdw_donated_PackTpl pt
-    ON pf.pack_id=pt.id
-  LEFT JOIN ingest.fdw_donor dn
-    ON pt.donor_id=dn.id
-  LEFT JOIN ingest.vw01full_jurisdiction_geom j
-    ON dn.scope_osm_id=j.osm_id
-  ORDER BY j.isolabel_ext
+  ORDER BY pf.isolabel_ext
 ;
 
 CREATE VIEW ingest.vw03dup_feature_asis AS
@@ -2227,9 +2206,9 @@ BEGIN
         dict := jsonb_set( dict, array['layers',key,'tabname'] , to_jsonb('pk' || (dict->'layers'->key->>'fullPkID') || '_p' || (dict->'layers'->key->>'file') || '_' || key));
 
         dict := jsonb_set( dict, array['layers',key,'isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['layers',key,'path_cutgeo'] , to_jsonb((SELECT path_cutgeo || '/' || key FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['layers',key,'path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server || '/' || key FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
 
-        dict := jsonb_set( dict, array['path_preserv'] , to_jsonb((SELECT path_preserv FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['path_preserv_server'] , to_jsonb((SELECT path_preserv_server FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
 
         IF dict?'orig'
@@ -2686,7 +2665,7 @@ CREATE or replace FUNCTION ingest.join(
                 FROM ingest.fdw_feature_type
                 WHERE ftname=lower('%s')
                 )
-                AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
+                AND packvers_id = (SELECT id FROM ingest.vw02full_donated_packfilevers WHERE hashedfname = '%s')
             )
       ),
       duplicate_keys AS (
@@ -2705,7 +2684,7 @@ CREATE or replace FUNCTION ingest.join(
                     --FROM ingest.fdw_feature_type
                     --WHERE ftname=lower('%s')
                     --)
-                    --AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
+                    --AND packvers_id = (SELECT id FROM ingest.vw02full_donated_packfilevers WHERE hashedfname = '%s')
             --)
         --) AS asis
 
@@ -2734,7 +2713,7 @@ CREATE or replace FUNCTION ingest.join(
                 FROM ingest.fdw_feature_type
                 WHERE ftname=lower('%s')
                 )
-                AND packvers_id = (SELECT id FROM ingest.fdw_donated_PackFileVers WHERE hashedfname = '%s')
+                AND packvers_id = (SELECT id FROM ingest.vw02full_donated_packfilevers WHERE hashedfname = '%s')
             )
             AND c.properties->'%s' NOT IN (  SELECT * FROM duplicate_keys  )
             RETURNING 1

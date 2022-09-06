@@ -1,5 +1,5 @@
 publicating_geojsons_{{layername_root}}: isolabel   = {{isolabel_ext}}
-publicating_geojsons_{{layername_root}}: folder     = {{path_cutgeo}}
+publicating_geojsons_{{layername_root}}: folder     = {{path_cutgeo_server}}
 publicating_geojsons_{{layername_root}}: pretty_opt = 3
 publicating_geojsons_{{layername_root}}: view       = vw{{file}}_{{tabname}}_publicating
 publicating_geojsons_{{layername_root}}:
@@ -16,7 +16,7 @@ publicating_geojsons_{{layername_root}}:
 	@echo "--- Check DIFF in $(pg_io)/$(isolabel)_{{layername_root}}_ls_diff.txt ---"
 	@diff $(pg_io)/$(isolabel)_{{layername_root}}_ls_before.txt $(pg_io)/$(isolabel)_{{layername_root}}_ls_after.txt > $(pg_io)/$(isolabel)_{{layername_root}}_ls_diff.txt || true
 
-audit-geojsons_{{layername_root}}: folder = {{path_cutgeo}}
+audit-geojsons_{{layername_root}}: folder = {{path_cutgeo_server}}
 audit-geojsons_{{layername_root}}:
 	@ls -lS   $(folder)/*.geojson | awk 'BEGIN {print "-- MÉDIA:"} $$5 {n=n+1;s=s+$$5;} END {print "\tnum arquivos: " n; print "\ttamanho médio: " s/(1024*n) " KiB" }'
 	@ls -lhS  $(folder)/*.geojson | head | awk 'BEGIN {print "-- MAIORES:"} $$5 {print $$5 " | " $$9;}'

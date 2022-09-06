@@ -7,11 +7,11 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
     'wikidata_id', wikidata_id,
     'user_resp', user_resp,
     'accepted_date', pack_item_accepted_date,
-    'path_preserv', path_preserv,
+    'path_preserv_git', path_preserv_git,
     'pack_number', pack_number,
-    'path_cutgeo', path_cutgeo,
+    'path_cutgeo_git', path_cutgeo_git,
     'license_evidences',license_evidences,
-    'path_cutgeo_notree', replace(path_cutgeo,'tree/',''),
+    'path_cutgeo_notree', replace(replace(path_cutgeo_git,'tree/',''),'http://git.digital-guard.org/',''),
     'layers',  jsonb_agg(jsonb_build_object(
                 'class_ftname', class_ftname,
                 'shortname', shortname,
@@ -27,7 +27,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
     ) AS page
 FROM (
   SELECT pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.kx_pack_item_version, pf.local_serial, pf.pk_count, pf.pack_number,
-  INITCAP(pf.user_resp) AS user_resp,
+  INITCAP(pf.user_resp) AS user_resp, pf.path_preserv_git, pf.path_cutgeo_git,
   row_number() OVER (PARTITION BY pf.isolabel_ext, pf.local_serial, pf.pk_count ORDER BY pf.ftype_info->'class_ftname' ASC ) AS row_num,
   pf.ftype_info->>'class_ftname' as class_ftname,
   pf.ftype_info->'class_info'->>'shortname_pt' as shortname,
@@ -59,9 +59,7 @@ FROM (
             END,
             'isGeoaddress', iif(pf.ftype_info->>'class_ftname'='geoaddress','true'::jsonb,'false'::jsonb),
         'bytes_mb', (pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0
-  ) || (pc.kx_profile->'publication_summary') AS publication_summary,
-  regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || pf.local_serial_formated || '.' || to_char(pf.pk_count,'fm00') AS path_preserv,
-  'preservCutGeo-' || regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || pf.local_serial_formated || '.' || to_char(pf.pk_count,'fm00') AS path_cutgeo
+  ) || (pc.kx_profile->'publication_summary') AS publication_summary
 
   FROM optim.vw01full_packfilevers_ftype pf
   INNER JOIN optim.donated_PackComponent pc
@@ -70,7 +68,7 @@ FROM (
   WHERE pf.ftid > 19
   ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
 ) t
-GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv, pack_number, path_cutgeo, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences
+GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv_git, pack_number, path_cutgeo_git, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences
 ;
 COMMENT ON VIEW optim.vw03publication
   IS 'Generate json for mustache template for preservDataViz pages.'
