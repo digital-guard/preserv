@@ -2207,7 +2207,9 @@ BEGIN
 
         dict := jsonb_set( dict, array['layers',key,'isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['layers',key,'path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server || '/' || key FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['layers',key,'path_cutgeo_git'] , to_jsonb((SELECT path_cutgeo_git || '/' || key FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
 
+        dict := jsonb_set( dict, array['path_preserv_git'] , to_jsonb((SELECT path_preserv_git FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['path_preserv_server'] , to_jsonb((SELECT path_preserv_server FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
 
@@ -2607,9 +2609,9 @@ CREATE or replace FUNCTION ingest.generate_readme(
     SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
     SELECT pg_read_file(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/readme.mustache') INTO readme;
 
-    SELECT f_yaml->>'pg_io' || '/README-draft_' || jurisd || pack_id INTO output_file;
+    SELECT f_yaml->>'pg_io' || '/README_' || jurisd || pack_id INTO output_file;
 
-    SELECT jsonb_mustache_render(readme, conf_yaml) || (CASE WHEN file_exists(p_yaml->>'path_preserv' ||'/attachment.md') THEN pg_read_file(p_yaml->>'path_preserv' ||'/attachment.md') ELSE '' END)
+    SELECT jsonb_mustache_render(readme, conf_yaml) || (CASE WHEN file_exists(p_yaml->>'path_preserv_server' ||'/attachment.md') THEN pg_read_file(p_yaml->>'path_preserv_server' ||'/attachment.md') ELSE '' END)
     INTO q_query;
 
     SELECT volat_file_write(output_file,q_query) INTO q_query;
