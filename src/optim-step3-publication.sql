@@ -10,6 +10,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
     'path_preserv', path_preserv,
     'pack_number', pack_number,
     'path_cutgeo', path_cutgeo,
+    'license_evidences',license_evidences,
     'path_cutgeo_notree', replace(path_cutgeo,'tree/',''),
     'layers',  jsonb_agg(jsonb_build_object(
                 'class_ftname', class_ftname,
@@ -69,7 +70,7 @@ FROM (
   WHERE pf.ftid > 19
   ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
 ) t
-GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv, pack_number, path_cutgeo, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count
+GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv, pack_number, path_cutgeo, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences
 ;
 COMMENT ON VIEW optim.vw03publication
   IS 'Generate json for mustache template for preservDataViz pages.'
