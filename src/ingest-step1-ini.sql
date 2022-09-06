@@ -197,7 +197,7 @@ CREATE FOREIGN TABLE ingest.vw01full_jurisdiction_geom (
  isolevel        text,
  geom            geometry(Geometry,4326)
 ) SERVER foreign_server_dl03
-  OPTIONS (schema_name 'optim', table_name 'jurisdiction_geom')
+  OPTIONS (schema_name 'optim', table_name 'vw01full_jurisdiction_geom')
 ;
 COMMENT ON FOREIGN TABLE ingest.vw01full_jurisdiction_geom
   IS 'Add geom to ingest.fdw_jurisdiction.'
@@ -2198,7 +2198,7 @@ BEGIN
 
         dict := jsonb_set( dict, array['layers',key,'file_data'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0));
 
-        SELECT id FROM ingest.fdw_donated_packfilevers WHERE hashedfname = dict->'layers'->key->>'sha256file' INTO packvers_id;
+        SELECT id FROM ingest.vw02full_donated_packfilevers WHERE hashedfname = dict->'layers'->key->>'sha256file' INTO packvers_id;
 
         dict := jsonb_set( dict, array['layers',key,'fullPkID'] , to_jsonb(packvers_id));
         dict := jsonb_set( dict, array['layers',key,'layername_root'] , to_jsonb(key));
