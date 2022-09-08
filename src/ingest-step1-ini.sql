@@ -2140,6 +2140,20 @@ BEGIN
         dict := jsonb_set( dict, array['has_to-do'], bt);
     END IF;
 
+    IF dict?'license_evidences'
+    THEN
+      IF dict->'license_evidences'?'file'
+      THEN
+          dict := jsonb_set( dict, array['license_evidences','file_7'], to_jsonb( substring(dict->'license_evidences'->>'file', '^([0-9a-f]{7}).+$') ) );
+          dict := jsonb_set( dict, array['license_evidences','file_7_ext'], to_jsonb( substring(dict->'license_evidences'->>'file', '^([0-9a-f]{7}).+$') || '...' || substring(dict->'license_evidences'->>'file', '^.+\.([a-z0-9]+)$') ) );
+      END IF;
+      IF dict->'license_evidences'?'uri_evidency'
+      THEN
+          dict := jsonb_set( dict, array['license_evidences','uri_evidency_7'], to_jsonb( substring(dict->'license_evidences'->>'uri_evidency', '^([0-9a-f]{7}).+$') ) );
+          dict := jsonb_set( dict, array['license_evidences','uri_evidency_7_ext'], to_jsonb( substring(dict->'license_evidences'->>'uri_evidency', '^([0-9a-f]{7}).+$') || '...' || substring(dict->'license_evidences'->>'uri_evidency', '^.+\.([a-z0-9]+)$') ) );
+      END IF;
+    END IF;
+
     FOREACH key IN ARRAY jsonb_object_keys_asarray(dict->'layers')
     LOOP
         method := dict->'layers'->key->>'method';
@@ -2424,6 +2438,7 @@ END;
 $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk0001.01/make_conf.yaml') ); 
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/SP/SaoPaulo/_pk0033.01/make_conf.yaml') );
 
 CREATE or replace FUNCTION ingest.insert_bytesize(
   dict   jsonb,  -- input
