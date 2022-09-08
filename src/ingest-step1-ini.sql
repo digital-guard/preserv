@@ -2147,10 +2147,17 @@ BEGIN
           dict := jsonb_set( dict, array['license_evidences','file_7'], to_jsonb( substring(dict->'license_evidences'->>'file', '^([0-9a-f]{7}).+$') ) );
           dict := jsonb_set( dict, array['license_evidences','file_7_ext'], to_jsonb( substring(dict->'license_evidences'->>'file', '^([0-9a-f]{7}).+$') || '...' || substring(dict->'license_evidences'->>'file', '^.+\.([a-z0-9]+)$') ) );
       END IF;
+
       IF dict->'license_evidences'?'uri_evidency'
       THEN
+        IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^.+\.eml$'))
+        THEN
+          dict := jsonb_set( dict, array['license_evidences','is_uri_evidency_eml'], bt );
           dict := jsonb_set( dict, array['license_evidences','uri_evidency_7'], to_jsonb( substring(dict->'license_evidences'->>'uri_evidency', '^([0-9a-f]{7}).+$') ) );
           dict := jsonb_set( dict, array['license_evidences','uri_evidency_7_ext'], to_jsonb( substring(dict->'license_evidences'->>'uri_evidency', '^([0-9a-f]{7}).+$') || '...' || substring(dict->'license_evidences'->>'uri_evidency', '^.+\.([a-z0-9]+)$') ) );
+        ELSE
+          dict := jsonb_set( dict, array['license_evidences','is_uri_evidency_eml'], bf );
+        END IF;
       END IF;
     END IF;
 
