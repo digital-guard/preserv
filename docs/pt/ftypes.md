@@ -9,7 +9,7 @@ A tabela `ingest.feature_asis` armazena todos os dados ingeridos, de "todos" os 
 * <img src="../assets/layerIcon-building.png" align="middle" width="40"/> **building**: Polígono de edificação.
 * <img src="../assets/layerIcon-parcel.png" align="middle" width="40"/> **parcel**: Polígono de lote.
 * <img src="../assets/layerIcon-namedZone.png" align="middle" width="40"/> **nsvia**: *Namespace* para distinguir vias duplicadas, tipicamente nome de polígono de bairro ou de loteamento.
-* **block**: Quadras ou divisões poligonais similares.
+* <img src="../assets/layerIcon-block.png" align="middle" width="40"/> **block**: Quadras ou divisões poligonais similares.
 
 <img align="right" src="../assets/asIs_tabs_geom2full.png"/>
 
