@@ -163,17 +163,17 @@ CREATE TABLE ingest.hcode_parameters (
   comments                      text
 );
 
-CREATE TABLE ingest.via_line(
-  pck_id real NOT NULL, -- REFERENCES optim.donatedPack(pck_id),
-  vianame text,
-  is_informal boolean default false, -- non-official name (loteamentos com ruas ainda sem nome)
-  geom geometry,
-  info JSONb,
-  UNIQUE(pck_id,geom)
-);
-COMMENT ON TABLE ingest.via_line
-  IS 'Ingested via lines (street axis) of one or more packages, temporary data (not need package-version).'
-;
+--CREATE TABLE ingest.via_line(
+  --pck_id real NOT NULL, -- REFERENCES optim.donatedPack(pck_id),
+  --vianame text,
+  --is_informal boolean default false, -- non-official name (loteamentos com ruas ainda sem nome)
+  --geom geometry,
+  --info JSONb,
+  --UNIQUE(pck_id,geom)
+--);
+--COMMENT ON TABLE ingest.via_line
+  --IS 'Ingested via lines (street axis) of one or more packages, temporary data (not need package-version).'
+--;
 
 ---------
 
@@ -208,7 +208,7 @@ RETURNS geometry AS $f$
     SELECT
         CASE
         WHEN buffer_type=0 THEN geom                  -- no buffer
-        WHEN buffer_type=1 THEN ST_Buffer(geom,0.001) --  ~100m
+        WHEN buffer_type=1 THEN ST_Buffer(geom,0.001) -- ~100m
         WHEN buffer_type=2 THEN ST_Buffer(geom,0.05)  -- ~5000m
         WHEN buffer_type=3 THEN ST_Buffer(geom,0.5)   -- ~50km
         WHEN buffer_type=4 THEN ST_Buffer(geom,5)     -- ~500km

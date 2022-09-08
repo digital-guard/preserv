@@ -296,3 +296,18 @@ Ao alterações no sha256 de arquivos make_conf.yaml:
 ## Load arquivos do CutGeo a partir de um diretório
 
 find /var/gits/_dg/preservCutGeo-BR2021/data -maxdepth 5 -type d -iwholename "*_pk*\/*" -exec bash loadGeojson.bash {} ingestXX \;
+
+## Inserir size no make_conf.yaml
+Procedimento para inserir `size` em `files` de um make_conf:
+
+```
+pushd /var/gits/_dg/preserv-BR/src
+make all
+pushd /var/gits/_dg/preserv-BR/data/AC/RioBranco/_pk0042.01
+make me
+make wget_files orig=/tmp/pg_io/tmpfolder
+make insert_size orig=/tmp/pg_io/tmpfolder
+rm -rf /tmp/pg_io/tmpfolder
+popd
+popd
+```
