@@ -223,10 +223,10 @@ datagrid-clean:
 {{/layers}}
 
 {{#openstreetmap}}
-openstreetmap: makedirs $(orig)/{{sha256file}}
+openstreetmap: makedirs $(orig)/{{file_data.file}}
 	@# pk{{pack_id}}_p{{file}} - ETL extrating to PostgreSQL/PostGIS the "openstreetmap" data
-	cp -s  $(orig)/{{sha256file}} $(sandbox)
-	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/{{sha256file}}
+	cp -s  $(orig)/{{file_data.file}} $(sandbox)
+	osm2pgsql -E {{srid}} -c -d $(pg_db) -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style $(sandbox)/{{file_data.file}}
 	@echo "Convertendo hstore para jsonb"
 	psql $(pg_uri_db) -c "SELECT ingest.jplanet_inserts_and_drops({{country_id}}::smallint,true);"
 {{>common007_layerFooter}}

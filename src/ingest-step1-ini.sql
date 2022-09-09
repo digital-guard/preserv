@@ -2109,7 +2109,7 @@ BEGIN
     THEN
         IF codec_desc_global IS NOT NULL
         THEN
-            dict := jsonb_set( dict, array['openstreetmap','sha256file'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.openstreetmap.file)')::jsonpath  )->0->>'file'));
+            dict := jsonb_set( dict, array['openstreetmap','file_data'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.openstreetmap.file)')::jsonpath  )->0->>'file'));
             
             dict := jsonb_set( dict, array['openstreetmap'], (dict->>'openstreetmap')::jsonb || codec_desc_global::jsonb );
         END IF;
@@ -2195,11 +2195,14 @@ BEGIN
             dict := jsonb_set( dict, array['layers',key,'has_other_fields'], bt);
         END IF;
 
-        dict := jsonb_set( dict, array['layers',key,'sha256file'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'));
-
         dict := jsonb_set( dict, array['layers',key,'file_data'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0));
 
-        SELECT id FROM ingest.vw02full_donated_packfilevers WHERE hashedfname = dict->'layers'->key->>'sha256file' INTO packvers_id;
+        SELECT id FROM ingest.vw02full_donated_packfilevers WHERE hashedfname = dict->'layers'->key->'file_data'->>'file' INTO packvers_id;
+
+        IF dict?'orig'
+        THEN
+            dict := jsonb_set( dict, array['layers',key,'file_data','path'] , to_jsonb((dict->>'orig') || '/' || (dict->'layers'->key->'file_data'->>'file') ));
+        END IF;
 
         dict := jsonb_set( dict, array['layers',key,'fullPkID'] , to_jsonb(packvers_id));
         dict := jsonb_set( dict, array['layers',key,'layername_root'] , to_jsonb(key));
@@ -2216,11 +2219,6 @@ BEGIN
         dict := jsonb_set( dict, array['path_preserv_git'] , to_jsonb((SELECT path_preserv_git FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['path_preserv_server'] , to_jsonb((SELECT path_preserv_server FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
-
-        IF dict?'orig'
-        THEN
-            dict := jsonb_set( dict, array['layers',key,'sha256file_path'] , to_jsonb((dict->>'orig') || '/' || (dict->'layers'->key->>'sha256file') ));
-        END IF;
 
         -- Caso de BR-PR-Araucaria/_pk0061.01
         IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
@@ -2393,6 +2391,16 @@ BEGIN
                 ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)')::jsonpath  )->0->>'file'
                 -- check by dict @? ('$.files[*].p ? (@ == $.layers.'|| key ||'.file)')
             ));
+            dict := jsonb_set( dict, array['layers',key,'join_data'] , jsonb_build_object(
+                'cadLayer',        'cad' || key
+                ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_column'
+                ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)')::jsonpath  )->0->>'file'
+            ));
+            dict := jsonb_set( dict, array['layers','cad'||key,'join_data'] , jsonb_build_object(
+                'cadLayer',         key
+                ,'cadLayerColumn',  dict->'layers'->key->'join_column'
+                ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
+            ));
         END IF;
 
         IF key='geoaddress' AND dict->'layers'?'address'
@@ -2409,6 +2417,16 @@ BEGIN
                 ,'cadLayerColumn',  dict->'layers'->'address'->'join_column'
                 ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
                 ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.address.file)')::jsonpath  )->0->>'file'
+            ));
+            dict := jsonb_set( dict, array['layers',key,'join_data'] , jsonb_build_object(
+                'cadLayer',        'address'
+                ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_column'
+                ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)')::jsonpath  )->0->>'file'
+            ));
+            dict := jsonb_set( dict, array['layers','cad'||key,'join_data'] , jsonb_build_object(
+                'cadLayer',         key
+                ,'cadLayerColumn',  dict->'layers'->key->'join_column'
+                ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
             ));
         END IF;
 	 END LOOP;
