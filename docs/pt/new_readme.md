@@ -19,74 +19,54 @@ files:
     name: Bairros
     comments: Comentários sobre o arquivo, se houver.
     size: 1234
-  -
-    p:    2
-    file: 47910adcd297a9ba875d89dacc91bc6b2a37d6eab4910964253e117c1484b4c5.zip
-    name: Logradouros
-    comments: Comentários sobre o arquivo, se houver.
-    size: 1234
 
 layers:
 
   geoaddress:
     subtype: ext
     method: shp2sql
-    file: 3
+    file: 1
     sql_select: ['gid', 'numnovo as house_number', 'cod_log', 'geom']
     orig_filename: pg_renumeracoes
-    join_column: cod_log
     comments: Comentários referente ao layer, se houver.
-    test_evidence: endereço da imagem. 
+    test_evidence: endereço da imagem de evidencia do layer.
+    
+    # dados relevantes, padronizados
     standardized_fields:
      -
-      name: numnovo
-      standard: house_number
-      comment: comentários, se houver.
+      name: nome do campo ou combinação de campos
+      standard: 'nome padronizado, por exemplo: house_number'
+      comment: comentários sobre o campo, se houver.
+
+    # dados relevantes, NÃO padronizados, se houver
     other_fields:
      -
-      name: cod_log
-      comment: Identificador, usado para join.
+      name: nome do campo ou combinação de campos
+      comment: comentários sobre o campo, se houver.
 
-  address:
-    subtype: cmpl
-    method: shp2sql
-    file: 2
-    sql_view: SELECT DISTINCT Logradouro as via_name, cod_log FROM $(tabname) WHERE Logradouro IS NOT NULL
-    orig_filename: pg_cartografia_logradouros
-    join_column: cod_log
-    comments: Comentários referente ao layer, se houver.
-    test_evidence: endereço da imagem. 
-    standardized_fields:
-     -
-      name: Logradouro
-      standard: via_name
-      comment: comentários, se houver.
-    other_fields:
-     -
-      name: cod_log
-      comment: Identificador, usado para join.
+comments: Comentários gerais sobre os dados, sobre o pacote, etc, se houver.
 
-comments: Comentários gerais, se houver.
+test_evidence: endereço da imagem de evidencia de todos os dados. 
 
-test_evidence: endereço da imagem. 
-
+# outros arquivos que podem ser úteis
 other_files:
   -
-    p: 4
+    p: 2
     file: pg_div_municipio.zip
     name: pg_div_municipio
     format: shp
     comment: Arquivo com a divisa territorial de guarulhos e vizinhos.
   -
-    p: 5 
+    p: 3 
     file: pg_cartografia_ct_vias.zip
     name: pg_cartografia_ct_vias
     format: shp
     comment: Arquivo com as vias sem nome do logradouro. Possui mais geometrias que o arquivo importado.
 
+# Lista de tarefas
 to-do: 
-  - E necessario buscar via_name do arquivo geoaddress no arquivo via, atraves do campo 'cod_log'.
-
+  - Tarefa 1.
+  - Tarefa 2.
 ```
 
 ### Como gerar
