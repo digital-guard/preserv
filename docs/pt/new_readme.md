@@ -74,3 +74,10 @@ make readme pd_db=ingest99
 popd
 popd
 ```
+
+### Exemplos:
+
+* https://github.com/digital-guard/preserv-BR/tree/main/data/SP/SaoPaulo/_pk0033.01
+* https://github.com/digital-guard/preserv-BR/tree/main/data/AC/RioBranco/_pk0042.01
+* https://github.com/digital-guard/preserv-BR/tree/main/data/SP/Atibaia/_pk0021.01
+* https://github.com/digital-guard/preserv-BR/tree/main/data/ES/CachoeiroItapemirim/_pk0091.01
