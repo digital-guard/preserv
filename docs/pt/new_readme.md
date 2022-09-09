@@ -56,17 +56,10 @@ other_files:
     name: pg_div_municipio
     format: shp
     comment: Arquivo com a divisa territorial de guarulhos e vizinhos.
-  -
-    p: 3 
-    file: pg_cartografia_ct_vias.zip
-    name: pg_cartografia_ct_vias
-    format: shp
-    comment: Arquivo com as vias sem nome do logradouro. Possui mais geometrias que o arquivo importado.
 
 # Lista de tarefas
 to-do: 
   - Tarefa 1.
-  - Tarefa 2.
 ```
 
 ### Como gerar
