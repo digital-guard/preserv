@@ -177,32 +177,6 @@ CREATE TABLE ingest.hcode_parameters (
 
 ---------
 
-CREATE FOREIGN TABLE ingest.vw01full_jurisdiction_geom (
- osm_id          bigint,
- jurisd_base_id  integer,
- jurisd_local_id integer,
- parent_id       bigint,
- admin_level     smallint,
- name            text,
- parent_abbrev   text,
- abbrev          text,
- wikidata_id     bigint,
- lexlabel        text,
- isolabel_ext    text,
- ddd             integer,
- housenumber_system_type text,
- lex_urn         text,
- info            jsonb,
- name_en         text,
- isolevel        text,
- geom            geometry(Geometry,4326)
-) SERVER foreign_server_dl03
-  OPTIONS (schema_name 'optim', table_name 'vw01full_jurisdiction_geom')
-;
-COMMENT ON FOREIGN TABLE ingest.vw01full_jurisdiction_geom
-  IS 'Add geom to ingest.fdw_jurisdiction.'
-;
-
 CREATE OR REPLACE FUNCTION ingest.buffer_geom(geom geometry, buffer_type integer )
 RETURNS geometry AS $f$
     SELECT
@@ -219,13 +193,15 @@ COMMENT ON FUNCTION ingest.buffer_geom(geometry,integer)
   IS 'Add standardized buffer to geometries.'
 ;
 
-CREATE FOREIGN TABLE ingest.vw03publication (
- isolabel_ext text,
- pack_number  text,
- page         jsonb
+CREATE FOREIGN TABLE ingest.fdw_feature_type (
+ ftid smallint,
+ ftname text,
+ geomtype text,
+ need_join boolean,
+ description text,
+ info jsonb
 ) SERVER foreign_server_dl03
-  OPTIONS (schema_name 'optim', table_name 'vw03publication');
-
+  OPTIONS (schema_name 'optim', table_name 'vw01info_feature_type');
 
 CREATE FOREIGN TABLE ingest.vw02full_donated_packfilevers (
   id                       bigint,
@@ -281,6 +257,32 @@ CREATE FOREIGN TABLE ingest.vw02full_donated_packfilevers (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'vw01full_packfilevers');
 
+CREATE FOREIGN TABLE ingest.vw01full_jurisdiction_geom (
+ osm_id          bigint,
+ jurisd_base_id  integer,
+ jurisd_local_id integer,
+ parent_id       bigint,
+ admin_level     smallint,
+ name            text,
+ parent_abbrev   text,
+ abbrev          text,
+ wikidata_id     bigint,
+ lexlabel        text,
+ isolabel_ext    text,
+ ddd             integer,
+ housenumber_system_type text,
+ lex_urn         text,
+ info            jsonb,
+ name_en         text,
+ isolevel        text,
+ geom            geometry(Geometry,4326)
+) SERVER foreign_server_dl03
+  OPTIONS (schema_name 'optim', table_name 'vw01full_jurisdiction_geom')
+;
+COMMENT ON FOREIGN TABLE ingest.vw01full_jurisdiction_geom
+  IS 'Add geom to ingest.fdw_jurisdiction.'
+;
+
 CREATE FOREIGN TABLE ingest.vwdonatedpacks_donor (
  jurisdiction text    ,
  pack_id              integer ,
@@ -313,15 +315,12 @@ CREATE FOREIGN TABLE ingest.vwdonatedpacks_donor (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'api', table_name 'donatedpacks_donor');
 
-CREATE FOREIGN TABLE ingest.fdw_feature_type (
- ftid smallint,
- ftname text,
- geomtype text,
- need_join boolean,
- description text,
- info jsonb
+CREATE FOREIGN TABLE ingest.vw03publication (
+ isolabel_ext text,
+ pack_number  text,
+ page         jsonb
 ) SERVER foreign_server_dl03
-  OPTIONS (schema_name 'optim', table_name 'feature_type');
+  OPTIONS (schema_name 'optim', table_name 'vw03publication');
 
 CREATE TABLE ingest.donated_PackComponent(
   -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
@@ -388,25 +387,6 @@ CREATE TABLE ingest.cadastral_asis (
 -- -- -- --
 --  VIEWS:
 
---DROP VIEW IF EXISTS ingest.vw01info_feature_type CASCADE;
-CREATE VIEW ingest.vw01info_feature_type AS
-  SELECT ftid, ftname, geomtype, need_join, description,
-       COALESCE(f.info,'{}'::jsonb) || (
-         SELECT to_jsonb(t2) FROM (
-           SELECT c.ftid as class_ftid, c.ftname as class_ftname,
-                  c.description as class_description,
-                  c.info as class_info
-           FROM ingest.fdw_feature_type c
-           WHERE c.geomtype='class' AND c.ftid = 5*round(f.ftid/5)
-         ) t2
-       ) AS info
-  FROM ingest.fdw_feature_type f
-  WHERE f.geomtype!='class'
-;
-COMMENT ON VIEW ingest.vw01info_feature_type
-  IS 'Adds class_ftname, class_description and class_info to ingest.fdw_feature_type.info.'
-;
-
 --DROP VIEW IF EXISTS ingest.vw02simple_feature_asis CASCADE;
 CREATE VIEW ingest.vw02simple_feature_asis AS
  -- Pending: validar fazendo count(*) comparativo entre a view e a tabela.
@@ -436,7 +416,7 @@ COMMENT ON VIEW ingest.vw02simple_feature_asis
 CREATE VIEW ingest.vw03full_layer_file AS
   SELECT pf.isolabel_ext, pf.scope_label, pc.*, ft.ftname, ft.geomtype, pf.housenumber_system_type, ft.need_join, ft.description, ft.info AS ft_info
   FROM ingest.donated_PackComponent pc
-  INNER JOIN ingest.vw01info_feature_type ft
+  INNER JOIN ingest.fdw_feature_type ft
     ON pc.ftid=ft.ftid
   LEFT JOIN ingest.vw02full_donated_packfilevers pf
     ON pc.packvers_id=pf.id
@@ -495,7 +475,7 @@ CREATE FUNCTION ingest.donated_PackComponent_geomtype(
 ) RETURNS text[] AS $f$
   -- ! pendente revisão para o caso shortname multiplingual, aqui usando só 'pt'
   SELECT array[geomtype, ftname, info->>'class_ftname', info->'class_info'->>'shortname_pt']
-  FROM ingest.vw01info_feature_type
+  FROM ingest.fdw_feature_type
   WHERE ftid = (
     SELECT ftid
     FROM ingest.donated_PackComponent
