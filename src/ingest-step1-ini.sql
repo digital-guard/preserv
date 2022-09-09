@@ -2230,6 +2230,9 @@ BEGIN
         dict := jsonb_set( dict, array['layers',key,'path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server || '/' || key FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['layers',key,'path_cutgeo_git'] , to_jsonb((SELECT path_cutgeo_git || '/' || key FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
 
+        dict := jsonb_set( dict, array['path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['path_cutgeo_git'] , to_jsonb((SELECT path_cutgeo_git FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+
         dict := jsonb_set( dict, array['path_preserv_git'] , to_jsonb((SELECT path_preserv_git FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['path_preserv_server'] , to_jsonb((SELECT path_preserv_server FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
