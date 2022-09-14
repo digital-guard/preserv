@@ -298,6 +298,7 @@ CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
     -- identidade
     SELECT isolabel_ext AS synonym, isolabel_ext AS isolabel_ext
     FROM optim.jurisdiction
+    WHERE isolevel > 1
   )
   UNION ALL
   (
