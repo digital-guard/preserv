@@ -292,7 +292,23 @@ FROM (
 ) t
 ;
 
+--DROP MATERIALIZED VIEW mvwjurisdiction_synonym;
 CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
+  (
+    -- identidade
+    SELECT isolabel_ext AS synonym, isolabel_ext AS isolabel_ext
+    FROM optim.jurisdiction
+  )
+  UNION ALL
+  (
+    -- não deve retornar abbrev repetidos
+    SELECT abbrev, MAX(isolabel_ext)
+    FROM optim.jurisdiction_abbrev_option
+    WHERE selected IS TRUE
+    GROUP BY abbrev
+    HAVING count(*) = 1
+  )
+  UNION ALL
   (
     -- co unique names
     -- eg.: CO-Medellin
