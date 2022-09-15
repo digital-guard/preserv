@@ -10,10 +10,11 @@ SELECT osm_id,
       lexlabel,
       isolabel_ext,
       ddd,
-      jsonb_strip_nulls(info)
+      jsonb_strip_nulls(info) AS info
 FROM optim.jurisdiction
 ;
 --curl "http://localhost:3103/jurisdiction?jurisd_base_id=eq.76&parent_abbrev=eq.CE" -H "Accept: text/csv"
+-- https://osm.codes/_sql.csv/jurisdiction?jurisd_base_id=eq.76&parent_abbrev=eq.CE
 
 ---------
 -- Union de fdw_donor de todas as jurisdições
