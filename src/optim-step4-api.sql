@@ -295,6 +295,9 @@ FROM (
 
 --DROP MATERIALIZED VIEW mvwjurisdiction_synonym;
 CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
+SELECT DISTINCT lower(synonym) AS synonym, isolabel_ext
+FROM
+(
   (
     -- identidade
     SELECT isolabel_ext AS synonym, isolabel_ext AS isolabel_ext
@@ -387,13 +390,14 @@ CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
   (
     -- br unique names
     -- eg.: BR-Zortea
-    SELECT 'BR-' || split_part(isolabel_ext,'-',3) AS synonym, MAX(isolabel_ext) AS isolabel_ext
+    SELECT lower('BR-' || split_part(isolabel_ext,'-',3)) AS synonym, MAX(isolabel_ext) AS isolabel_ext
     FROM optim.jurisdiction j
     WHERE isolevel::int >2 AND isolabel_ext LIKE 'BR%'
     GROUP BY 1
     HAVING count(*)=1
     ORDER BY 1
   )
+) z
 ;
 CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON mvwjurisdiction_synonym (synonym);
 COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
