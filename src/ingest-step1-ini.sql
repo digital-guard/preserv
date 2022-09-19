@@ -2585,6 +2585,45 @@ $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.generate_makefile('BR','16.1');
 -- SELECT ingest.generate_makefile('PE','1');
 
+
+-- Tabela temporaria para armazenar sequencia de comandos de um makefile
+CREATE TABLE ingest.lix_makecommands (
+  jurisdiction text NOT NULL,-- e.g: BR
+  pack_id text,              -- e.g: 16.1
+  makecommands text,         -- 
+  UNIQUE(jurisdiction,pack_id)
+);
+
+CREATE or replace FUNCTION ingest.generate_commands(
+    jurisd  text,
+    packid text,
+    p_path_pack text,
+    p_path  text DEFAULT '/var/gits/_dg'  -- git path
+) RETURNS text AS $f$
+    DECLARE
+        q_query text;
+        p_yaml jsonb;
+        f_yaml jsonb;
+        mkme_srcTpl text;
+        output_file text;
+    BEGIN
+
+    SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) INTO p_yaml;
+    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/reproducibility/make_' || lower(p_yaml->>'schemaId_template') || '.mustache.mk')  INTO mkme_srcTpl;
+    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
+
+    p_yaml := jsonb_set( p_yaml, array['jurisdiction'], to_jsonb(jurisd) );
+
+    SELECT replace(jsonb_mustache_render(mkme_srcTpl, ingest.jsonb_mustache_prepare(f_yaml || p_yaml),'/var/gits/_dg/preserv/src/maketemplates/reproducibility/'),E'\u130C9',$$\"$$) INTO q_query; -- "
+
+    INSERT INTO ingest.lix_makecommands VALUES (upper(jurisd),packid,q_query)
+    ON CONFLICT (jurisdiction, pack_id) DO UPDATE SET makecommands = q_query;
+        
+    RETURN q_query;
+    END;
+$f$ LANGUAGE PLpgSQL;
+-- SELECT ingest.generate_commands('BR','16.1','/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01','/var/gits/_dg');
+
 CREATE or replace FUNCTION ingest.generate_readme(
     jurisd  text,
     pack_id text,

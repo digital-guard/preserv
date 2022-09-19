@@ -1,0 +1,25 @@
+{{^isOsm}}
+{{^multiple_files}}
+{{#sql_view}}
+psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}"
+psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load('{{method}}','{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{#isGdb}}/timestamps{{/isGdb}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{#isGdb}}/timestamps{{/isGdb}}{{/orig_filename_with_extension}}','{{layername}}','vw{{file}}_{{tabname}}','{{fullPkID}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}})"
+psql {{pg_uri}}/{{pg_db}} -c "DROP VIEW vw{{file}}_{{tabname}}"
+{{/sql_view}}
+{{^sql_view}}
+psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load('{{method}}','{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{#isGdb}}/timestamps{{/isGdb}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{#isGdb}}/timestamps{{/isGdb}}{{/orig_filename_with_extension}}','{{layername}}','{{tabname}}','{{fullPkID}}','{{file_data.file}}',array{{{sql_select}}},{{id_profile_params}},{{buffer_type}})"
+{{/sql_view}}
+@echo "Confira os resultados nas tabelas ingest.donated_packcomponent e {{#isCadLayer}}ingest.cadastral_asis{{/isCadLayer}}{{^isCadLayer}}ingest.feature_asis{{/isCadLayer}}".
+{{/multiple_files}}
+{{#isCsv}}
+psql {{pg_uri}}/{{pg_db}} -c "DROP FOREIGN TABLE IF EXISTS {{tabname}}"
+{{/isCsv}}
+{{/isOsm}}
+{{#isOsm}}
+psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.osm_load('{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{orig_filename}}.pbf','{{layername}}','vw{{file}}_{{tabname}}','{{fullPkID}}','{{file_data.file}}',array[]::text[],{{id_profile_params}})"
+psql {{pg_uri}}/{{pg_db}} -c "DROP VIEW vw{{file}}_{{tabname}}"
+{{/isOsm}}
+{{#srid_proj}}
+@echo "Delete SRID {{srid}} configurado via PROJ.4 string:"
+@echo "{{.}}"
+psql {{pg_uri}}/{{pg_db}} -c "DELETE FROM spatial_ref_sys WHERE srid={{srid}};"
+{{/srid_proj}}
