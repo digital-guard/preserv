@@ -12,6 +12,7 @@ SELECT osm_id,
       ddd,
       jsonb_strip_nulls(info) AS info
 FROM optim.jurisdiction
+ORDER BY jurisd_base_id, isolevel, name
 ;
 --curl "http://localhost:3103/jurisdiction?jurisd_base_id=eq.76&parent_abbrev=eq.CE" -H "Accept: text/csv"
 -- https://osm.codes/_sql.csv/jurisdiction?jurisd_base_id=eq.76&parent_abbrev=eq.CE
