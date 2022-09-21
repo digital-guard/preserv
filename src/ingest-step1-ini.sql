@@ -2319,21 +2319,45 @@ BEGIN
             IF codec_desc_global IS NOT NULL
             THEN
                 codec_desc := codec_desc || codec_desc_global;
+
+                IF codec_desc_global?'srid'
+                THEN
+                    dict := jsonb_set( dict, array['layers',key,'insertSrid'], 'true'::jsonb );
+                END IF;
+
             END IF;
 
             IF codec_desc_sobre IS NOT NULL
             THEN
                 codec_desc := codec_desc || codec_desc_sobre;
+
+                IF codec_desc_sobre?'srid'
+                THEN
+                    dict := jsonb_set( dict, array['layers',key,'insertSrid'], 'false'::jsonb );
+                END IF;
+
             END IF;
         ELSE
             IF codec_desc_global IS NOT NULL
             THEN
                 codec_desc := codec_desc_global;
+
+                IF codec_desc_global?'srid'
+                THEN
+                    dict := jsonb_set( dict, array['layers',key,'insertSrid'], 'true'::jsonb );
+                END IF;
+
             END IF;
 
             IF codec_desc_sobre IS NOT NULL
             THEN
                 codec_desc := codec_desc || codec_desc_sobre;
+
+                IF codec_desc_sobre?'srid'
+                THEN
+                    dict := jsonb_set( dict, array['layers',key,'insertSrid'], 'false'::jsonb );
+                END IF;
+
             END IF;
         END IF;
 
@@ -2444,7 +2468,7 @@ BEGIN
  RETURN dict;
 END;
 $f$ language PLpgSQL;
--- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01/make_conf.yaml') );
+-- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/ES/CachoeiroItapemirim/_pk0091.01/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk0001.01/make_conf.yaml') ); 
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/SP/SaoPaulo/_pk0033.01/make_conf.yaml') );
 
