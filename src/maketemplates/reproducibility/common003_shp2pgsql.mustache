@@ -59,7 +59,7 @@ sudo docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{pack_id}
 {{/isGdb}}
 {{#isOgrWithShp}}
 {{!-- 	@echo Executando ogr2ogr ... --}}
-docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}:/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='{{pg_db}}' host='localhost' port='5432' user='postgres' " /tmp/{{{orig_tabname}}} {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
+sudo docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}:/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='{{pg_db}}' host='localhost' port='5432' user='postgres' " /tmp/{{{orig_tabname}}} {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
 {{/isOgrWithShp}}
 {{#isOsm}}
 {{!-- 	@echo Executando osm2sql ... --}}
