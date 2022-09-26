@@ -1,5 +1,7 @@
 ## Readme automatizado
 
+Template em https://github.com/digital-guard/preserv-BR/blob/main/src/maketemplates/readme.mustache
+
 A seguir exemplo fictício de make_conf.yaml para gerar um README.md do pacote. Reparar nas chaves: `comments, comment, test_evidence, standardized_fields, other_fields, other_files e to-do`.
 
 Informações extras ou que não se encaixam nas referidas chaves devem ser incluídas num arquivo _attachment.md_, que terá seu conteúdo anexado ao final do README.md numa seção chamada _anexo_.
