@@ -31,7 +31,7 @@ endif
 endif
 
 {{#isCsv}}
-	psql $(pg_uri_db) -c "DROP FOREIGN TABLE IF EXISTS {{tabname}}"
+	psql $(pg_uri_db) -c "DROP FOREIGN TABLE IF EXISTS {{tabname}} CASCADE"
 {{/isCsv}}
 {{^isCsv}}
 	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS {{tabname}} CASCADE"
@@ -48,3 +48,7 @@ endif
 	@tput sgr0
 	cd $(sandbox); cp $(orig)/{{file_data.file}} "{{orig_filename}}.pbf" ; chmod -R a+rwx . > /dev/null
 {{/isOsm}}
+{{#after_extract}}
+	@echo Aplicando comandos após a extração ...
+	{{.}}
+{{/after_extract}}
