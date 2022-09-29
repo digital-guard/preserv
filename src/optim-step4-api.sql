@@ -405,6 +405,24 @@ COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
  IS 'Synonymous names of jurisdictions.'
 ;
 
+CREATE or replace FUNCTION str_geocodeiso_decode(iso text)
+RETURNS text[] as $f$
+  SELECT isolabel_ext || array[split_part(isolabel_ext,'-',1)]
+  FROM mvwjurisdiction_synonym
+  WHERE synonym = lower((
+    SELECT
+      CASE
+        WHEN cardinality(u)=2 AND u[2] ~ '^\d+?$'
+        THEN u[1]::text || '-' || ((u[2])::integer)::text
+        ELSE iso
+      END
+    FROM (SELECT regexp_split_to_array(iso,'(-)')::text[] AS u ) r
+  ))
+$f$ LANGUAGE SQL IMMUTABLE;
+COMMENT ON FUNCTION str_geocodeiso_decode(text)
+  IS 'Decode abbrev isolabel_ext.'
+;
+
 CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
    p_code text
 ) RETURNS jsonb AS $f$
@@ -437,7 +455,7 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
             )
         )
     FROM optim.vw01full_jurisdiction_geom g
-    WHERE ( (lower(g.isolabel_ext) = lower(p_code) ) OR ( lower(g.isolabel_ext) = lower((SELECT isolabel_ext FROM mvwjurisdiction_synonym WHERE lower(synonym) = lower(p_code))) ) )
+    WHERE g.isolabel_ext = (SELECT (str_geocodeiso_decode(p_code))[1])
 $f$ LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION api.jurisdiction_geojson_from_isolabel(text)
   IS 'Return jurisdiction geojson from isolabel_ext.'
