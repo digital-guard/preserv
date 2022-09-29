@@ -50,7 +50,7 @@ DECLARE
  sepcols text;
 BEGIN
  sepcols := iIF(p_addtxtype, '" text,"'::text, '","'::text);
- cols := pg_csv_head(p_file, p_delimiter);
+ cols := pg_csv_head(p_file, replace(p_delimiter,'|','\|'));
  EXECUTE
     format(
       'DROP FOREIGN TABLE IF EXISTS %s; CREATE FOREIGN TABLE %s    (%s%s%s)',
