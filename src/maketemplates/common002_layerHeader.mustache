@@ -48,7 +48,9 @@ endif
 	@tput sgr0
 	cd $(sandbox); cp $(orig)/{{file_data.file}} "{{orig_filename}}.pbf" ; chmod -R a+rwx . > /dev/null
 {{/isOsm}}
+{{#isCsv}}
 {{#after_extract}}
 	@echo Aplicando comandos após a extração ...
 	{{.}}
 {{/after_extract}}
+{{/isCsv}}

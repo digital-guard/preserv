@@ -12,3 +12,8 @@ cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; 7z {{7z_opts}} x -y
 {{#isOsm}}
 cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; cp {{orig}}/{{file_data.file}} "{{orig_filename}}.pbf" ; chmod -R a+rwx . > /dev/null
 {{/isOsm}}
+{{#isCsv}}
+{{#after_extract}}
+{{.}}
+{{/after_extract}}
+{{/isCsv}}
