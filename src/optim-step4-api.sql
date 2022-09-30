@@ -316,6 +316,24 @@ FROM
   )
   UNION ALL
   (
+    -- co state abbrev, mun abbrev.
+    -- e.g.: CO-A-IGI
+    SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| split_part(abbrev,'-',3) AS synonym, MAX(isolabel_ext) AS isolabel_ext
+    FROM 
+    (
+        -- não deve retornar abbrev repetidos
+        SELECT abbrev, MAX(isolabel_ext) AS isolabel_ext
+        FROM optim.jurisdiction_abbrev_option
+        WHERE selected IS TRUE
+        GROUP BY abbrev
+        HAVING count(*) = 1
+    ) j
+    GROUP BY 1
+    HAVING count(*)=1
+    ORDER BY 1
+  )
+  UNION ALL
+  (
     -- co unique names
     -- eg.: CO-Medellin
     SELECT 'CO-' || split_part(isolabel_ext,'-',3) AS synonym, MAX(isolabel_ext) AS isolabel_ext
