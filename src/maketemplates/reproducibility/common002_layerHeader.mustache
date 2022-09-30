@@ -1,19 +1,12 @@
 wget -P {{orig}} http://dl.digital-guard.org/{{file_data.file}}
 sudo chown postgres:www-data {{orig}}/{{file_data.file}} && sudo chmod 664 {{orig}}/{{file_data.file}}
-{{#isCsv}}
-psql {{pg_uri}}/{{pg_db}} -c "DROP FOREIGN TABLE IF EXISTS {{tabname}}"
-{{/isCsv}}
-{{^isCsv}}
-psql {{pg_uri}}/{{pg_db}} -c "DROP TABLE IF EXISTS {{tabname}} CASCADE"
-{{/isCsv}}
+psql $(pg_uri_db) -c "DROP {{#isCsv}}FOREIGN{{/isCsv}} TABLE IF EXISTS {{tabname}} CASCADE"
 {{^isOsm}}
 cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; 7z {{7z_opts}} x -y {{orig}}/{{file_data.file}} {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}"*{{orig_filename}}*"{{/orig_filename_string_extract}} ; chmod -R a+rwx . > /dev/null
 {{/isOsm}}
 {{#isOsm}}
 cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; cp {{orig}}/{{file_data.file}} "{{orig_filename}}.pbf" ; chmod -R a+rwx . > /dev/null
 {{/isOsm}}
-{{#isCsv}}
 {{#after_extract}}
 {{.}}
 {{/after_extract}}
-{{/isCsv}}

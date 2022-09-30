@@ -30,12 +30,7 @@ endif
 	@echo " Download completed."
 endif
 
-{{#isCsv}}
-	psql $(pg_uri_db) -c "DROP FOREIGN TABLE IF EXISTS {{tabname}} CASCADE"
-{{/isCsv}}
-{{^isCsv}}
-	psql $(pg_uri_db) -c "DROP TABLE IF EXISTS {{tabname}} CASCADE"
-{{/isCsv}}
+	psql $(pg_uri_db) -c "DROP {{#isCsv}}FOREIGN{{/isCsv}} TABLE IF EXISTS {{tabname}} CASCADE"
 {{^isOsm}}
 	@tput bold
 	@echo Extracting ....
@@ -48,9 +43,7 @@ endif
 	@tput sgr0
 	cd $(sandbox); cp $(orig)/{{file_data.file}} "{{orig_filename}}.pbf" ; chmod -R a+rwx . > /dev/null
 {{/isOsm}}
-{{#isCsv}}
 {{#after_extract}}
 	@echo Aplicando comandos após a extração ...
 	{{.}}
 {{/after_extract}}
-{{/isCsv}}

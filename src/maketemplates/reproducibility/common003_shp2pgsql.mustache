@@ -78,3 +78,6 @@ psql {{pg_uri}}/{{pg_db}} -c "DROP TABLE IF EXISTS {{tabname}}" ; \
 psql {{pg_uri}}/{{pg_db}} -c "CREATE TABLE {{tabname}} AS SELECT * FROM geojson_readfile_features_jgeom('{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{orig_filename}}.geojson',null) WHERE jgeom->'type' is not null" ; \
 fi
 {{/isGeojson}}
+{{#isTxt2sql}}
+psql $(pg_uri_db) -c "SELECT ingest.copy_tabular_data( '$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.txt{{/orig_filename_with_extension}}', '{{tabname}}'{{#charset}},'{{charset}}'{{/charset}}{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+{{/isTxt2sql}}

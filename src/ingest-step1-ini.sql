@@ -66,6 +66,34 @@ COMMENT ON FUNCTION ingest.fdw_generate_direct_csv
   IS 'Generates a FOREIGN TABLE for simples and direct CSV ingestion.'
 ;
 
+CREATE or replace FUNCTION ingest.copy_tabular_data(
+  p_file text,  -- path+filename+ext
+  p_fdwname text, -- nome da tabela fwd
+  p_enconding text DEFAULT 'UTF8', -- https://www.postgresql.org/docs/current/multibyte.html
+  p_delimiter text DEFAULT ',',
+  p_addtxtype boolean DEFAULT true
+) RETURNS text  AS $f$
+DECLARE
+ fpath text;
+ cols text[];
+ sepcols text;
+BEGIN
+ sepcols := iIF(p_addtxtype, '" text,"'::text, '","'::text);
+ cols := pg_csv_head(p_file, replace(p_delimiter,'|','\|'));
+ EXECUTE
+    format(
+      'DROP TABLE IF EXISTS %s; CREATE TABLE %s (%s%s%s);
+      COPY %s(%s) FROM %L DELIMITER %L CSV HEADER ENCODING %L;',
+       p_fdwname, p_fdwname, '"', array_to_string(cols,sepcols), iIF(p_addtxtype, '" text'::text, '"'),
+       p_fdwname, '"'||array_to_string(cols,'","')||'"', p_file, p_delimiter, p_enconding
+     );
+ RETURN p_fdwname;
+END;
+$f$ language PLpgSQL;
+COMMENT ON FUNCTION ingest.copy_tabular_data
+  IS 'Generates a TABLE for tabular data ingestion.'
+;
+
 CREATE FUNCTION ingest.fdw_generate(
   p_name text,  -- table name and CSV input filename
   p_context text DEFAULT 'br',  -- or null
@@ -2182,6 +2210,7 @@ BEGIN
         dict := jsonb_set( dict, array['layers',key,'isOsm'],        IIF(method='osm2sql',bt,bf) );
         dict := jsonb_set( dict, array['layers',key,'isGdb'],        IIF(method='gdb2sql',bt,bf) );
         dict := jsonb_set( dict, array['layers',key,'isGeojson'],    IIF(method='geojson2sql',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'isTxt2sql'],    IIF(method='txt2sql',bt,bf) );
         
         dict := jsonb_set( dict, array['layers',key,'isGeoaddress'], IIF(key='geoaddress',bt,bf) );
 
