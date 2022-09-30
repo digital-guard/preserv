@@ -430,7 +430,7 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
         'type', 'FeatureCollection',
         'features',
             (
-                ST_AsGeoJSONb(
+                jsonb_agg(ST_AsGeoJSONb(
                     geom,
                     8,0,null,
                     jsonb_build_object(
@@ -451,7 +451,7 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
                         'area', ST_Area(geom,true),
                         'jurisd_base_id', jurisd_base_id
                         )
-                    )::jsonb
+                    )::jsonb)
             )
         )
     FROM optim.vw01full_jurisdiction_geom g
