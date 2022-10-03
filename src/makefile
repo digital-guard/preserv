@@ -161,6 +161,7 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step3-publication.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step4-api.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step5-list.sql
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step6-metrics.sql
 	@echo "--- Running API SQL templates ---"
 	@echo "!nao fazendo ainda, futuro"
 	#psql $(pg_datalake_uri) < step00-iniApi.sql
