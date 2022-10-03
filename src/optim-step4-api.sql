@@ -374,6 +374,13 @@ FROM
   )
   UNION ALL
   (
+    -- UY-codigo (municipios)
+    SELECT 'UY-' || jurisd_local_id, isolabel_ext
+    FROM optim.jurisdiction
+    WHERE isolabel_ext LIKE 'UY-%'
+  )
+  UNION ALL
+  (
     -- BR isolevel=3 abbrev
     SELECT substring(isolabel_ext,1,6) || abbrev, isolabel_ext
     FROM optim.jurisdiction
