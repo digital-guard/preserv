@@ -77,6 +77,18 @@ COMMENT ON COLUMN optim.auth_user.info     IS 'Other account details on host.';
 
 INSERT INTO optim.auth_user(username) VALUES ('carlos'),('igor'),('enio'),('peter'),('claiton'),('luis'); -- minimal one Linux's /home/username
 
+CREATE TABLE optim.codec_type (
+  extension text,
+  variant text,
+  descr_mime jsonb,
+  descr_encode jsonb,
+  UNIQUE(extension,variant)
+);
+COMMENT ON COLUMN optim.codec_type.extension     IS '';
+COMMENT ON COLUMN optim.codec_type.variant       IS '';
+COMMENT ON COLUMN optim.codec_type.descr_mime    IS '';
+COMMENT ON COLUMN optim.codec_type.descr_encode  IS '';
+
 CREATE TABLE optim.donor (
   id integer NOT NULL PRIMARY KEY CHECK (id = country_id*1000000+local_serial),  -- by trigger!
   country_id int NOT NULL CHECK(country_id>0), -- ISO
@@ -612,7 +624,39 @@ COMMENT ON FUNCTION optim.load_donor_pack
   IS 'Generates a clone-structure FOREIGN TABLE for donor.csv and donatedPack.csv.'
 ;
 
---SELECT ingest.fdw_generate_direct_csv('/var/gits/_dg/preserv-BR/data/donor.csv','tmp_orig.fdw_donorbr',',')
+--SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv-BR/data/donor.csv','tmp_orig.fdw_donorbr',',')
+
+CREATE or replace FUNCTION optim.load_codec_type(
+) RETURNS text AS $f$
+BEGIN
+  RETURN (SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/codec_type.csv','tmp_orig.fdw_codec_type',','));
+END;
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION optim.load_codec_type
+  IS 'Generates a clone-structure FOREIGN TABLE for codec_type.csv.'
+;
+
+CREATE or replace FUNCTION optim.insert_codec_type(
+) RETURNS text  AS $f$
+BEGIN
+    INSERT INTO optim.codec_type (extension,variant,descr_mime,descr_encode)
+      SELECT lower(extension) AS extension, COALESCE(variant, '') AS variant, jsonb_object(regexp_split_to_array ('mime=' || descr_mime,'(;|=)')) AS descr_mime, jsonb_object(regexp_split_to_array ( descr_encode,'(;|=)')) AS descr_encode
+      FROM tmp_orig.fdw_codec_type
+    ON CONFLICT (extension,variant)
+    DO UPDATE
+    SET descr_mime=EXCLUDED.descr_mime, descr_encode=EXCLUDED.descr_encode
+    ;
+
+    UPDATE optim.codec_type
+    SET descr_encode = jsonb_set(descr_encode, '{delimiter}', to_jsonb(str_urldecode(descr_encode->>'delimiter')), true)
+    WHERE descr_encode->'delimiter' IS NOT NULL;
+
+    RETURN 'Load codec_type from codec_type.csv.';
+END;
+$f$ language PLpgSQL;
+COMMENT ON FUNCTION optim.insert_codec_type
+  IS 'Load codec_type.csv.'
+;
 
 CREATE or replace FUNCTION optim.replace_file_and_version(file text) RETURNS text AS $f$
 BEGIN

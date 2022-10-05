@@ -231,6 +231,14 @@ CREATE FOREIGN TABLE ingest.fdw_feature_type (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'vw01info_feature_type');
 
+CREATE FOREIGN TABLE ingest.fdw_codec_type (
+  extension text,
+  variant text,
+  descr_mime jsonb,
+  descr_encode jsonb
+) SERVER foreign_server_dl03
+  OPTIONS (schema_name 'optim', table_name 'codec_type');
+
 CREATE FOREIGN TABLE ingest.vw02full_donated_packfilevers (
   id                       bigint,
   hashedfname              text,
@@ -2301,7 +2309,7 @@ BEGIN
             
             IF orig_filename_ext IS NOT NULL
             THEN
-                SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (array[extension] = orig_filename_ext) INTO codec_extension, codec_descr_mime, codec_desc_default;
+                SELECT extension, descr_mime, descr_encode FROM ingest.fdw_codec_type WHERE (array[extension] = orig_filename_ext) INTO codec_extension, codec_descr_mime, codec_desc_default;
                 dict := jsonb_set( dict, array['layers',key,'orig_filename_with_extension'], 'true'::jsonb );
                 RAISE NOTICE 'orig_filename_ext : %', orig_filename_ext;
                 RAISE NOTICE 'codec_desc_default from extension: %', codec_desc_default;
@@ -2313,7 +2321,7 @@ BEGIN
             -- 1. Extensão, variação e sobrescrição. Descarta a variação.
             IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~(.*);(.*)$'))
             THEN
-                    SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', '~', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
+                    SELECT extension, descr_mime, descr_encode FROM ingest.fdw_codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', '~', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
 
                 codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',3),'(;|=)'));
 
@@ -2324,7 +2332,7 @@ BEGIN
             -- 2. Extensão e sobrescrição, sem variação
             IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^;~]*);(.*)$'))
             THEN
-                SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', ';', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
+                SELECT extension, descr_mime, descr_encode FROM ingest.fdw_codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', ';', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
 
                 codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',2),'(;|=)'));
 
@@ -2337,7 +2345,7 @@ BEGIN
             THEN
                 codec_value := regexp_split_to_array( dict->'layers'->key->>'codec' ,'(~)');
 
-                SELECT extension, descr_mime, descr_encode FROM ingest.codec_type WHERE (array[upper(extension), variant] = codec_value AND cardinality(codec_value) = 2) OR (array[upper(extension)] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
+                SELECT extension, descr_mime, descr_encode FROM ingest.fdw_codec_type WHERE (array[upper(extension), variant] = codec_value AND cardinality(codec_value) = 2) OR (array[upper(extension)] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
 
                 RAISE NOTICE '3. codec_desc_default : %', codec_desc_default;
             END IF;
@@ -2896,38 +2904,3 @@ COMMENT ON FUNCTION ingest.load_hcode_parameters
   IS 'Load hcode_parameters.csv.'
 ;
 --SELECT ingest.load_hcode_parameters('/var/gits/_dg/preserv/data/hcode_parameters.csv')
-
-CREATE TABLE ingest.codec_type (
-  extension text,
-  variant text,
-  descr_mime jsonb,
-  descr_encode jsonb,
-  UNIQUE(extension,variant)
-);
-
-CREATE FUNCTION ingest.load_codec_type(
-  p_file text,  -- path+filename+ext
-  p_delimiter text DEFAULT ',',
-  p_fdwname text DEFAULT 'tmp_codec_type' -- nome da tabela fwd
-) RETURNS text  AS $f$
-DECLARE
-        q_query text;
-BEGIN
-    SELECT ingest.fdw_generate_direct_csv(p_file,p_fdwname,p_delimiter) INTO q_query;
-
-    DELETE FROM ingest.codec_type;
-
-    EXECUTE format($$INSERT INTO ingest.codec_type (extension,variant,descr_mime,descr_encode) SELECT lower(extension), variant, jsonb_object(regexp_split_to_array ('mime=' || descr_mime,'(;|=)')), jsonb_object(regexp_split_to_array ( descr_encode,'(;|=)')) FROM %s$$, p_fdwname);
-
-    EXECUTE format('DROP FOREIGN TABLE IF EXISTS %s;',p_fdwname);
-
-    UPDATE ingest.codec_type
-    SET descr_encode = jsonb_set(descr_encode, '{delimiter}', to_jsonb(str_urldecode(descr_encode->>'delimiter')), true)
-    WHERE descr_encode->'delimiter' IS NOT NULL;
-
-    RETURN ' '|| E'Load codec_type from: '||p_file|| ' ';
-END;
-$f$ language PLpgSQL;
-COMMENT ON FUNCTION ingest.load_codec_type
-  IS 'Load codec_type.csv.'
-;
