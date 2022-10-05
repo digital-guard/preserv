@@ -76,7 +76,7 @@ all: ini_all
 
 ini_all: ini_ingest ini_datalake
 
-ini_ingest: ini_ingest_sql load_codec_type load_hcode_parameters load_license_tables
+ini_ingest: ini_ingest_sql load_hcode_parameters load_license_tables
 
 ini_ingest_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 ifeq ($(DB_TEST),$(pg_db))
