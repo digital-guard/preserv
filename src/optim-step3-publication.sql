@@ -48,7 +48,7 @@ FROM (
             WHEN 'point' THEN 'pontos'
             END,
         'geom_unit_abr',CASE pf.geomtype
-            WHEN 'poly'  THEN 'km2'
+            WHEN 'poly'  THEN 'km²'
             WHEN 'line'  THEN 'km'
             ELSE  ''
             END,
@@ -79,7 +79,7 @@ FROM (
   INNER JOIN optim.donated_PackComponent pc
   ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
 
-  WHERE pf.ftid > 19 AND isolabel_ext = 'BR-ES-CachoeiroItapemirim'
+  WHERE pf.ftid > 19
   ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
 ) t
 GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv_git, pack_number, path_cutgeo_git, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences
