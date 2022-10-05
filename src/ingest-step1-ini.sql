@@ -2228,6 +2228,12 @@ BEGIN
 
         SELECT id FROM ingest.vw02full_donated_packfilevers WHERE hashedfname = dict->'layers'->key->'file_data'->>'file' INTO packvers_id;
 
+        IF dict->'layers'->key->'file_data'?'size'
+        THEN
+            dict := jsonb_set( dict, array['layers',key,'file_data','size_mb_round2'], to_jsonb(ROUND(((dict->'layers'->key->'file_data'->'size')::bigint / 1048576.0),2)));
+            dict := jsonb_set( dict, array['layers',key,'file_data','size_mb_round4'], to_jsonb(ROUND(((dict->'layers'->key->'file_data'->'size')::bigint / 1048576.0),4)));
+        END IF;
+        
         IF dict?'orig'
         THEN
             dict := jsonb_set( dict, array['layers',key,'file_data','path'] , to_jsonb((dict->>'orig') || '/' || (dict->'layers'->key->'file_data'->>'file') ));
