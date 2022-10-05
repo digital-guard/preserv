@@ -4,7 +4,7 @@ FROM
 (
   SELECT pf.*,
     regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') AS path_yaml
-  FROM optim.vw01full_packfilevers_withoutgeom pf
+  FROM optim.vw01full_packfilevers pf
 ) pf2
 GROUP BY country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalName, wikidata_id, url, donor_info, kx_vat_id, isolevel
 ORDER BY scope_label, legalName
@@ -52,7 +52,7 @@ FROM
   SELECT legalName, scope_label, hashedfname, hashedfname_7, pack_number, local_serial_formated,
     regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') AS path_yaml,
     pf.info AS info
-  FROM optim.vw01full_packfilevers_withoutgeom pf
+  FROM optim.vw01full_packfilevers pf
   ORDER BY hashedfname
 ) r
 ;

@@ -239,7 +239,7 @@ CREATE FOREIGN TABLE ingest.fdw_codec_type (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'codec_type');
 
-CREATE FOREIGN TABLE ingest.vw02full_donated_packfilevers (
+CREATE FOREIGN TABLE ingest.vw01full_packfilevers (
   id                       bigint,
   hashedfname              text,
   pack_id                  bigint,
@@ -288,7 +288,6 @@ CREATE FOREIGN TABLE ingest.vw02full_donated_packfilevers (
   housenumber_system_type  text,
   lex_urn                  text,
   jurisdiction_info        jsonb,
-  geom                     geometry(Geometry,4326),
   isolevel                 integer
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'vw01full_packfilevers');
@@ -454,7 +453,7 @@ CREATE VIEW ingest.vw03full_layer_file AS
   FROM ingest.donated_PackComponent pc
   INNER JOIN ingest.fdw_feature_type ft
     ON pc.ftid=ft.ftid
-  LEFT JOIN ingest.vw02full_donated_packfilevers pf
+  LEFT JOIN ingest.vw01full_packfilevers pf
     ON pc.packvers_id=pf.id
   ORDER BY pf.isolabel_ext
 ;
@@ -968,7 +967,7 @@ CREATE or replace FUNCTION ingest.any_load(
         FROM a0
         WHERE ST_IsClosed(geom) = TRUE OR GeometryType(geom) IN ('LINESTRING','MULTILINESTRING')
       ),
-      mask AS (SELECT ingest.buffer_geom(geom,%s) AS geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
+      mask AS (SELECT ingest.buffer_geom(geom,%s) AS geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=(SELECT isolabel_ext FROM ingest.vw01full_packfilevers WHERE id=%s)),
       b AS (
         SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM mask))))::int::bit ) AS error_mask
         FROM a
@@ -1354,7 +1353,7 @@ CREATE or replace FUNCTION ingest.osm_load(
         FROM scan
         WHERE ST_IsClosed(geom) = TRUE OR GeometryType(geom) IN ('LINESTRING','MULTILINESTRING')
       ),
-      mask AS (SELECT geom FROM ingest.vw02full_donated_packfilevers WHERE id=%s LIMIT 1),
+      mask AS (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=(SELECT isolabel_ext FROM ingest.vw01full_packfilevers WHERE id=%s)),
       b AS (
         SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM mask))))::int::bit ) AS error_mask
         FROM a
@@ -2234,7 +2233,7 @@ BEGIN
 
         dict := jsonb_set( dict, array['layers',key,'file_data'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0));
 
-        SELECT id FROM ingest.vw02full_donated_packfilevers WHERE hashedfname = dict->'layers'->key->'file_data'->>'file' INTO packvers_id;
+        SELECT id FROM ingest.vw01full_packfilevers WHERE hashedfname = dict->'layers'->key->'file_data'->>'file' INTO packvers_id;
 
         IF dict->'layers'->key->'file_data'?'size'
         THEN
@@ -2252,16 +2251,16 @@ BEGIN
         dict := jsonb_set( dict, array['layers',key,'layername'] , to_jsonb(key || '_' || (dict->'layers'->key->>'subtype') ));
         dict := jsonb_set( dict, array['layers',key,'tabname'] , to_jsonb('pk' || (dict->'layers'->key->>'fullPkID') || '_p' || (dict->'layers'->key->>'file') || '_' || key));
 
-        dict := jsonb_set( dict, array['layers',key,'isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['layers',key,'path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server || '/' || key FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['layers',key,'path_cutgeo_git'] , to_jsonb((SELECT path_cutgeo_git || '/' || key FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['layers',key,'isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw01full_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['layers',key,'path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server || '/' || key FROM ingest.vw01full_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['layers',key,'path_cutgeo_git'] , to_jsonb((SELECT path_cutgeo_git || '/' || key FROM ingest.vw01full_packfilevers WHERE id=packvers_id)));
 
-        dict := jsonb_set( dict, array['path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['path_cutgeo_git'] , to_jsonb((SELECT path_cutgeo_git FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server FROM ingest.vw01full_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['path_cutgeo_git'] , to_jsonb((SELECT path_cutgeo_git FROM ingest.vw01full_packfilevers WHERE id=packvers_id)));
 
-        dict := jsonb_set( dict, array['path_preserv_git'] , to_jsonb((SELECT path_preserv_git FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['path_preserv_server'] , to_jsonb((SELECT path_preserv_server FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw02full_donated_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['path_preserv_git'] , to_jsonb((SELECT path_preserv_git FROM ingest.vw01full_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['path_preserv_server'] , to_jsonb((SELECT path_preserv_server FROM ingest.vw01full_packfilevers WHERE id=packvers_id)));
+        dict := jsonb_set( dict, array['isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM ingest.vw01full_packfilevers WHERE id=packvers_id)));
 
         -- Caso de BR-PR-Araucaria/_pk0061.01
         IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
@@ -2652,45 +2651,6 @@ $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.generate_makefile('BR','16.1');
 -- SELECT ingest.generate_makefile('PE','1');
 
-
--- Tabela temporaria para armazenar sequencia de comandos de um makefile
-CREATE TABLE ingest.lix_makecommands (
-  jurisdiction text NOT NULL,-- e.g: BR
-  pack_id text,              -- e.g: 16.1
-  makecommands text,         -- 
-  UNIQUE(jurisdiction,pack_id)
-);
-
-CREATE or replace FUNCTION ingest.generate_commands(
-    jurisd  text,
-    packid text,
-    p_path_pack text,
-    p_path  text DEFAULT '/var/gits/_dg'  -- git path
-) RETURNS text AS $f$
-    DECLARE
-        q_query text;
-        p_yaml jsonb;
-        f_yaml jsonb;
-        mkme_srcTpl text;
-        output_file text;
-    BEGIN
-
-    SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) INTO p_yaml;
-    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/reproducibility/make_' || lower(p_yaml->>'schemaId_template') || '.mustache.mk')  INTO mkme_srcTpl;
-    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
-
-    p_yaml := jsonb_set( p_yaml, array['jurisdiction'], to_jsonb(jurisd) );
-
-    SELECT replace(jsonb_mustache_render(mkme_srcTpl, ingest.jsonb_mustache_prepare(f_yaml || p_yaml),'/var/gits/_dg/preserv/src/maketemplates/reproducibility/'),E'\u130C9',$$\"$$) INTO q_query; -- "
-
-    INSERT INTO ingest.lix_makecommands VALUES (upper(jurisd),packid,q_query)
-    ON CONFLICT (jurisdiction, pack_id) DO UPDATE SET makecommands = q_query;
-        
-    RETURN q_query;
-    END;
-$f$ LANGUAGE PLpgSQL;
--- SELECT ingest.generate_commands('BR','16.1','/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01','/var/gits/_dg');
-
 CREATE or replace FUNCTION ingest.generate_readme(
     jurisd  text,
     pack_id text,
@@ -2796,7 +2756,7 @@ CREATE or replace FUNCTION ingest.join(
                 FROM ingest.fdw_feature_type
                 WHERE ftname=lower('%s')
                 )
-                AND packvers_id = (SELECT id FROM ingest.vw02full_donated_packfilevers WHERE hashedfname = '%s')
+                AND packvers_id = (SELECT id FROM ingest.vw01full_packfilevers WHERE hashedfname = '%s')
             )
       ),
       duplicate_keys AS (
@@ -2815,7 +2775,7 @@ CREATE or replace FUNCTION ingest.join(
                     --FROM ingest.fdw_feature_type
                     --WHERE ftname=lower('%s')
                     --)
-                    --AND packvers_id = (SELECT id FROM ingest.vw02full_donated_packfilevers WHERE hashedfname = '%s')
+                    --AND packvers_id = (SELECT id FROM ingest.vw01full_packfilevers WHERE hashedfname = '%s')
             --)
         --) AS asis
 
@@ -2844,7 +2804,7 @@ CREATE or replace FUNCTION ingest.join(
                 FROM ingest.fdw_feature_type
                 WHERE ftname=lower('%s')
                 )
-                AND packvers_id = (SELECT id FROM ingest.vw02full_donated_packfilevers WHERE hashedfname = '%s')
+                AND packvers_id = (SELECT id FROM ingest.vw01full_packfilevers WHERE hashedfname = '%s')
             )
             AND c.properties->'%s' NOT IN (  SELECT * FROM duplicate_keys  )
             RETURNING 1

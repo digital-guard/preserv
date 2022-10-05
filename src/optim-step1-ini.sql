@@ -332,24 +332,37 @@ COMMENT ON VIEW optim.vw01full_jurisdiction_geom
   IS 'Add geom to optim.jurisdiction.'
 ;
 
+CREATE VIEW optim.vw01full_donated_PackTpl AS
+  SELECT pt.id AS packtpl_id, pt.donor_id, pt.pk_count, pt.original_tpl, pt.make_conf_tpl, pt.kx_num_files, pt.info AS packtpl_info,
+         dn.country_id, dn.local_serial, dn.scope_osm_id, dn.scope_label, dn.shortname, dn.vat_id, dn.legalName, dn.wikidata_id, dn.url, dn.info AS donor_info, dn.kx_vat_id,
+         j.osm_id, j.jurisd_base_id, j.jurisd_local_id, j.parent_id, j.admin_level, j.name, j.parent_abbrev, j.abbrev, j.wikidata_id AS jurisdiction_wikidata_id, j.lexlabel, j.isolabel_ext, j.ddd, j.housenumber_system_type, j.lex_urn, j.info AS jurisdiction_info, j.isolevel
+  FROM optim.donated_PackTpl pt
+  LEFT JOIN optim.donor dn
+    ON pt.donor_id=dn.id
+  LEFT JOIN optim.jurisdiction j
+    ON dn.scope_osm_id=j.osm_id
+;
+COMMENT ON VIEW optim.vw01full_donated_PackTpl
+  IS 'Add geom to optim.jurisdiction.'
+;
+
 CREATE or replace VIEW optim.vw01full_packfilevers AS
   SELECT pf.*,
-         to_char(dn.local_serial,'fm0000') AS local_serial_formated, -- e.g.: 0042
-         to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS pack_number, -- e.g.: 0042.01
+         to_char(pt.local_serial,'fm0000') AS local_serial_formated, -- e.g.: 0042
+         to_char(pt.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS pack_number, -- e.g.: 0042.01
 
-         '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_cutgeo_server, -- e.g.:
+         '/var/gits/_dg/preservCutGeo-' || regexp_replace(replace(regexp_replace(pt.isolabel_ext, '^([^-]*)-?', '\12021/data/'),'-','/'),'\/$','') || '/_pk' || to_char(pt.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_cutgeo_server, -- e.g.:
 
-         '/var/gits/_dg/preserv-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv_server, -- e.g.:
+         '/var/gits/_dg/preserv-' || regexp_replace(replace(regexp_replace(pt.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(pt.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv_server, -- e.g.:
 
-         'http://git.digital-guard.org/preserv-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv_git, -- e.g.:
+         'http://git.digital-guard.org/preserv-' || regexp_replace(replace(regexp_replace(pt.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(pt.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv_git, -- e.g.:
 
-         'http://git.digital-guard.org/preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_cutgeo_git, -- e.g.:
+         'http://git.digital-guard.org/preservCutGeo-' || regexp_replace(replace(regexp_replace(pt.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(pt.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_cutgeo_git, -- e.g.:
 
          substring(pf.hashedfname, '^([0-9a-f]{7}).+$') AS hashedfname_7,
          substring(pf.hashedfname, '^([0-9a-f]{64,64})\.[a-z0-9]+$') AS hashedfname_without_ext,
-         pt.donor_id, pt.pk_count, pt.original_tpl, pt.make_conf_tpl, pt.kx_num_files, pt.info AS packtpl_info,
-         dn.country_id, dn.local_serial, dn.scope_osm_id, dn.scope_label, dn.shortname, dn.vat_id, dn.legalName, dn.wikidata_id, dn.url, dn.info AS donor_info, dn.kx_vat_id,
-         j.osm_id, j.jurisd_base_id, j.jurisd_local_id, j.parent_id, j.admin_level, j.name, j.parent_abbrev, j.abbrev, j.wikidata_id AS jurisdiction_wikidata_id, j.lexlabel, j.isolabel_ext, j.ddd, j.housenumber_system_type, j.lex_urn, j.info AS jurisdiction_info, j.geom, j.isolevel
+
+         pt.*
   FROM
   (
     SELECT *
@@ -362,24 +375,12 @@ CREATE or replace VIEW optim.vw01full_packfilevers AS
         ORDER BY pack_id, pack_item
     )
   ) pf
-  LEFT JOIN optim.donated_PackTpl pt
-    ON pf.pack_id=pt.id
-  LEFT JOIN optim.donor dn
-    ON pt.donor_id=dn.id
-  LEFT JOIN optim.vw01full_jurisdiction_geom j
-    ON dn.scope_osm_id=j.osm_id
-  ORDER BY j.isolabel_ext, dn.local_serial, pt.pk_count
+  LEFT JOIN optim.vw01full_donated_PackTpl pt
+    ON pf.pack_id=pt.packtpl_id
+  ORDER BY pt.isolabel_ext, pt.local_serial, pt.pk_count
 ;
 COMMENT ON VIEW optim.vw01full_packfilevers
   IS 'Join donated_packfilevers with donated_PackTpl, donor and vw01full_jurisdiction_geom.'
-;
-
-CREATE or replace VIEW optim.vw01full_packfilevers_withoutgeom AS
-  SELECT hashedfname, pack_number, path_cutgeo_server,path_preserv_server,path_preserv_git,path_cutgeo_git, hashedfname_7, local_serial_formated, hashedfname_without_ext, pack_id, pack_item, pack_item_accepted_date, kx_pack_item_version, user_resp, info, donor_id, pk_count, original_tpl, make_conf_tpl, kx_num_files, packtpl_info, country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalname, wikidata_id, url, donor_info, kx_vat_id, osm_id, jurisd_base_id, jurisd_local_id, parent_id, admin_level, name, parent_abbrev, abbrev, jurisdiction_wikidata_id, lexlabel, isolabel_ext, ddd, housenumber_system_type, lex_urn, jurisdiction_info, isolevel
-  FROM optim.vw01full_packfilevers
-;
-COMMENT ON VIEW optim.vw01full_packfilevers_withoutgeom
-  IS 'vw01full_packfilevers without geom jurisdiction'
 ;
 
 CREATE VIEW optim.vw01full_packfilevers_ftype AS
