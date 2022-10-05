@@ -53,6 +53,7 @@ CREATE TABLE optim.jurisdiction_geom (
   osm_id bigint PRIMARY KEY,
   isolabel_ext text NOT NULL,
   geom geometry(Geometry,4326),
+  geom_svg geometry(Geometry,4326),
   kx_ghs1_intersects text[],
   kx_ghs2_intersects text[],
   UNIQUE(isolabel_ext)
@@ -60,8 +61,11 @@ CREATE TABLE optim.jurisdiction_geom (
 COMMENT ON COLUMN optim.jurisdiction_geom.osm_id             IS 'Relation identifier in OpenStreetMap.';
 COMMENT ON COLUMN optim.jurisdiction_geom.isolabel_ext       IS 'ISO 3166-1 alpha-2 code and name (camel case); e.g. BR-SP-SaoPaulo.';
 COMMENT ON COLUMN optim.jurisdiction_geom.geom               IS 'Geometry for osm_id identifier';
+COMMENT ON COLUMN optim.jurisdiction_geom.geom_svg           IS 'Simplified geometry version to use in svg interface.';
 --COMMENT ON COLUMN optim.jurisdiction_geom.kx_ghs1_intersects IS '';
 --COMMENT ON COLUMN optim.jurisdiction_geom.kx_ghs2_intersects IS '';
+CREATE INDEX optim_jurisdiction_geom_idx1     ON optim.jurisdiction_geom USING gist (geom);
+CREATE INDEX optim_jurisdiction_geom_svg_idx1 ON optim.jurisdiction_geom USING gist (geom_svg);
 
 CREATE TABLE optim.auth_user (
   -- authorized users to be a datapack responsible and eclusa-FTP manager
