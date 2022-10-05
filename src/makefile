@@ -100,7 +100,7 @@ endif
 
 load_codec_type:
 	@echo "--- codec_type load ---"
-	psql $(pg_db_uri) -c "SELECT ingest.load_codec_type('$(gits_basepath)/_dg/preserv/data/codec_type.csv',',');"
+	psql $(pg_datalake_uri) -c "SELECT optim.insert_codec_type();"
 
 load_hcode_parameters:
 	@echo "--- hcode_parameters load ---"
@@ -174,7 +174,7 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
 
 load_optim_csv:
-	@echo "Load tables donor.csv and donatedPack.csv into $(pg_datalake_uri), for all jurisdictions."
+	@echo "Load tables donor.csv, donatedPack.csv and codec_type into $(pg_datalake_uri), for all jurisdictions."
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step2-ini.sql
 
