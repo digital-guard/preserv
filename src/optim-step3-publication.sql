@@ -41,7 +41,7 @@ FROM (
             WHEN 'line'  THEN 'lns'
             WHEN 'point' THEN 'pts'
             END AS geom_type_abbr,
-  jsonb_build_object(
+  jsonb_strip_nulls(jsonb_build_object(
         'geom_type',CASE pf.geomtype
             WHEN 'poly'  THEN 'polígonos'
             WHEN 'line'  THEN 'segmentos'
@@ -61,19 +61,25 @@ FROM (
         'bytes_mb', (pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0,
         'bytes_mb_round2', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.01),
         'avg_density_round2', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::float),0.01),
-        'size_round2', ROUND(((pc.kx_profile->'publication_summary'->'size')::float),2),
-        
         'bytes_mb_round4', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.0001),
         'avg_density_round4', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::float),0.0001),
-        'size_round4', ROUND(((pc.kx_profile->'publication_summary'->'size')::float),4)
-        
-  ) || (pc.kx_profile->'publication_summary') AS publication_summary
+        'size_round2',CASE
+            WHEN pc.kx_profile->'publication_summary'->>'size' IS NOT NULL
+            THEN ROUND(((pc.kx_profile->'publication_summary'->'size')::float),0.01)
+            ELSE  NULL
+            END,
+        'size_round4',CASE
+            WHEN pc.kx_profile->'publication_summary'->>'size' IS NOT NULL
+            THEN ROUND(((pc.kx_profile->'publication_summary'->'size')::float),0.0001)
+            ELSE  NULL
+            END
+  )) || (pc.kx_profile->'publication_summary') AS publication_summary
 
   FROM optim.vw01full_packfilevers_ftype pf
   INNER JOIN optim.donated_PackComponent pc
   ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
 
-  WHERE pf.ftid > 19
+  WHERE pf.ftid > 19 AND isolabel_ext = 'BR-ES-CachoeiroItapemirim'
   ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
 ) t
 GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv_git, pack_number, path_cutgeo_git, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences
