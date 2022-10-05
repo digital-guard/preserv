@@ -59,11 +59,11 @@ FROM (
             END,
             'isGeoaddress', iif(pf.ftype_info->>'class_ftname'='geoaddress','true'::jsonb,'false'::jsonb),
         'bytes_mb', (pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0,
-        'bytes_mb_round2', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),2),
-        'avg_density_mbround2', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::bigint),2),
+        'bytes_mb_round2', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.01),
+        'avg_density_round2', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::bigint),0.01),
         'size_round2', ROUND(((pc.kx_profile->'publication_summary'->'size')::bigint),2),
-        'bytes_mb_round4', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),4),
-        'avg_density_mbround4', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::bigint),4),
+        'bytes_mb_round4', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.0001),
+        'avg_density_round4', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::bigint),0.0001),
         'size_round4', ROUND(((pc.kx_profile->'publication_summary'->'size')::bigint),4)
         
   ) || (pc.kx_profile->'publication_summary') AS publication_summary

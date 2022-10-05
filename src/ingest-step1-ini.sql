@@ -2230,8 +2230,8 @@ BEGIN
 
         IF dict->'layers'->key->'file_data'?'size'
         THEN
-            dict := jsonb_set( dict, array['layers',key,'file_data','size_mb_round2'], to_jsonb(ROUND(((dict->'layers'->key->'file_data'->'size')::bigint / 1048576.0),2)));
-            dict := jsonb_set( dict, array['layers',key,'file_data','size_mb_round4'], to_jsonb(ROUND(((dict->'layers'->key->'file_data'->'size')::bigint / 1048576.0),4)));
+            dict := jsonb_set( dict, array['layers',key,'file_data','size_mb_round2'], to_jsonb(ROUND(((dict->'layers'->key->'file_data'->'size')::bigint / 1048576.0),0.01)));
+            dict := jsonb_set( dict, array['layers',key,'file_data','size_mb_round4'], to_jsonb(ROUND(((dict->'layers'->key->'file_data'->'size')::bigint / 1048576.0),0.0001)));
         END IF;
         
         IF dict?'orig'
