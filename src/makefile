@@ -205,6 +205,11 @@ generate_readme:
 	@echo "-- Generating README.md in $(output) --"
 	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_readme('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
 
+generate_makefile: pg_datalake=dl03t_main
+generate_makefile:
+	@echo "-- Generating makefile in $(output) --"
+	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_makefile('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
+
 insert_size: pg_datalake=dl03t_main
 insert_size:
 	@echo "-- Inserting size in files of make_conf --"
