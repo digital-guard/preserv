@@ -214,12 +214,12 @@ generate_makefile:
 insert_license: pg_datalake=dl03t_main
 insert_license:
 	@echo "-- Inserting files_licenses in make_conf $(output) --"
-	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_make_conf_with_size('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
+	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_make_conf_with_license('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
 
 insert_size: pg_datalake=dl03t_main
 insert_size:
 	@echo "-- Inserting size in files of make_conf --"
-	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT generate_make_conf_with_size('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)','$(orig)');"
+	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_make_conf_with_size('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)','$(orig)');"
 
 first_makefile:
 	@echo "--- Copying initial makefile in 'data/_pk*' directories   ---"
