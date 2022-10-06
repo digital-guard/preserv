@@ -1,12 +1,9 @@
 {{#srid}}
 {{#srid_proj}}
 {{#insertSrid}}
-{{!-- 	@echo "Configurando SRID via PROJ.4 string:" --}}
-{{!-- 	@echo "{{.}}" --}}
 psql {{pg_uri}}/{{pg_db}} -c "INSERT INTO spatial_ref_sys (srid, auth_name, auth_srid, proj4text, srtext) VALUES ({{srid}},'carlos',{{srid}},'{{srid_proj}}',null);"
 {{/insertSrid}}
 {{/srid_proj}}
-{{!-- 	@echo "Conferindo se SRID {{.}} está configurado:" --}}
 psql {{pg_uri}}/{{pg_db}} -c "SELECT srid, proj4text FROM spatial_ref_sys where srid={{.}}"
 {{/srid}}
 {{#orig_subfilename}}

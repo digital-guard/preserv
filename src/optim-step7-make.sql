@@ -568,7 +568,7 @@ CREATE or replace FUNCTION optim.generate_readme(
            (CASE WHEN file_exists(p_yaml->>'path_preserv_server' ||'/attachment.md') THEN pg_read_file(p_yaml->>'path_preserv_server' ||'/attachment.md') ELSE '' END)
     INTO q_query;
 
-    SELECT volat_file_write(p_output,q_query) INTO q_query;
+    SELECT volat_file_write(p_output,regexp_replace(q_query, '(\n\n\n)\n*', E'\n\n', 'g')) INTO q_query;
 
     RETURN q_query;
     END;
