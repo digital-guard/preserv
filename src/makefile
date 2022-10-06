@@ -76,7 +76,7 @@ all: ini_all
 
 ini_all: ini_ingest ini_datalake
 
-ini_ingest: ini_ingest_sql load_hcode_parameters load_license_tables
+ini_ingest: ini_ingest_sql load_hcode_parameters
 
 ini_ingest_sql: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 ifeq ($(DB_TEST),$(pg_db))
@@ -106,6 +106,7 @@ load_hcode_parameters:
 	@echo "--- hcode_parameters load ---"
 	psql $(pg_db_uri) -c "SELECT ingest.load_hcode_parameters('$(gits_basepath)/_dg/preserv/data/hcode_parameters.csv',',');"
 
+load_license_tables: pg_datalake=dl03t_main
 load_license_tables: pgio
 	@echo "--- license table load ---"
 # 	wget "https://github.com/digital-guard/licenses/raw/master/data/families.csv" -O "$(pg_io)/families.csv"
@@ -113,14 +114,14 @@ load_license_tables: pgio
 	wget "https://github.com/digital-guard/licenses/raw/master/data/implieds.csv" -O "$(pg_io)/implieds.csv"
 	wget "https://raw.githubusercontent.com/digital-guard/preserv-BR/main/data/donatedPack.csv" -O "$(pg_io)/donatedPack.csv"
 
-	psql $(pg_db_uri) -c "SELECT ingest.fdw_generate_direct_csv('$(pg_io)/licenses.csv','tmp_licenses'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/implieds.csv','tmp_implieds'); SELECT ingest.fdw_generate_direct_csv('$(pg_io)/donatedPack.csv','tmp_donatedPack'); \
-	DROP TABLE IF EXISTS tmp_pack_licenses; CREATE TABLE tmp_pack_licenses AS SELECT d.pack_id, l.* FROM tmp_donatedPack AS d \
+	psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.fdw_generate_direct_csv('$(pg_io)/licenses.csv','tmp_orig.tmp_licenses'); SELECT optim.fdw_generate_direct_csv('$(pg_io)/implieds.csv','tmp_orig.tmp_implieds'); SELECT optim.fdw_generate_direct_csv('$(pg_io)/donatedPack.csv','tmp_orig.tmp_donatedPack'); \
+	DROP TABLE IF EXISTS tmp_orig.tmp_pack_licenses; CREATE TABLE tmp_orig.tmp_pack_licenses AS SELECT d.pack_id, l.* FROM tmp_orig.tmp_donatedPack AS d \
 	LEFT JOIN (\
-	SELECT id_label, name, family, url, 'yes' AS license_is_explicit FROM tmp_licenses \
+	SELECT id_label, name, family, url, 'yes' AS license_is_explicit FROM tmp_orig.tmp_licenses \
 	UNION \
-	SELECT id_label, name, family, url_report AS url, 'no' AS license_is_explicit FROM tmp_implieds) AS l \
+	SELECT id_label, name, family, url_report AS url, 'no' AS license_is_explicit FROM tmp_orig.tmp_implieds) AS l \
 	ON lower(d.license) = l.id_label AND d.license_is_explicit = l.license_is_explicit;\
-	DROP FOREIGN TABLE IF EXISTS tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_donatedPack;"
+	DROP FOREIGN TABLE IF EXISTS tmp_orig.tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_orig.tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_orig.tmp_donatedPack;"
 
 to_donated_packcomponent:
 	@echo "--- DUMP ingest.donated_packcomponent to $(pg_io)/dump_component_$(pg_db).sql ---"
@@ -209,6 +210,11 @@ generate_makefile: pg_datalake=dl03t_main
 generate_makefile:
 	@echo "-- Generating makefile in $(output) --"
 	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_makefile('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
+
+insert_license: pg_datalake=dl03t_main
+insert_license:
+	@echo "-- Inserting files_licenses in make_conf $(output) --"
+	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_make_conf_with_size('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
 
 insert_size: pg_datalake=dl03t_main
 insert_size:

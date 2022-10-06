@@ -7,12 +7,13 @@ mkme_input    = $(shell ls -d "${PWD}/"make_conf.yaml)
 country       = $(shell ls -d "${PWD}" | cut -d'-' -f2 | cut -d'/' -f1)
 baseSrc       = /var/gits/_dg
 baseSrcPack   = $(shell ls -d "${PWD}")
+preservSrc    = $(baseSrc)/preserv/src
 
 mkme_input0   = $(baseSrc)/preserv-$(country)/src/maketemplates/commomFirst.yaml
 
 ifeq ($(shell ls -d "${PWD}" | grep "-"),)
 country       = INT
-mkme_input0   = $(baseSrc)/preserv/src/maketemplates/commomFirst.yaml
+mkme_input0   = $(preservSrc)/maketemplates/commomFirst.yaml
 endif
 
 pg_io         = $(shell grep 'pg_io'   < $(mkme_input0) | cut -f2  -d':' | sed 's/^[ \t]*//' | sed 's/[\ \#].*//')
@@ -23,9 +24,7 @@ pack_id       = $(shell grep 'pack_id' < $(mkme_input)  | cut -f2  -d':' | sed '
 
 pg_uri_db     = $(pg_uri)/$(pg_db)
 
-mkme_output   = $(pg_io)/makeme_$(country)$(pack_id)
-readme_output = $(pg_io)/README_$(country)$(pack_id)
-conf_output   = $(pg_io)/make_conf_$(country)$(pack_id)
+tmpfile       = $(pg_io)/tmpfile_$(country)$(pack_id)
 
 info:
 	@echo "=== Targets ==="
@@ -38,55 +37,55 @@ info:
 
 me:
 	@echo "-- Generating makefile --"
-	cd $(baseSrc)/preserv/src; make generate_makefile country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(mkme_output)
-	sudo chmod 777 $(mkme_output)
+	cd $(preservSrc); make generate_makefile country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(tmpfile)
+	sudo chmod 777 $(tmpfile)
 	@echo " Check diff, the '<' lines are the new ones. Something changed?"
-	@diff $(mkme_output) ./makefile || :
+	@diff $(tmpfile) ./makefile || :
 	@echo "If some changes, and no error in the changes, move the script:"
-	@echo " mv $(mkme_output) ./makefile"
+	@echo " mv $(tmpfile) ./makefile"
 ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 endif
-	mv $(mkme_output) ./makefile
+	mv $(tmpfile) ./makefile
 
 readme:
 	@echo "-- Generating README.md --"
-	cd $(baseSrc)/preserv/src; make generate_readme country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(readme_output)
-	sudo chmod 777 $(readme_output)
+	cd $(preservSrc); make generate_readme country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(tmpfile)
+	sudo chmod 777 $(tmpfile)
 	@echo " Check diff, the '<' lines are the new ones. Something changed?"
-	@diff $(readme_output) ./README.md || :
+	@diff $(tmpfile) ./README.md || :
 	@echo "If some changes, and no error in the changes, move the readme:"
-	@echo " mv $(readme_output) ./README.md"
+	@echo " mv $(tmpfile) ./README.md"
 ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 endif
-	mv $(readme_output) ./README.md
+	mv $(tmpfile) ./README.md
 
 insert_size:
 	@echo "-- Inserting size in files of make_conf --"
-	cd $(baseSrc)/preserv/src; make generate_make_conf_with_size country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(conf_output)
-	sudo chmod 777 $(conf_output)
+	cd $(preservSrc); make insert_size country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(tmpfile)
+	sudo chmod 777 $(tmpfile)
 	@echo " Check diff, the '<' lines are the new ones. Something changed?"
-	@diff $(conf_output) ./make_conf.yaml || :
+	@diff $(tmpfile) ./make_conf.yaml || :
 	@echo "If some changes, and no error in the changes, move the script:"
-	@echo " mv $(conf_output) ./make_conf.yaml"
+	@echo " mv $(tmpfile) ./make_conf.yaml"
 ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 endif
-	mv $(conf_output) ./make_conf.yaml
+	mv $(tmpfile) ./make_conf.yaml
 
 insert_license:
 	@echo "-- Inserting files_licenses in make_conf --"
-	psql $(pg_uri_db) -c "SELECT ingest.generate_make_conf_with_license('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)');"
-	sudo chmod 777 $(conf_output)
+	cd $(preservSrc); make insert_license country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(tmpfile)
+	sudo chmod 777 $(tmpfile)
 	@echo " Check diff, the '<' lines are the new ones. Something changed?"
-	@diff $(conf_output) ./make_conf.yaml || :
+	@diff $(tmpfile) ./make_conf.yaml || :
 	@echo "If some changes, and no error in the changes, move the script:"
-	@echo " mv $(conf_output) ./make_conf.yaml"
+	@echo " mv $(tmpfile) ./make_conf.yaml"
 ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 endif
-	mv $(conf_output) ./make_conf.yaml
+	mv $(tmpfile) ./make_conf.yaml
 
 delete_file:
 	@echo "-- Deleting donated donated packcomponent --"

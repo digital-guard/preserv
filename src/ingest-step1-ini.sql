@@ -318,13 +318,6 @@ COMMENT ON FOREIGN TABLE ingest.vw01full_jurisdiction_geom
   IS 'Add geom to ingest.fdw_jurisdiction.'
 ;
 
-CREATE FOREIGN TABLE ingest.vw03publication (
- isolabel_ext text,
- pack_number  text,
- page         jsonb
-) SERVER foreign_server_dl03
-  OPTIONS (schema_name 'optim', table_name 'vw03publication');
-
 CREATE TABLE ingest.donated_PackComponent(
   -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
   id bigserial NOT NULL PRIMARY KEY,  -- layerfile_id
@@ -2481,56 +2474,6 @@ $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/ES/CachoeiroItapemirim/_pk0091.01/make_conf.yaml') );
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk0001.01/make_conf.yaml') ); 
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/SP/SaoPaulo/_pk0033.01/make_conf.yaml') );
-
-
-CREATE or replace FUNCTION ingest.generate_make_conf_with_license(
-    jurisd  text,
-    pack_id text,
-    p_path_pack text,
-    p_path  text DEFAULT '/var/gits/_dg'  -- git path
-) RETURNS text AS $f$
-    DECLARE
-        q_query text;
-        p_yaml jsonb;
-        p_yaml_t text;
-        f_yaml jsonb;
-        output_file text;
-        license_evidences jsonb;
-        definition jsonb;
-        license_explicit boolean;
-    BEGIN
-
-    SELECT pg_read_file(p_path_pack ||'/make_conf.yaml') INTO p_yaml_t;
-    SELECT yaml_to_jsonb(p_yaml_t) INTO p_yaml;
-    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
-    SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
-
-    SELECT to_jsonb(ARRAY[name, family, url]), CASE WHEN lower(license_is_explicit)='yes' THEN TRUE ELSE FALSE END FROM tmp_pack_licenses WHERE tmp_pack_licenses.pack_id = (to_char(substring(p_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(p_yaml->>'pack_id','([^\.]*)$')::int,'fm00')) INTO definition, license_explicit;
-
-    --SELECT p_yaml_t || jsonb_to_yaml(license_evidences::text)::text INTO q_query;
-    IF license_explicit
-    THEN
-      IF p_yaml?'license_evidences'
-      THEN
-          license_evidences := p_yaml->'license_evidences' || jsonb_build_object('definition',null);
-
-          SELECT regexp_replace( p_yaml_t , '\n*license_evidences: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || regexp_replace(jsonb_to_yaml(jsonb_build_object('license_evidences',license_evidences)::text)::text,'definition: null\n', 'definition: ' || jsonb_to_yaml(definition::text,True)::text) || E'\n', 'n') INTO q_query;
-      ELSE
-          license_evidences := jsonb_build_object('license_evidences',jsonb_build_object('definition',null));
-
-          SELECT regexp_replace( p_yaml_t , '\n*files: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || jsonb_to_yaml((p_yaml->'files')::text)::text || E'\n' || regexp_replace(jsonb_to_yaml(jsonb_build_object('license_evidences',license_evidences)::text)::text,'definition: null', 'definition: ' || jsonb_to_yaml(definition::text,True)::text) || E'\n', 'n') INTO q_query;
-      END IF;
-    ELSE
-      SELECT 'licença implícita.' INTO q_query;
-    END IF;
-
-    SELECT volat_file_write(output_file,q_query) INTO q_query;
-
-    RETURN q_query;
-    END;
-$f$ LANGUAGE PLpgSQL;
--- SELECT ingest.generate_make_conf_with_license('BR','16.1','/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01','/var/gits/_dg');
--- SELECT ingest.generate_make_conf_with_license('BR','9.1','/var/gits/_dg/preserv-BR/data/MG/Contagem/_pk0009.01','/var/gits/_dg');
 
 -- ----------------------------
 
