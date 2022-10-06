@@ -200,6 +200,16 @@ generate_pages:
 	@echo "--- fix_permissions $(folder)"
 	sudo bash fixaPermissoes.sh $(folder)
 
+generate_readme: pg_datalake=dl03t_main
+generate_readme:
+	@echo "-- Generating README.md in $(output) --"
+	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_readme('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
+
+insert_size: pg_datalake=dl03t_main
+insert_size:
+	@echo "-- Inserting size in files of make_conf --"
+	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT generate_make_conf_with_size('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)','$(orig)');"
+
 first_makefile:
 	@echo "--- Copying initial makefile in 'data/_pk*' directories   ---"
 	# retorna todos os diretórios com o padrão '*_pk*' e copia o arquivo commomLast.mustache.mk para cada um deles, renomeando o arquivo para makefile.

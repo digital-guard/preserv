@@ -318,38 +318,6 @@ COMMENT ON FOREIGN TABLE ingest.vw01full_jurisdiction_geom
   IS 'Add geom to ingest.fdw_jurisdiction.'
 ;
 
-CREATE FOREIGN TABLE ingest.vwdonatedpacks_donor (
- jurisdiction text    ,
- pack_id              integer ,
- donor_id             integer ,
- pack_count           integer ,
- lst_vers             integer ,
- donor_label          text    ,
- user_resp            text    ,
- accepted_date        date    ,
- scope                text    ,
- about                text    ,
- author               text    ,
- contentreferencetime text    ,
- license_is_explicit  text    ,
- license              text    ,
- uri_objtype          text    ,
- uri                  text    ,
- isat_urbigis         text    ,
- status               text    ,
- statusupdatedate     text    ,
- local_id             text    ,
- scope_label          text    ,
- "shortName"          text    ,
- vat_id               text    ,
- "legalName"          text    ,
- wikidata_id          text    ,
- url                  text    ,
- donor_date           text    ,
- donor_status         text
-) SERVER foreign_server_dl03
-  OPTIONS (schema_name 'api', table_name 'donatedpacks_donor');
-
 CREATE FOREIGN TABLE ingest.vw03publication (
  isolabel_ext text,
  pack_number  text,
@@ -2514,58 +2482,6 @@ $f$ language PLpgSQL;
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk0001.01/make_conf.yaml') ); 
 -- SELECT ingest.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/SP/SaoPaulo/_pk0033.01/make_conf.yaml') );
 
-CREATE or replace FUNCTION ingest.insert_bytesize(
-  dict   jsonb,  -- input
-  p_orig text DEFAULT '/tmp' --folder with file
-) RETURNS jsonb  AS $f$
-DECLARE
- a text;
- sz bigint;
-BEGIN
-    FOR i in 0..(select jsonb_array_length(dict->'files')-1)
-    LOOP
-        a := format($$ {files,%s,file} $$, i )::text[];
-
-        SELECT size::bigint FROM pg_stat_file(concat(p_orig,'/',dict#>>a::text[])) INTO sz;
-
-        a := format($$ {files,%s,size} $$, i );
-        dict := jsonb_set( dict, a::text[],to_jsonb(sz));
-    END LOOP;
- RETURN dict;
-END;
-$f$ language PLpgSQL;
---SELECT ingest.insert_bytesize( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RS/SantaMaria/_pk0019.01/make_conf.yaml') );
-
-CREATE or replace FUNCTION ingest.generate_make_conf_with_size(
-    jurisd      text,
-    pack_id     text,
-    p_path_pack text,
-    p_path      text DEFAULT '/var/gits/_dg', -- git path
-    p_orig      text DEFAULT '/tmp'
-) RETURNS text AS $f$
-    DECLARE
-        q_query     text;
-        conf_yaml   jsonb;
-        conf_yaml_t text;
-        f_yaml      jsonb;
-        output_file text;
-    BEGIN
-
-    SELECT pg_read_file(p_path_pack ||'/make_conf.yaml') INTO conf_yaml_t;
-    SELECT yaml_to_jsonb(conf_yaml_t) INTO conf_yaml;
-    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
-
-    SELECT f_yaml->>'pg_io' || '/make_conf_' || jurisd || pack_id INTO output_file;
-
-    --SELECT jsonb_to_yaml(ingest.insert_bytesize(conf_yaml)::text) INTO q_query;
-    SELECT regexp_replace( conf_yaml_t , '\n*files: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || jsonb_to_yaml((jsonb_build_object('files',ingest.insert_bytesize(conf_yaml,p_orig)->'files'))::text) || E'\n', 'n') INTO q_query;
-    
-    SELECT volat_file_write(output_file,q_query) INTO q_query;
-
-    RETURN q_query;
-    END;
-$f$ LANGUAGE PLpgSQL;
--- SELECT ingest.generate_make_conf_with_size('BR','19.1');
 
 CREATE or replace FUNCTION ingest.generate_make_conf_with_license(
     jurisd  text,
@@ -2616,101 +2532,6 @@ $f$ LANGUAGE PLpgSQL;
 -- SELECT ingest.generate_make_conf_with_license('BR','16.1','/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01','/var/gits/_dg');
 -- SELECT ingest.generate_make_conf_with_license('BR','9.1','/var/gits/_dg/preserv-BR/data/MG/Contagem/_pk0009.01','/var/gits/_dg');
 
-
-CREATE or replace FUNCTION ingest.generate_makefile(
-    jurisd  text,
-    pack_id text,
-    p_path_pack text,
-    p_path  text DEFAULT '/var/gits/_dg'  -- git path
-) RETURNS text AS $f$
-    DECLARE
-        q_query text;
-        p_yaml jsonb;
-        f_yaml jsonb;
-        mkme_srcTplLast text;
-        mkme_srcTpl text;
-        output_file text;
-    BEGIN
-
-    SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) INTO p_yaml;
-    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/make_' || lower(p_yaml->>'schemaId_template') || '.mustache.mk')  INTO mkme_srcTpl;
-    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
-    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/commomLast.mustache.mk') INTO mkme_srcTplLast;
-
-    SELECT f_yaml->>'pg_io' || '/makeme_' || jurisd || pack_id INTO output_file;
-
-    p_yaml := jsonb_set( p_yaml, array['jurisdiction'], to_jsonb(jurisd) );
-
-    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, ingest.jsonb_mustache_prepare(f_yaml || p_yaml)),E'\u130C9',$$\"$$) INTO q_query; -- "
-
-    SELECT volat_file_write(output_file,q_query) INTO q_query;
-
-    RETURN q_query;
-    END;
-$f$ LANGUAGE PLpgSQL;
--- SELECT ingest.generate_makefile('BR','16.1');
--- SELECT ingest.generate_makefile('PE','1');
-
-CREATE or replace FUNCTION ingest.generate_readme(
-    jurisd  text,
-    pack_id text,
-    p_path_pack text,
-    p_path  text DEFAULT '/var/gits/_dg'  -- git path
-) RETURNS text AS $f$
-    DECLARE
-        q_query text;
-        conf_yaml jsonb;
-        f_yaml jsonb;
-        p_yaml jsonb;
-        readme text;
-        output_file text;
-    BEGIN
-
-    SELECT ingest.jsonb_mustache_prepare(yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' ))) INTO p_yaml;
-
-    SELECT p_yaml || jsonb_build_object('layers',list) || s.csv[0]
-    FROM
-    (
-      SELECT jsonb_agg(g) AS list
-      FROM
-      (
-        SELECT t.value || jsonb_build_object('publication_data',COALESCE(u.l,'{}'::jsonb)) AS value
-        FROM jsonb_each(p_yaml->'layers') t(key,value)
-        LEFT JOIN
-        (
-          SELECT jsonb_array_elements(page->'layers') AS l
-          FROM ingest.vw03publication
-          WHERE pack_number = ('_pk' || (p_yaml->>'pack_number')::text) AND  isolabel_ext = p_yaml->>'isolabel_ext'
-        ) u
-        ON u.l->'class_ftname' = t.value->'layername_root'
-      ) g
-    ) r,
-    LATERAL
-    (
-      SELECT jsonb_agg(to_jsonb(t.*)) AS csv
-      FROM ingest.vwdonatedpacks_donor t
-      WHERE t.pack_id = (p_yaml->>'pack_number_donatedpackcsv')::int
-    ) s
-    INTO conf_yaml;
-
-    RAISE NOTICE 'conf: %', conf_yaml;
-
-    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
-    SELECT pg_read_file(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/readme.mustache') INTO readme;
-
-    SELECT f_yaml->>'pg_io' || '/README_' || jurisd || pack_id INTO output_file;
-
-    SELECT jsonb_mustache_render(readme, conf_yaml) || (CASE WHEN file_exists(p_yaml->>'path_preserv_server' ||'/attachment.md') THEN pg_read_file(p_yaml->>'path_preserv_server' ||'/attachment.md') ELSE '' END)
-    INTO q_query;
-
-    SELECT volat_file_write(output_file,q_query) INTO q_query;
-
-    RETURN q_query;
-    END;
-$f$ LANGUAGE PLpgSQL;
--- SELECT ingest.generate_readme('BR','16.1');
--- SELECT ingest.generate_readme('BR','21.1','/var/gits/_dg/preserv-BR/data/SP/Atibaia/_pk0021.01','/var/gits/_dg');
--- SELECT ingest.generate_readme('BR','30.1');
 -- ----------------------------
 
 CREATE TABLE download.redirects (
@@ -2724,7 +2545,7 @@ CREATE TABLE download.redirects (
 
 CREATE or replace VIEW api.redirects AS SELECT * FROM download.redirects;
 
-
+-- ----------------------------
 
 CREATE or replace FUNCTION ingest.join(
     p_ftname_layer text,

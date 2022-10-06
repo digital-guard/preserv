@@ -465,3 +465,154 @@ CREATE or replace FUNCTION optim.generate_commands(
     END;
 $f$ LANGUAGE PLpgSQL;
 -- SELECT optim.generate_commands('BR','/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01','/var/gits/_dg');
+
+
+CREATE VIEW optim.reproducibility AS
+    SELECT r.*, optim.generate_commands(split_part(r.isolabel_ext,'-',1), path_preserv_server, '/var/gits/_dg') AS commands
+    FROM
+    (
+        SELECT pt.*, '/var/gits/_dg/preserv-' || regexp_replace(replace(regexp_replace(pt.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(pt.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv_server
+        FROM optim.vw01full_donated_PackTpl pt
+    ) r
+    WHERE path_preserv_server <> '/var/gits/_dg/preserv-BR/data/PR/Curitiba/_pk0002.01'
+    ORDER BY packtpl_id
+;
+
+CREATE or replace FUNCTION optim.generate_makefile(
+    jurisd  text,
+    pack_id text,
+    p_output text,
+    p_path_pack text,
+    p_path  text DEFAULT '/var/gits/_dg'  -- git path
+) RETURNS text AS $f$
+    DECLARE
+        q_query text;
+        p_yaml jsonb;
+        f_yaml jsonb;
+        mkme_srcTplLast text;
+        mkme_srcTpl text;
+    BEGIN
+
+    SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) INTO p_yaml;
+    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/make_' || lower(p_yaml->>'schemaId_template') || '.mustache.mk')  INTO mkme_srcTpl;
+    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
+    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/commomLast.mustache.mk') INTO mkme_srcTplLast;
+
+    p_yaml := jsonb_set( p_yaml, array['jurisdiction'], to_jsonb(jurisd) );
+
+    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, optim.jsonb_mustache_prepare(f_yaml || p_yaml)),E'\u130C9',$$\"$$) INTO q_query; -- "
+
+    SELECT volat_file_write(p_output,q_query) INTO q_query;
+
+    RETURN q_query;
+    END;
+$f$ LANGUAGE PLpgSQL;
+-- SELECT optim.generate_makefile('BR','21.1','/tmp/pg_io/testemakefile','/var/gits/_dg/preserv-BR/data/SP/Atibaia/_pk0021.01','/var/gits/_dg');
+
+CREATE or replace FUNCTION optim.generate_readme(
+    jurisd  text,
+    pack_id text,
+    p_output text,
+    p_path_pack text,
+    p_path  text DEFAULT '/var/gits/_dg'  -- git path
+) RETURNS text AS $f$
+    DECLARE
+        q_query text;
+        conf_yaml jsonb;
+        f_yaml jsonb;
+        p_yaml jsonb;
+        readme text;
+    BEGIN
+
+    SELECT optim.jsonb_mustache_prepare(yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' ))) INTO p_yaml;
+
+    SELECT p_yaml || jsonb_build_object('layers',list) || s.csv[0]
+    FROM
+    (
+      SELECT jsonb_agg(g) AS list
+      FROM
+      (
+        SELECT t.value || jsonb_build_object('publication_data',COALESCE(u.l,'{}'::jsonb)) AS value
+        FROM jsonb_each(p_yaml->'layers') t(key,value)
+        LEFT JOIN
+        (
+          SELECT jsonb_array_elements(page->'layers') AS l
+          FROM optim.vw03publication
+          WHERE pack_number = ('_pk' || (p_yaml->>'pack_number')::text) AND  isolabel_ext = p_yaml->>'isolabel_ext'
+        ) u
+        ON u.l->'class_ftname' = t.value->'layername_root'
+      ) g
+    ) r,
+    LATERAL
+    (
+      SELECT jsonb_agg(to_jsonb(t.*)) AS csv
+      FROM api.donatedpacks_donor t
+      WHERE t.pack_id = (p_yaml->>'pack_number_donatedpackcsv')::int
+    ) s
+    INTO conf_yaml;
+
+    RAISE NOTICE 'conf: %', conf_yaml;
+
+    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
+    SELECT pg_read_file(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/readme.mustache') INTO readme;
+
+    SELECT jsonb_mustache_render(readme, conf_yaml) || (CASE WHEN file_exists(p_yaml->>'path_preserv_server' ||'/attachment.md') THEN pg_read_file(p_yaml->>'path_preserv_server' ||'/attachment.md') ELSE '' END)
+    INTO q_query;
+
+    SELECT volat_file_write(p_output,q_query) INTO q_query;
+
+    RETURN q_query;
+    END;
+$f$ LANGUAGE PLpgSQL;
+-- SELECT optim.generate_readme('BR','21.1','/tmp/pg_io/testereadme','/var/gits/_dg/preserv-BR/data/SP/Atibaia/_pk0021.01','/var/gits/_dg');
+
+CREATE or replace FUNCTION optim.insert_bytesize(
+  dict   jsonb,  -- input
+  p_orig text DEFAULT '/tmp' --folder with file
+) RETURNS jsonb  AS $f$
+DECLARE
+ a text;
+ sz bigint;
+BEGIN
+    FOR i in 0..(select jsonb_array_length(dict->'files')-1)
+    LOOP
+        a := format($$ {files,%s,file} $$, i )::text[];
+
+        SELECT size::bigint FROM pg_stat_file(concat(p_orig,'/',dict#>>a::text[])) INTO sz;
+
+        a := format($$ {files,%s,size} $$, i );
+        dict := jsonb_set( dict, a::text[],to_jsonb(sz));
+    END LOOP;
+ RETURN dict;
+END;
+$f$ language PLpgSQL;
+--SELECT optim.insert_bytesize( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/RS/SantaMaria/_pk0019.01/make_conf.yaml') );
+
+CREATE or replace FUNCTION optim.generate_make_conf_with_size(
+    jurisd      text,
+    pack_id     text,
+    p_output    text,
+    p_path_pack text,
+    p_path      text DEFAULT '/var/gits/_dg', -- git path
+    p_orig      text DEFAULT '/tmp'
+) RETURNS text AS $f$
+    DECLARE
+        q_query     text;
+        conf_yaml   jsonb;
+        conf_yaml_t text;
+        f_yaml      jsonb;
+    BEGIN
+
+    SELECT pg_read_file(p_path_pack ||'/make_conf.yaml') INTO conf_yaml_t;
+    SELECT yaml_to_jsonb(conf_yaml_t) INTO conf_yaml;
+    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
+
+    --SELECT jsonb_to_yaml(optim.insert_bytesize(conf_yaml)::text) INTO q_query;
+    SELECT regexp_replace( conf_yaml_t , '\n*files: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || jsonb_to_yaml((jsonb_build_object('files',optim.insert_bytesize(conf_yaml,p_orig)->'files'))::text) || E'\n', 'n') INTO q_query;
+
+    SELECT volat_file_write(p_output,q_query) INTO q_query;
+
+    RETURN q_query;
+    END;
+$f$ LANGUAGE PLpgSQL;
+-- SELECT optim.generate_make_conf_with_size('BR','21.1','/tmp/pg_io/testereadme','/var/gits/_dg/preserv-BR/data/SP/Atibaia/_pk0021.01','/var/gits/_dg');

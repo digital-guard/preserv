@@ -38,7 +38,7 @@ info:
 
 me:
 	@echo "-- Generating makefile --"
-	psql $(pg_uri_db) -c "SELECT ingest.generate_makefile('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)');"
+	cd $(baseSrc)/preserv/src; make generate_makefile country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(mkme_output)
 	sudo chmod 777 $(mkme_output)
 	@echo " Check diff, the '<' lines are the new ones. Something changed?"
 	@diff $(mkme_output) ./makefile || :
@@ -51,7 +51,7 @@ endif
 
 readme:
 	@echo "-- Generating README.md --"
-	psql $(pg_uri_db) -c "SELECT ingest.generate_readme('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)');"
+	cd $(baseSrc)/preserv/src; make generate_readme country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(readme_output)
 	sudo chmod 777 $(readme_output)
 	@echo " Check diff, the '<' lines are the new ones. Something changed?"
 	@diff $(readme_output) ./README.md || :
@@ -64,7 +64,7 @@ endif
 
 insert_size:
 	@echo "-- Inserting size in files of make_conf --"
-	psql $(pg_uri_db) -c "SELECT ingest.generate_make_conf_with_size('$(country)','$(pack_id)','$(baseSrcPack)','$(baseSrc)','$(orig)');"
+	cd $(baseSrc)/preserv/src; make generate_make_conf_with_size country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(conf_output)
 	sudo chmod 777 $(conf_output)
 	@echo " Check diff, the '<' lines are the new ones. Something changed?"
 	@diff $(conf_output) ./make_conf.yaml || :
