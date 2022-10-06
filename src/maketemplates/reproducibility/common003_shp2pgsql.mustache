@@ -7,11 +7,9 @@ psql {{pg_uri}}/{{pg_db}} -c "INSERT INTO spatial_ref_sys (srid, auth_name, auth
 psql {{pg_uri}}/{{pg_db}} -c "SELECT srid, proj4text FROM spatial_ref_sys where srid={{.}}"
 {{/srid}}
 {{#orig_subfilename}}
-{{!-- 	@echo Extraindo ... --}}
 cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; 7z x -y "*{{orig_filename}}*" ; chmod -R a+rx . > /dev/null
 {{/orig_subfilename}}
 {{#isShp}}
-{{!-- 	@echo Executando shp2pgsql ... --}}
 {{#multiple_files}}
 {{#multiple_files_array}}
 cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{name_item}}*.shp" -exec sh -c "psql {{pg_uri}}/{{pg_db}} -c 'DROP TABLE IF EXISTS {{tabname}}'; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' {{tabname}} | psql -q {{pg_uri}}/{{pg_db}}; {{#sql_view_item}}psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}" | psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_filename_array_first}}{{orig_filename_array_first}}{{/orig_filename_array_first}}*.shp" | head -n 1)','{{layername}}','vw{{file}}_{{tabname}}','{{fullPkID}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}},{{isFirst}})" | psql {{pg_uri}}/{{pg_db}} -c "DROP VIEW vw{{file}}_{{tabname}}"{{/sql_view_item}}{{^sql_view_item}}psql {{pg_uri}}/{{pg_db}} -c \"SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_filename_array_first}}{{orig_filename_array_first}}{{/orig_filename_array_first}}*.shp" | head -n 1)','{{layername}}','{{tabname}}','{{fullPkID}}','{{file_data.file}}',array{{{sql_select_item}}},{{id_profile_params}},{{buffer_type}},{{isFirst}})\"{{/sql_view_item}}; chmod -R a+rx . 2> /dev/null" \;
@@ -21,7 +19,6 @@ cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; find {{sandbox}}/_p
 cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" -exec sh -c "psql {{pg_uri}}/{{pg_db}} -c 'DROP TABLE IF EXISTS {{tabname}}'; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' {{tabname}} | psql -q {{pg_uri}}/{{pg_db}} ; {{#sql_view}}psql {{pg_uri}}/{{pg_db}} -c \"CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}\" | psql {{pg_uri}}/{{pg_db}} -c \"SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" | head -n 1)','{{layername}}','vw{{file}}_{{tabname}}','{{fullPkID}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}},false)\" | psql {{pg_uri}}/{{pg_db}} -c \"DROP VIEW vw{{file}}_{{tabname}}\"{{/sql_view}}{{^sql_view}}psql {{pg_uri}}/{{pg_db}} -c \"SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" | head -n 1)','{{layername}}','{{tabname}}','{{fullPkID}}','{{file_data.file}}',array{{{sql_select}}},{{id_profile_params}},{{buffer_type}},false)\"{{/sql_view}} " \;
 psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load_assign('$$(find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" | head -n 1)','{{layername}}','{{fullPkID}}' )"
 {{/multiple_files_array}}
-{{!-- 	@echo "Confira os resultados nas tabelas ingest.donated_packcomponent e ingest.feature_asis". --}}
 {{/multiple_files}}
 {{^multiple_files}}
 cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} "{{orig_filename}}.shp" {{tabname}} | psql -q {{pg_uri}}/{{pg_db}} 2> /dev/null
@@ -29,15 +26,12 @@ cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; shp2pgsql -D {{#cha
 {{/isShp}}
 {{#isCsv}}
 {{#isXlsx}}
-{{!-- 	@echo Convertendo de {{orig_filename}}.xlsx para {{orig_filename}}.csv em UTF8 com LF ... --}}
 xlsx2csv -i {{{method_opts}}} "{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{orig_filename}}.xlsx" "{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}"
 {{/isXlsx}}
 {{^isXlsx}}
 {{#charset}}
-{{!-- 	@echo Alterando codificação para UTF8 e o tipo de quebra de linha de CRLF para LF ... --}}
 iconv -f {{charset}} -t UTF-8 {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}} | dos2unix > {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{orig_filename}}.unix_utf8.csv
 {{/charset}}
-{{!-- 	@echo Executando csv2sql ... --}}
 {{#charset}}
 psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.fdw_generate_direct_csv( '{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{orig_filename}}.unix_utf8.csv', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
 {{/charset}}
@@ -47,22 +41,17 @@ psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.fdw_generate_direct_csv( '{{sandbox}
 {{/charset}}
 {{/isCsv}}
 {{#isOgr}}
-{{!-- 	@echo Executando ogr2ogr ... --}}
 sudo docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}:/tmp osgeo/gdal ogr2ogr -lco GEOMETRY_NAME=geom -overwrite -f "PostgreSQL" PG:" dbname='{{pg_db}}' host='localhost' port='5432' user='postgres' " "/tmp/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}" {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
 {{/isOgr}}
 {{#isGdb}}
-{{!-- 	@echo Executando ogr2ogr ... --}}
 sudo docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}:/tmp osgeo/gdal ogr2ogr -lco GEOMETRY_NAME=geom -overwrite -f "PostgreSQL" PG:" dbname='{{pg_db}}' host='localhost' port='5432' user='postgres' " "/tmp/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}" {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
 {{/isGdb}}
 {{#isOgrWithShp}}
-{{!-- 	@echo Executando ogr2ogr ... --}}
 sudo docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}:/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='{{pg_db}}' host='localhost' port='5432' user='postgres' " /tmp/{{{orig_tabname}}} {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
 {{/isOgrWithShp}}
 {{#isOsm}}
-{{!-- 	@echo Executando osm2sql ... --}}
 {{/isOsm}}
 {{#isGeojson}}
-{{!-- 	@echo Executando geojson2sql ... --}}
 FSIZE=$$(du -b '{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{orig_filename}}.geojson' | cut -f 1) ; \
 if [ $$FSIZE -gt 157286400 ]; then \
 cp -s /var/gits/_dg/preserv/src/splitGeojson.bash {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; \
