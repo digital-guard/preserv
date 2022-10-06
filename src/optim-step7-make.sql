@@ -182,9 +182,9 @@ BEGIN
         dict := jsonb_set( dict, array['layers',key,'path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server || '/' || key FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['layers',key,'path_cutgeo_git'] , to_jsonb((SELECT path_cutgeo_git || '/' || key FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
 
+        dict := jsonb_set( dict, array['packtpl_id'] , to_jsonb((SELECT packtpl_id FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['path_cutgeo_git'] , to_jsonb((SELECT path_cutgeo_git FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
-
         dict := jsonb_set( dict, array['path_preserv_git'] , to_jsonb((SELECT path_preserv_git FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['path_preserv_server'] , to_jsonb((SELECT path_preserv_server FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
@@ -461,11 +461,14 @@ CREATE or replace FUNCTION optim.generate_commands(
 
     p_yaml := jsonb_set( p_yaml, array['jurisdiction'], to_jsonb(jurisd) );
 
-    RETURN (SELECT replace(jsonb_mustache_render(mkme_srcTpl, optim.jsonb_mustache_prepare(f_yaml || p_yaml),'/var/gits/_dg/preserv/src/maketemplates/reproducibility/'),E'\u130C9',$$\"$$));
+    SELECT replace(jsonb_mustache_render(mkme_srcTpl, optim.jsonb_mustache_prepare(f_yaml || p_yaml),'/var/gits/_dg/preserv/src/maketemplates/reproducibility/'),E'\u130C9',$$\"$$)
+    INTO q_query;
+
+    RETURN q_query;
+
     END;
 $f$ LANGUAGE PLpgSQL;
 -- SELECT optim.generate_commands('BR','/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01','/var/gits/_dg');
-
 
 CREATE VIEW optim.reproducibility AS
     SELECT r.*, optim.generate_commands(split_part(r.isolabel_ext,'-',1), path_preserv_server, '/var/gits/_dg') AS commands
@@ -522,6 +525,7 @@ CREATE or replace FUNCTION optim.generate_readme(
         f_yaml jsonb;
         p_yaml jsonb;
         readme text;
+        reproducibility text;
     BEGIN
 
     SELECT optim.jsonb_mustache_prepare(yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' ))) INTO p_yaml;
@@ -551,12 +555,17 @@ CREATE or replace FUNCTION optim.generate_readme(
     ) s
     INTO conf_yaml;
 
+    SELECT commands FROM optim.reproducibility WHERE packtpl_id= (p_yaml->>'packtpl_id')::bigint INTO reproducibility;
+
+    conf_yaml := conf_yaml || jsonb_build_object( 'reproducibility', to_jsonb(reproducibility) );
+
     RAISE NOTICE 'conf: %', conf_yaml;
 
     SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
     SELECT pg_read_file(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/readme.mustache') INTO readme;
 
-    SELECT jsonb_mustache_render(readme, conf_yaml) || (CASE WHEN file_exists(p_yaml->>'path_preserv_server' ||'/attachment.md') THEN pg_read_file(p_yaml->>'path_preserv_server' ||'/attachment.md') ELSE '' END)
+    SELECT jsonb_mustache_render(readme, conf_yaml) ||
+           (CASE WHEN file_exists(p_yaml->>'path_preserv_server' ||'/attachment.md') THEN pg_read_file(p_yaml->>'path_preserv_server' ||'/attachment.md') ELSE '' END)
     INTO q_query;
 
     SELECT volat_file_write(p_output,q_query) INTO q_query;
