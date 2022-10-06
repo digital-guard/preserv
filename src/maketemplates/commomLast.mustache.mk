@@ -63,7 +63,7 @@ endif
 
 insert_size:
 	@echo "-- Inserting size in files of make_conf --"
-	cd $(preservSrc); make insert_size country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(tmpfile)
+	cd $(preservSrc); make insert_size country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(tmpfile) orig=$(orig)
 	sudo chmod 777 $(tmpfile)
 	@echo " Check diff, the '<' lines are the new ones. Something changed?"
 	@diff $(tmpfile) ./make_conf.yaml || :
