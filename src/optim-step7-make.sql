@@ -577,12 +577,12 @@ CREATE or replace FUNCTION optim.generate_make_conf_with_size(
         q_query     text;
         conf_yaml   jsonb;
         conf_yaml_t text;
-        f_yaml      jsonb;
     BEGIN
 
     SELECT pg_read_file(p_path_pack ||'/make_conf.yaml') INTO conf_yaml_t;
-    SELECT yaml_to_jsonb(conf_yaml_t) INTO conf_yaml;
-    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
+    SELECT yaml_to_jsonb(conf_yaml_t) ||
+           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml')
+    INTO conf_yaml;
 
     --SELECT jsonb_to_yaml(optim.insert_bytesize(conf_yaml)::text) INTO q_query;
     SELECT regexp_replace( conf_yaml_t , '\n*files: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || jsonb_to_yaml((jsonb_build_object('files',optim.insert_bytesize(conf_yaml,p_orig)->'files'))::text) || E'\n', 'n') INTO q_query;
@@ -605,19 +605,18 @@ CREATE or replace FUNCTION optim.generate_make_conf_with_license(
         q_query text;
         p_yaml jsonb;
         p_yaml_t text;
-        f_yaml jsonb;
         license_evidences jsonb;
         definition jsonb;
         license_explicit boolean;
     BEGIN
 
     SELECT pg_read_file(p_path_pack ||'/make_conf.yaml') INTO p_yaml_t;
-    SELECT yaml_to_jsonb(p_yaml_t) INTO p_yaml;
-    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
+    SELECT yaml_to_jsonb(p_yaml_t) ||
+           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml')
+    INTO p_yaml;
 
     SELECT to_jsonb(ARRAY[name, family, url]), CASE WHEN lower(license_is_explicit)='yes' THEN TRUE ELSE FALSE END FROM tmp_orig.tmp_pack_licenses WHERE tmp_orig.tmp_pack_licenses.pack_id = (to_char(substring(p_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(p_yaml->>'pack_id','([^\.]*)$')::int,'fm00')) INTO definition, license_explicit;
 
-    --SELECT p_yaml_t || jsonb_to_yaml(license_evidences::text)::text INTO q_query;
     IF license_explicit
     THEN
       IF p_yaml?'license_evidences'
