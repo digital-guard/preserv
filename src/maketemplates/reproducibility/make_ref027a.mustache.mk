@@ -1,7 +1,7 @@
 {{#layers}}
 {{#address}}
 address:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
@@ -13,7 +13,7 @@ mkdir -p {{pg_io}}
 
 {{#block}}
 block:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
@@ -26,7 +26,7 @@ mkdir -p {{pg_io}}
 
 {{#building}}
 building:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
@@ -39,7 +39,7 @@ mkdir -p {{pg_io}}
 
 {{#cadparcel}}
 cadparcel:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
@@ -51,7 +51,7 @@ mkdir -p {{pg_io}}
 
 {{#cadvia}}
 cadvia:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
@@ -63,7 +63,7 @@ mkdir -p {{pg_io}}
 
 {{#genericvia}}
 genericvia:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
@@ -76,7 +76,7 @@ mkdir -p {{pg_io}}
 
 {{#geoaddress}}
 geoaddress:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
@@ -92,7 +92,7 @@ psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, 
 
 {{#nsvia}}
 nsvia:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
@@ -105,7 +105,7 @@ mkdir -p {{pg_io}}
 
 {{#parcel}}
 parcel:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
@@ -118,7 +118,7 @@ mkdir -p {{pg_io}}
 
 {{#via}}
 via:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
@@ -134,7 +134,7 @@ psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, 
 
 {{#datagrid}}
 datagrid:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
@@ -148,7 +148,7 @@ mkdir -p {{pg_io}}
 
 {{#openstreetmap}}
 openstreetmap:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
