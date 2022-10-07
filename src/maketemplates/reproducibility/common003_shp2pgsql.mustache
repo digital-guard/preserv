@@ -7,61 +7,61 @@ psql {{pg_uri}}/{{pg_db}} -c "INSERT INTO spatial_ref_sys (srid, auth_name, auth
 psql {{pg_uri}}/{{pg_db}} -c "SELECT srid, proj4text FROM spatial_ref_sys where srid={{.}}"
 {{/srid}}
 {{#orig_subfilename}}
-cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; 7z x -y "*{{orig_filename}}*" ; chmod -R a+rx . > /dev/null
+cd {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}; 7z x -y "*{{orig_filename}}*" ; chmod -R a+rx . > /dev/null
 {{/orig_subfilename}}
 {{#isShp}}
 {{#multiple_files}}
 {{#multiple_files_array}}
-cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{name_item}}*.shp" -exec sh -c "psql {{pg_uri}}/{{pg_db}} -c 'DROP TABLE IF EXISTS {{tabname}}'; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' {{tabname}} | psql -q {{pg_uri}}/{{pg_db}}; {{#sql_view_item}}psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}" | psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_filename_array_first}}{{orig_filename_array_first}}{{/orig_filename_array_first}}*.shp" | head -n 1)','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}},{{isFirst}})" | psql {{pg_uri}}/{{pg_db}} -c "DROP VIEW vw{{file}}_{{tabname}}"{{/sql_view_item}}{{^sql_view_item}}psql {{pg_uri}}/{{pg_db}} -c \"SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_filename_array_first}}{{orig_filename_array_first}}{{/orig_filename_array_first}}*.shp" | head -n 1)','{{layername}}','{{tabname}}','{{packvers_id}}','{{file_data.file}}',array{{{sql_select_item}}},{{id_profile_params}},{{buffer_type}},{{isFirst}})\"{{/sql_view_item}}; chmod -R a+rx . 2> /dev/null" \;
+cd {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}; find {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} -path "*{{name_item}}*.shp" -exec sh -c "psql {{pg_uri}}/{{pg_db}} -c 'DROP TABLE IF EXISTS {{tabname}}'; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' {{tabname}} | psql -q {{pg_uri}}/{{pg_db}}; {{#sql_view_item}}psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}" | psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} -path "*{{#orig_filename_array_first}}{{orig_filename_array_first}}{{/orig_filename_array_first}}*.shp" | head -n 1)','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}},{{isFirst}})" | psql {{pg_uri}}/{{pg_db}} -c "DROP VIEW vw{{file}}_{{tabname}}"{{/sql_view_item}}{{^sql_view_item}}psql {{pg_uri}}/{{pg_db}} -c \"SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} -path "*{{#orig_filename_array_first}}{{orig_filename_array_first}}{{/orig_filename_array_first}}*.shp" | head -n 1)','{{layername}}','{{tabname}}','{{packvers_id}}','{{file_data.file}}',array{{{sql_select_item}}},{{id_profile_params}},{{buffer_type}},{{isFirst}})\"{{/sql_view_item}}; chmod -R a+rx . 2> /dev/null" \;
 {{/multiple_files_array}}
-{{#orig_filename_array_first}}psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load_assign( '$$(find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_filename_array_first}}{{orig_filename_array_first}}{{/orig_filename_array_first}}*.shp" | head -n 1)','{{layername}}','{{packvers_id}}' )"{{/orig_filename_array_first}}
+{{#orig_filename_array_first}}psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load_assign( '$$(find {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} -path "*{{#orig_filename_array_first}}{{orig_filename_array_first}}{{/orig_filename_array_first}}*.shp" | head -n 1)','{{layername}}','{{packvers_id}}' )"{{/orig_filename_array_first}}
 {{^multiple_files_array}}
-cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" -exec sh -c "psql {{pg_uri}}/{{pg_db}} -c 'DROP TABLE IF EXISTS {{tabname}}'; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' {{tabname}} | psql -q {{pg_uri}}/{{pg_db}} ; {{#sql_view}}psql {{pg_uri}}/{{pg_db}} -c \"CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}\" | psql {{pg_uri}}/{{pg_db}} -c \"SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" | head -n 1)','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}},false)\" | psql {{pg_uri}}/{{pg_db}} -c \"DROP VIEW vw{{file}}_{{tabname}}\"{{/sql_view}}{{^sql_view}}psql {{pg_uri}}/{{pg_db}} -c \"SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" | head -n 1)','{{layername}}','{{tabname}}','{{packvers_id}}','{{file_data.file}}',array{{{sql_select}}},{{id_profile_params}},{{buffer_type}},false)\"{{/sql_view}} " \;
-psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load_assign('$$(find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" | head -n 1)','{{layername}}','{{packvers_id}}' )"
+cd {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}; find {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" -exec sh -c "psql {{pg_uri}}/{{pg_db}} -c 'DROP TABLE IF EXISTS {{tabname}}'; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' {{tabname}} | psql -q {{pg_uri}}/{{pg_db}} ; {{#sql_view}}psql {{pg_uri}}/{{pg_db}} -c \"CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}\" | psql {{pg_uri}}/{{pg_db}} -c \"SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" | head -n 1)','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}},false)\" | psql {{pg_uri}}/{{pg_db}} -c \"DROP VIEW vw{{file}}_{{tabname}}\"{{/sql_view}}{{^sql_view}}psql {{pg_uri}}/{{pg_db}} -c \"SELECT ingest.any_load('{{method}}','$$(find {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" | head -n 1)','{{layername}}','{{tabname}}','{{packvers_id}}','{{file_data.file}}',array{{{sql_select}}},{{id_profile_params}},{{buffer_type}},false)\"{{/sql_view}} " \;
+psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load_assign('$$(find {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.shp" | head -n 1)','{{layername}}','{{packvers_id}}' )"
 {{/multiple_files_array}}
 {{/multiple_files}}
 {{^multiple_files}}
-cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} "{{orig_filename}}.shp" {{tabname}} | psql -q {{pg_uri}}/{{pg_db}} 2> /dev/null
+cd {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}; shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} "{{orig_filename}}.shp" {{tabname}} | psql -q {{pg_uri}}/{{pg_db}} 2> /dev/null
 {{/multiple_files}}
 {{/isShp}}
 {{#isCsv}}
 {{#isXlsx}}
-xlsx2csv -i {{{method_opts}}} "{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{orig_filename}}.xlsx" "{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}"
+xlsx2csv -i {{{method_opts}}} "{{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}/{{orig_filename}}.xlsx" "{{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}"
 {{/isXlsx}}
 {{^isXlsx}}
 {{#charset}}
-iconv -f {{charset}} -t UTF-8 {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}} | dos2unix > {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{orig_filename}}.unix_utf8.csv
+iconv -f {{charset}} -t UTF-8 {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}} | dos2unix > {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}/{{orig_filename}}.unix_utf8.csv
 {{/charset}}
 {{#charset}}
-psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.fdw_generate_direct_csv( '{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{orig_filename}}.unix_utf8.csv', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.fdw_generate_direct_csv( '{{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}/{{orig_filename}}.unix_utf8.csv', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
 {{/charset}}
 {{/isXlsx}}
 {{^charset}}
-psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.fdw_generate_direct_csv( '{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.fdw_generate_direct_csv( '{{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
 {{/charset}}
 {{/isCsv}}
 {{#isOgr}}
-sudo docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}:/tmp osgeo/gdal ogr2ogr -lco GEOMETRY_NAME=geom -overwrite -f "PostgreSQL" PG:" dbname='{{pg_db}}' host='localhost' port='5432' user='postgres' " "/tmp/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}" {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
+sudo docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}:/tmp osgeo/gdal ogr2ogr -lco GEOMETRY_NAME=geom -overwrite -f "PostgreSQL" PG:" dbname='{{pg_db}}' host='localhost' port='5432' user='postgres' " "/tmp/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}" {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
 {{/isOgr}}
 {{#isGdb}}
-sudo docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}:/tmp osgeo/gdal ogr2ogr -lco GEOMETRY_NAME=geom -overwrite -f "PostgreSQL" PG:" dbname='{{pg_db}}' host='localhost' port='5432' user='postgres' " "/tmp/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}" {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
+sudo docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}:/tmp osgeo/gdal ogr2ogr -lco GEOMETRY_NAME=geom -overwrite -f "PostgreSQL" PG:" dbname='{{pg_db}}' host='localhost' port='5432' user='postgres' " "/tmp/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}" {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
 {{/isGdb}}
 {{#isOgrWithShp}}
-sudo docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}:/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='{{pg_db}}' host='localhost' port='5432' user='postgres' " /tmp/{{{orig_tabname}}} {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
+sudo docker run --rm --network host -v {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}:/tmp osgeo/gdal ogr2ogr -overwrite -f "PostgreSQL" PG:" dbname='{{pg_db}}' host='localhost' port='5432' user='postgres' " /tmp/{{{orig_tabname}}} {{{orig_tabname}}} -nln {{tabname}} {{{method_opts}}}
 {{/isOgrWithShp}}
 {{#isOsm}}
 {{/isOsm}}
 {{#isGeojson}}
-FSIZE=$$(du -b '{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{orig_filename}}.geojson' | cut -f 1) ; \
+FSIZE=$$(du -b '{{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}/{{orig_filename}}.geojson' | cut -f 1) ; \
 if [ $$FSIZE -gt 157286400 ]; then \
-cp -s /var/gits/_dg/preserv/src/splitGeojson.bash {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; \
-cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; bash splitGeojson.bash '{{orig_filename}}.geojson' 20000 ; \
+cp -s /var/gits/_dg/preserv/src/splitGeojson.bash {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}; \
+cd {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}; bash splitGeojson.bash '{{orig_filename}}.geojson' 20000 ; \
 psql {{pg_uri}}/{{pg_db}} -c "DROP TABLE IF EXISTS {{tabname}}" ; \
-psql {{pg_uri}}/{{pg_db}} -c "CREATE TABLE {{tabname}} AS SELECT * FROM geojson_readfile_features_jgeom('{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/splited1_{{orig_filename}}.geojson',null) WHERE jgeom->'type' is not null" ; \
-cd {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}; find {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}} -path "*splited*_{{orig_filename}}.geojson" ! -path "*splited1_{{orig_filename}}.geojson" -exec sh -c "psql {{pg_uri}}/{{pg_db}} -c \"INSERT INTO {{tabname}} SELECT * FROM geojson_readfile_features_jgeom('{}',null) WHERE jgeom->'type' is not null;\"" \; ; \
+psql {{pg_uri}}/{{pg_db}} -c "CREATE TABLE {{tabname}} AS SELECT * FROM geojson_readfile_features_jgeom('{{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}/splited1_{{orig_filename}}.geojson',null) WHERE jgeom->'type' is not null" ; \
+cd {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}; find {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} -path "*splited*_{{orig_filename}}.geojson" ! -path "*splited1_{{orig_filename}}.geojson" -exec sh -c "psql {{pg_uri}}/{{pg_db}} -c \"INSERT INTO {{tabname}} SELECT * FROM geojson_readfile_features_jgeom('{}',null) WHERE jgeom->'type' is not null;\"" \; ; \
 else \
 psql {{pg_uri}}/{{pg_db}} -c "DROP TABLE IF EXISTS {{tabname}}" ; \
-psql {{pg_uri}}/{{pg_db}} -c "CREATE TABLE {{tabname}} AS SELECT * FROM geojson_readfile_features_jgeom('{{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{orig_filename}}.geojson',null) WHERE jgeom->'type' is not null" ; \
+psql {{pg_uri}}/{{pg_db}} -c "CREATE TABLE {{tabname}} AS SELECT * FROM geojson_readfile_features_jgeom('{{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}/{{orig_filename}}.geojson',null) WHERE jgeom->'type' is not null" ; \
 fi
 {{/isGeojson}}
 {{#isTxt2sql}}
