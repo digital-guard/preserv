@@ -3,7 +3,7 @@
 address:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -15,7 +15,7 @@ mkdir -p {{pg_io}}
 block:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -28,7 +28,7 @@ mkdir -p {{pg_io}}
 building:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -41,7 +41,7 @@ mkdir -p {{pg_io}}
 cadparcel:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -53,7 +53,7 @@ mkdir -p {{pg_io}}
 cadvia:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -65,7 +65,7 @@ mkdir -p {{pg_io}}
 genericvia:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -78,7 +78,7 @@ mkdir -p {{pg_io}}
 geoaddress:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -94,7 +94,7 @@ psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, 
 nsvia:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -107,7 +107,7 @@ mkdir -p {{pg_io}}
 parcel:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -120,7 +120,7 @@ mkdir -p {{pg_io}}
 via:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -136,7 +136,7 @@ psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, 
 datagrid:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -150,7 +150,7 @@ mkdir -p {{pg_io}}
 openstreetmap:
 rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 cp -s  {{orig}}/{{file_data.file}} {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
 osm2pgsql -E {{srid}} -c -d {{pg_db}} -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{file_data.file}}
