@@ -27,7 +27,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
     ) AS page
 FROM (
   SELECT pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.kx_pack_item_version, pf.local_serial, pf.pk_count, pf.pack_number,
-  INITCAP(pf.user_resp) AS user_resp, pf.path_preserv_git, pf.path_cutgeo_git,
+  pf.user_resp_initcap AS user_resp, pf.path_preserv_git, pf.path_cutgeo_git,
   row_number() OVER (PARTITION BY pf.isolabel_ext, pf.local_serial, pf.pk_count ORDER BY pf.ftype_info->'class_ftname' ASC ) AS row_num,
   pf.ftype_info->>'class_ftname' as class_ftname,
   pf.ftype_info->'class_info'->>'shortname_pt' as shortname,
@@ -35,7 +35,7 @@ FROM (
   pf.make_conf_tpl->'license_evidences' AS license_evidences,
   pf.hashedfname, 
   pf.hashedfname_without_ext,
-  hashedfname_7 || '...' || substring(pf.hashedfname, '^.+\.([a-z0-9]+)$') AS hashedfname_7_ext,
+  pf.hashedfname_7_ext,
   CASE pf.geomtype
             WHEN 'poly'  THEN 'pols'
             WHEN 'line'  THEN 'lns'

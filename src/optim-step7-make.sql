@@ -31,22 +31,6 @@ BEGIN
  CASE p_type -- preparing types
  WHEN 'make_conf', NULL THEN
 
-    IF dict?'pack_id'
-    THEN
-        dict := jsonb_set( dict, array['pack_number_donatedpackcsv'] , to_jsonb(to_char((split_part(dict->>'pack_id','.',1)::int),'fm000') || to_char((split_part(dict->>'pack_id','.',2)::int),'fm00')));
-        dict := jsonb_set( dict, array['pack_number'] , to_jsonb(to_char((split_part(dict->>'pack_id','.',1)::int),'fm0000') || '.' || to_char((split_part(dict->>'pack_id','.',2)::int),'fm00')));
-        dict := jsonb_set( dict, array['pack_id'], replace(dict->>'pack_id','.','')::jsonb);
-        
-        RAISE NOTICE 'pack_id : %', dict->>'pack_id';
-    END IF;
-
-    IF dict?'jurisdiction'
-    THEN
-        dict := jsonb_set( dict, array['country_id'], to_jsonb((SELECT jurisd_base_id::int FROM optim.vw01full_jurisdiction_geom WHERE abbrev= upper(dict->>'jurisdiction') AND jurisd_local_id=0)));
-
-        RAISE NOTICE 'country_id : %', dict->>'country_id';
-    END IF;
-
     IF dict?'codec:descr_encode'
     THEN
         codec_desc_global := jsonb_object(regexp_split_to_array ( dict->>'codec:descr_encode','(;|=)'));
@@ -115,11 +99,6 @@ BEGIN
             CASE key
             WHEN 'geoaddress'  THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb(1));
             WHEN 'via'         THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb(5));
-            --WHEN 'block'       THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb());
-            --WHEN 'building'    THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb());
-            --WHEN 'genericvia'  THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb());
-            --WHEN 'nsvia'       THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb());
-            --WHEN 'parcel'      THEN dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb());
             ELSE
                 dict := jsonb_set( dict, array['layers',key,'id_profile_params'], to_jsonb(5));
             END CASE;
@@ -145,7 +124,6 @@ BEGIN
         dict := jsonb_set( dict, array['layers',key,'isGdb'],        IIF(method='gdb2sql',bt,bf) );
         dict := jsonb_set( dict, array['layers',key,'isGeojson'],    IIF(method='geojson2sql',bt,bf) );
         dict := jsonb_set( dict, array['layers',key,'isTxt2sql'],    IIF(method='txt2sql',bt,bf) );
-        
         dict := jsonb_set( dict, array['layers',key,'isGeoaddress'], IIF(key='geoaddress',bt,bf) );
 
         IF dict->'layers'->key?'standardized_fields'
@@ -160,8 +138,6 @@ BEGIN
 
         dict := jsonb_set( dict, array['layers',key,'file_data'] , to_jsonb(jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0));
 
-        SELECT id FROM optim.vw01full_packfilevers WHERE hashedfname = dict->'layers'->key->'file_data'->>'file' INTO packvers_id;
-
         IF dict->'layers'->key->'file_data'?'size'
         THEN
             dict := jsonb_set( dict, array['layers',key,'file_data','size_mb_round2'], to_jsonb(ROUND(((dict->'layers'->key->'file_data'->'size')::bigint / 1048576.0),0.01)));
@@ -173,21 +149,17 @@ BEGIN
             dict := jsonb_set( dict, array['layers',key,'file_data','path'] , to_jsonb((dict->>'orig') || '/' || (dict->'layers'->key->'file_data'->>'file') ));
         END IF;
 
-        dict := jsonb_set( dict, array['layers',key,'fullPkID'] , to_jsonb(packvers_id));
+        SELECT id FROM optim.vw01full_packfilevers WHERE hashedfname = dict->'layers'->key->'file_data'->>'file' INTO packvers_id;
+
+        dict := jsonb_set( dict, array['layers',key,'packvers_id'] , to_jsonb(packvers_id));
         dict := jsonb_set( dict, array['layers',key,'layername_root'] , to_jsonb(key));
         dict := jsonb_set( dict, array['layers',key,'layername'] , to_jsonb(key || '_' || (dict->'layers'->key->>'subtype') ));
-        dict := jsonb_set( dict, array['layers',key,'tabname'] , to_jsonb('pk' || (dict->'layers'->key->>'fullPkID') || '_p' || (dict->'layers'->key->>'file') || '_' || key));
-
+        dict := jsonb_set( dict, array['layers',key,'tabname'] , to_jsonb('pk' || packvers_id || '_p' || (dict->'layers'->key->>'file') || '_' || key));
         dict := jsonb_set( dict, array['layers',key,'isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['layers',key,'path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server || '/' || key FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
         dict := jsonb_set( dict, array['layers',key,'path_cutgeo_git'] , to_jsonb((SELECT path_cutgeo_git || '/' || key FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
 
         dict := jsonb_set( dict, array['packtpl_id'] , to_jsonb((SELECT packtpl_id FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['path_cutgeo_server'] , to_jsonb((SELECT path_cutgeo_server FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['path_cutgeo_git'] , to_jsonb((SELECT path_cutgeo_git FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['path_preserv_git'] , to_jsonb((SELECT path_preserv_git FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['path_preserv_server'] , to_jsonb((SELECT path_preserv_server FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
-        dict := jsonb_set( dict, array['isolabel_ext'] , to_jsonb((SELECT isolabel_ext FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
 
         -- Caso de BR-PR-Araucaria/_pk0061.01
         IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
@@ -432,6 +404,8 @@ BEGIN
 	 dict := dict || jsonb_build_object( 'layers_keys', jsonb_object_keys_asarray(dict->'layers') );
 	 dict := jsonb_set( dict, array['pkversion'], to_jsonb(to_char((dict->>'pkversion')::int,'fm000')) );
 	 dict := jsonb_set( dict, '{files,-1,last}','true'::jsonb);
+
+	 dict := jsonb_set( dict, array['data_packtpl'] , to_jsonb((SELECT (jsonb_agg(t))[0] FROM (SELECT * FROM optim.vw01full_donated_PackTpl WHERE packtpl_id=((dict->>'packtpl_id')::bigint)) t)));
  -- CASE ELSE ...?
  END CASE;
  RETURN dict;
@@ -450,18 +424,19 @@ CREATE or replace FUNCTION optim.generate_commands(
     DECLARE
         q_query text;
         p_yaml jsonb;
-        f_yaml jsonb;
         mkme_srcTpl text;
         output_file text;
     BEGIN
 
-    SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) INTO p_yaml;
-    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/reproducibility/make_' || lower(p_yaml->>'schemaId_template') || '.mustache.mk')  INTO mkme_srcTpl;
-    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
+    SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) ||
+           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') ||
+           jsonb_build_object('jurisdiction',jurisd)
+    INTO p_yaml;
 
-    p_yaml := jsonb_set( p_yaml, array['jurisdiction'], to_jsonb(jurisd) );
+    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/reproducibility/make_' || lower(p_yaml->>'schemaId_template') || '.mustache.mk')
+    INTO mkme_srcTpl;
 
-    SELECT replace(jsonb_mustache_render(mkme_srcTpl, optim.jsonb_mustache_prepare(f_yaml || p_yaml),'/var/gits/_dg/preserv/src/maketemplates/reproducibility/'),E'\u130C9',$$\"$$)
+    SELECT replace(jsonb_mustache_render(mkme_srcTpl, optim.jsonb_mustache_prepare(p_yaml),p_path ||'/preserv/src/maketemplates/reproducibility/'),E'\u130C9',$$\"$$)
     INTO q_query;
 
     RETURN q_query;
@@ -470,13 +445,9 @@ CREATE or replace FUNCTION optim.generate_commands(
 $f$ LANGUAGE PLpgSQL;
 -- SELECT optim.generate_commands('BR','/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01','/var/gits/_dg');
 
-CREATE VIEW optim.reproducibility AS
-    SELECT r.*, optim.generate_commands(split_part(r.isolabel_ext,'-',1), path_preserv_server, '/var/gits/_dg') AS commands
-    FROM
-    (
-        SELECT pt.*, '/var/gits/_dg/preserv-' || regexp_replace(replace(regexp_replace(pt.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(pt.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv_server
-        FROM optim.vw01full_donated_PackTpl pt
-    ) r
+CREATE or replace VIEW optim.reproducibility AS
+    SELECT pt.*, optim.generate_commands(split_part(pt.isolabel_ext,'-',1), path_preserv_server, '/var/gits/_dg') AS commands
+    FROM optim.vw01full_donated_PackTpl pt
     WHERE path_preserv_server <> '/var/gits/_dg/preserv-BR/data/PR/Curitiba/_pk0002.01'
     ORDER BY packtpl_id
 ;
@@ -491,19 +462,19 @@ CREATE or replace FUNCTION optim.generate_makefile(
     DECLARE
         q_query text;
         p_yaml jsonb;
-        f_yaml jsonb;
-        mkme_srcTplLast text;
-        mkme_srcTpl text;
+        mkme_tpl text;
     BEGIN
 
-    SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) INTO p_yaml;
-    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/make_' || lower(p_yaml->>'schemaId_template') || '.mustache.mk')  INTO mkme_srcTpl;
-    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
-    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/commomLast.mustache.mk') INTO mkme_srcTplLast;
+    SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) ||
+           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') ||
+           jsonb_build_object('jurisdiction',jurisd)
+    INTO p_yaml;
 
-    p_yaml := jsonb_set( p_yaml, array['jurisdiction'], to_jsonb(jurisd) );
+    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/make_' || lower(p_yaml->>'schemaId_template') || '.mustache.mk') ||
+           pg_read_file(p_path || '/preserv/src/maketemplates/commomLast.mustache.mk')
+    INTO mkme_tpl;
 
-    SELECT replace(jsonb_mustache_render(mkme_srcTpl || mkme_srcTplLast, optim.jsonb_mustache_prepare(f_yaml || p_yaml)),E'\u130C9',$$\"$$) INTO q_query; -- "
+    SELECT replace(jsonb_mustache_render(mkme_tpl, optim.jsonb_mustache_prepare(p_yaml)),E'\u130C9',$$\"$$) INTO q_query; -- "
 
     SELECT volat_file_write(p_output,q_query) INTO q_query;
 
@@ -522,15 +493,20 @@ CREATE or replace FUNCTION optim.generate_readme(
     DECLARE
         q_query text;
         conf_yaml jsonb;
-        f_yaml jsonb;
         p_yaml jsonb;
         readme text;
         reproducibility text;
     BEGIN
 
-    SELECT optim.jsonb_mustache_prepare(yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' ))) INTO p_yaml;
+    SELECT optim.jsonb_mustache_prepare(
+           yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) ||
+           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') ||
+           jsonb_build_object('jurisdiction',jurisd)
+    ) INTO p_yaml;
 
-    SELECT p_yaml || jsonb_build_object('layers',list) || s.csv[0]
+    SELECT commands FROM optim.reproducibility WHERE packtpl_id= (p_yaml->>'packtpl_id')::bigint INTO reproducibility;
+
+    SELECT p_yaml || jsonb_build_object('layers',list) || jsonb_build_object('data_packcsv',s.csv[0]) || jsonb_build_object( 'reproducibility', to_jsonb(reproducibility) )
     FROM
     (
       SELECT jsonb_agg(g) AS list
@@ -551,17 +527,12 @@ CREATE or replace FUNCTION optim.generate_readme(
     (
       SELECT jsonb_agg(to_jsonb(t.*)) AS csv
       FROM api.donatedpacks_donor t
-      WHERE t.pack_id = (p_yaml->>'pack_number_donatedpackcsv')::int
+      WHERE t.pack_id = (p_yaml->'data_packtpl'->>'pack_number_donatedpackcsv')::int
     ) s
     INTO conf_yaml;
 
-    SELECT commands FROM optim.reproducibility WHERE packtpl_id= (p_yaml->>'packtpl_id')::bigint INTO reproducibility;
-
-    conf_yaml := conf_yaml || jsonb_build_object( 'reproducibility', to_jsonb(reproducibility) );
-
     RAISE NOTICE 'conf: %', conf_yaml;
 
-    SELECT yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') INTO f_yaml;
     SELECT pg_read_file(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/readme.mustache') INTO readme;
 
     SELECT jsonb_mustache_render(readme, conf_yaml) ||

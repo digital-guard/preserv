@@ -1,9 +1,8 @@
 CREATE or replace VIEW optim.vw01generate_list AS
-SELECT scope_label, isolevel, jsonb_build_object('legalName',legalName,'pack_number', MAX(pack_number), 'path_yaml', MAX(path_yaml), 'local_serial_formated', MAX(local_serial_formated), 'pacotes',jsonb_agg(pf2.*)) AS pacotes
+SELECT scope_label, isolevel, jsonb_build_object('legalName',legalName,'pack_number', MAX(pack_number), 'path_preserv_git', MAX(path_preserv_git), 'local_serial_formated', MAX(local_serial_formated), 'pacotes',jsonb_agg(pf2.*)) AS pacotes
 FROM  
 (
-  SELECT pf.*,
-    regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') AS path_yaml
+  SELECT pf.*
   FROM optim.vw01full_packfilevers pf
 ) pf2
 GROUP BY country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalName, wikidata_id, url, donor_info, kx_vat_id, isolevel
@@ -49,9 +48,7 @@ CREATE or replace VIEW optim.vw03generate_list_hash AS
 SELECT jsonb_build_object('pacotes',jsonb_agg(r.*)) AS y
 FROM  
 (
-  SELECT legalName, scope_label, hashedfname, hashedfname_7, pack_number, local_serial_formated,
-    regexp_replace(replace(regexp_replace(pf.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') AS path_yaml,
-    pf.info AS info
+  SELECT legalName, scope_label, hashedfname, hashedfname_7, pack_number, local_serial_formated, path_preserv_git, info
   FROM optim.vw01full_packfilevers pf
   ORDER BY hashedfname
 ) r
