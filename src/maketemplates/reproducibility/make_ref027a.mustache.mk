@@ -1,9 +1,9 @@
 {{#layers}}
 {{#address}}
 address:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -13,9 +13,9 @@ mkdir -p {{pg_io}}
 
 {{#block}}
 block:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -26,9 +26,9 @@ mkdir -p {{pg_io}}
 
 {{#building}}
 building:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -39,9 +39,9 @@ mkdir -p {{pg_io}}
 
 {{#cadparcel}}
 cadparcel:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -51,9 +51,9 @@ mkdir -p {{pg_io}}
 
 {{#cadvia}}
 cadvia:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -63,9 +63,9 @@ mkdir -p {{pg_io}}
 
 {{#genericvia}}
 genericvia:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -76,9 +76,9 @@ mkdir -p {{pg_io}}
 
 {{#geoaddress}}
 geoaddress:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -92,9 +92,9 @@ psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, 
 
 {{#nsvia}}
 nsvia:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -105,9 +105,9 @@ mkdir -p {{pg_io}}
 
 {{#parcel}}
 parcel:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -118,9 +118,9 @@ mkdir -p {{pg_io}}
 
 {{#via}}
 via:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -134,9 +134,9 @@ psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, 
 
 {{#datagrid}}
 datagrid:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
 {{>common002_layerHeader}}
 {{>common003_shp2pgsql}}
@@ -148,12 +148,12 @@ mkdir -p {{pg_io}}
 
 {{#openstreetmap}}
 openstreetmap:
-rm -rf {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}} || true
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
-mkdir -m 777 -p {{sandbox}}/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
 mkdir -p {{pg_io}}
-cp -s  {{orig}}/{{file_data.file}} {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
-osm2pgsql -E {{srid}} -c -d {{pg_db}} -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style {{sandbox}}/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}/{{file_data.file}}
+cp -s  {{orig}}/{{file_data.file}} {{sandbox}}/_pk{{pack_id}}_{{pkversion}}
+osm2pgsql -E {{srid}} -c -d {{pg_db}} -U postgres -H localhost --slim --hstore --extra-attributes --hstore-add-index --multi-geometry --number-processes 4 --style /usr/share/osm2pgsql/empty.style {{sandbox}}/_pk{{pack_id}}_{{pkversion}}/{{file_data.file}}
 psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.jplanet_inserts_and_drops({{data_packtpl.country_id}}::smallint,true);"
 {{>common006_clean}}
 {{/openstreetmap}}

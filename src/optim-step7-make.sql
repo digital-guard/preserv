@@ -429,8 +429,7 @@ CREATE or replace FUNCTION optim.generate_commands(
     BEGIN
 
     SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) ||
-           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') ||
-           jsonb_build_object('jurisdiction',jurisd)
+           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml')
     INTO p_yaml;
 
     SELECT pg_read_file(p_path || '/preserv/src/maketemplates/reproducibility/make_' || lower(p_yaml->>'schemaId_template') || '.mustache.mk')
@@ -466,8 +465,7 @@ CREATE or replace FUNCTION optim.generate_makefile(
     BEGIN
 
     SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) ||
-           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') ||
-           jsonb_build_object('jurisdiction',jurisd)
+           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml')
     INTO p_yaml;
 
     SELECT pg_read_file(p_path || '/preserv/src/maketemplates/make_' || lower(p_yaml->>'schemaId_template') || '.mustache.mk') ||
@@ -500,8 +498,7 @@ CREATE or replace FUNCTION optim.generate_readme(
 
     SELECT optim.jsonb_mustache_prepare(
            yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) ||
-           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml') ||
-           jsonb_build_object('jurisdiction',jurisd)
+           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml')
     ) INTO p_yaml;
 
     SELECT commands FROM optim.reproducibility WHERE packtpl_id= (p_yaml->>'packtpl_id')::bigint INTO reproducibility;
