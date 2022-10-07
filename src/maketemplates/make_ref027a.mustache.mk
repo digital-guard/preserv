@@ -11,7 +11,7 @@ orig              = {{orig}}
 pg_uri            = {{pg_uri}}
 pg_db             = {{pg_db}}
 sandbox_root      = {{sandbox}}
-sandbox           = $(sandbox_root)/_pk{{jurisdiction}}{{pack_id}}_{{pkversion}}
+sandbox           = $(sandbox_root)/_pk{{jurisdiction}}{{packtpl_id}}_{{pkversion}}
 need_commands     = {{^isOsm}}7z v16+; psql v12+; shp2pgsql v3+; {{/isOsm}}{{#openstreetmap}}osm2pgsql v1.4.1+; {{/openstreetmap}}{{need_extra_commands}}
 
 ## COMPOSED VARS

@@ -518,7 +518,7 @@ CREATE or replace FUNCTION optim.generate_readme(
         (
           SELECT jsonb_array_elements(page->'layers') AS l
           FROM optim.vw03publication
-          WHERE pack_number = ('_pk' || (p_yaml->>'pack_number')::text) AND  isolabel_ext = p_yaml->>'isolabel_ext'
+          WHERE pack_number = ('_pk' || (p_yaml->'data_packtpl'->>'pack_number')::text) AND  isolabel_ext = p_yaml->'data_packtpl'->>'isolabel_ext'
         ) u
         ON u.l->'class_ftname' = t.value->'layername_root'
       ) g
@@ -536,7 +536,7 @@ CREATE or replace FUNCTION optim.generate_readme(
     SELECT pg_read_file(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/readme.mustache') INTO readme;
 
     SELECT jsonb_mustache_render(readme, conf_yaml) ||
-           (CASE WHEN file_exists(p_yaml->>'path_preserv_server' ||'/attachment.md') THEN pg_read_file(p_yaml->>'path_preserv_server' ||'/attachment.md') ELSE '' END)
+           (CASE WHEN file_exists(p_yaml->'data_packtpl'->>'path_preserv_server' ||'/attachment.md') THEN pg_read_file(p_yaml->'data_packtpl'->>'path_preserv_server' ||'/attachment.md') ELSE '' END)
     INTO q_query;
 
     SELECT volat_file_write(p_output,regexp_replace(q_query, '(\n\n\n)\n*', E'\n\n', 'g')) INTO q_query;
