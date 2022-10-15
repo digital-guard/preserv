@@ -1,4 +1,6 @@
-O acesso ao servidor é realizado com o software de código aberto [Putty](https://www.putty.org/).
+O acesso ao servidor é realizado através de [protoclo SSH](https://en.wikipedia.org/wiki/Secure_Shell). Opções:
+* no Linux usar diretamente o comando `ssh no terminal
+* no Windows para quem usa com frequência sugere-se [Moba](https://mobaxterm.mobatek.net/), senão o classico [Putty](https://www.putty.org/).
 
 ### Configuração do servidor
 
