@@ -219,7 +219,7 @@ BEGIN
             -- 1. Extensão, variação e sobrescrição. Descarta a variação.
             IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^(.*)~(.*);(.*)$'))
             THEN
-                    SELECT extension, descr_mime, descr_encode FROM optim.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', '~', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
+                    SELECT extension, descr_mime, descr_encode FROM optim.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', '~', 1)) AND variant = '') INTO codec_extension, codec_descr_mime, codec_desc_default;
 
                 codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',3),'(;|=)'));
 
@@ -230,7 +230,7 @@ BEGIN
             -- 2. Extensão e sobrescrição, sem variação
             IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^([^;~]*);(.*)$'))
             THEN
-                SELECT extension, descr_mime, descr_encode FROM optim.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', ';', 1)) AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
+                SELECT extension, descr_mime, descr_encode FROM optim.codec_type WHERE (extension = lower(split_part(dict->'layers'->key->>'codec', ';', 1)) AND variant = '') INTO codec_extension, codec_descr_mime, codec_desc_default;
 
                 codec_desc_sobre := jsonb_object(regexp_split_to_array (split_part(regexp_replace(dict->'layers'->key->>'codec', ';','~'),'~',2),'(;|=)'));
 
@@ -243,7 +243,7 @@ BEGIN
             THEN
                 codec_value := regexp_split_to_array( dict->'layers'->key->>'codec' ,'(~)');
 
-                SELECT extension, descr_mime, descr_encode FROM optim.codec_type WHERE (array[upper(extension), variant] = codec_value AND cardinality(codec_value) = 2) OR (array[upper(extension)] = codec_value AND cardinality(codec_value) = 1 AND variant IS NULL) INTO codec_extension, codec_descr_mime, codec_desc_default;
+                SELECT extension, descr_mime, descr_encode FROM optim.codec_type WHERE (array[upper(extension), variant] = codec_value AND cardinality(codec_value) = 2) OR (array[upper(extension)] = codec_value AND cardinality(codec_value) = 1 AND variant = '') INTO codec_extension, codec_descr_mime, codec_desc_default;
 
                 RAISE NOTICE '3. codec_desc_default : %', codec_desc_default;
             END IF;

@@ -856,7 +856,9 @@ CREATE or replace FUNCTION ingest.any_load(
     buffer_type int DEFAULT 1,
     p_check_file_id_exist boolean DEFAULT true,
     p_geom_name text DEFAULT 'geom',
-    p_to4326 boolean DEFAULT true -- on true converts SRID to 4326 .
+    p_to4326 boolean DEFAULT true,  -- on true converts SRID to 4326 .
+    p_partition_name  text DEFAULT NULL,
+    p_partition_value text DEFAULT NULL
 ) RETURNS text AS $f$
   DECLARE
     q_file_id integer;
@@ -896,6 +898,7 @@ CREATE or replace FUNCTION ingest.any_load(
   IF p_geom_name=ANY(p_tabcols) THEN
     p_tabcols := array_remove(p_tabcols,p_geom_name);
   END IF;
+
   q_query := format(
       $$
       WITH
@@ -916,6 +919,7 @@ CREATE or replace FUNCTION ingest.any_load(
                  %s as properties,
                  %s -- geom
             FROM %s %s
+            %s
           ) t
       ),
       a0 AS (
@@ -1028,6 +1032,7 @@ CREATE or replace FUNCTION ingest.any_load(
     END,
     p_tabname,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
+    CASE WHEN p_partition_name IS NOT NULL THEN 'WHERE '|| p_tabname || '.' || p_partition_name || ' = ' || p_partition_value ELSE '' END,
     buffer_type,
     p_pck_id,
     q_file_id,
@@ -1191,7 +1196,7 @@ CREATE or replace FUNCTION ingest.any_load(
   RETURN msg_ret;
   END;
 $f$ LANGUAGE PLpgSQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],int,int,boolean,text,boolean)
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],int,int,boolean,text,boolean,text,text)
   IS 'Load (into ingest.feature_asis) shapefile or any other, of a separated table.'
 ;
 -- posto ipiranga logo abaixo..  sorvetorua.
@@ -1228,23 +1233,57 @@ COMMENT ON FUNCTION ingest.any_load_assign(text,text,bigint)
   IS 'Assign when ingest multiple files per layer.'
 ;
 
-CREATE or replace FUNCTION ingest.any_load(
-    p_method text,   -- 1.  shp/csv/etc.
-    p_fileref text,  -- 2. apenas referencia para ingest.donated_PackComponent
-    p_ftname text,   -- 3. featureType of layer... um file pode ter mais de um layer??
-    p_tabname text,  -- 4. tabela temporária de ingestáo
-    p_pck_id text,   -- 5. id do package da Preservação no formato "a.b".
-    p_pck_fileref_sha256 text,   -- 6
-    p_tabcols text[] DEFAULT NULL,   -- 7. lista de atributos, ou só geometria
+CREATE OR replace PROCEDURE ingest.any_load_loop(
+    p_method text,   -- shp/csv/etc.
+    p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
+    p_ftname text,   -- featureType of layer... um file pode ter mais de um layer??
+    p_tabname text,  -- tabela temporária de ingestão
+    p_pck_id bigint,   -- id do package da Preservação.
+    p_pck_fileref_sha256 text,
+    p_tabcols text[] DEFAULT NULL, -- array[]=tudo, senão lista de atributos de p_tabname, ou só geometria
     p_id_profile_params int DEFAULT 1,
     buffer_type int DEFAULT 1,
     p_check_file_id_exist boolean DEFAULT true,
-    p_geom_name text DEFAULT 'geom', -- 8
-    p_to4326 boolean DEFAULT true    -- 9. on true converts SRID to 4326 .
+    p_geom_name text DEFAULT 'geom',
+    p_to4326 boolean DEFAULT true, -- on true converts SRID to 4326 .
+    p_partition_name  text DEFAULT NULL
+)
+LANGUAGE PLpgSQL
+AS $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN EXECUTE format('SELECT DISTINCT %s AS value FROM %s' ,p_partition_name, p_tabname)
+    LOOP
+        RAISE NOTICE 'loop value: %.', r.value;
+        PERFORM ingest.any_load(p_method,p_fileref,p_ftname,p_tabname,p_pck_id,p_pck_fileref_sha256,p_tabcols,p_id_profile_params,buffer_type,p_check_file_id_exist,p_geom_name,p_to4326,p_partition_name,(r.value)::text);
+        COMMIT;
+    END LOOP;
+END;
+$$;
+COMMENT ON PROCEDURE ingest.any_load_loop(text,text,text,text,bigint,text,text[],int,int,boolean,text,boolean,text)
+  IS 'Load data into ingest.feature_asis partitionally, using column p_partition_name.'
+;
+
+CREATE or replace FUNCTION ingest.any_load(
+    p_method text,                              --  1. shp/csv/etc.
+    p_fileref text,                             --  2. apenas referencia para ingest.donated_PackComponent
+    p_ftname text,                              --  3. featureType of layer... um file pode ter mais de um layer??
+    p_tabname text,                             --  4. tabela temporária de ingestáo
+    p_pck_id text,                              --  5. id do package da Preservação no formato "a.b".
+    p_pck_fileref_sha256 text,                  --  6.
+    p_tabcols text[] DEFAULT NULL,              --  7. lista de atributos, ou só geometria
+    p_id_profile_params int DEFAULT 1,          --  8.
+    buffer_type int DEFAULT 1,                  --  9.
+    p_check_file_id_exist boolean DEFAULT true, -- 10.
+    p_geom_name text DEFAULT 'geom',            -- 11.
+    p_to4326 boolean DEFAULT true,              -- 12.. on true converts SRID to 4326 .
+    p_partition_name  text DEFAULT NULL,
+    p_partition_value text DEFAULT NULL
 ) RETURNS text AS $wrap$
-   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9, $10, $11, $12)
+   SELECT ingest.any_load($1, $2, $3, $4, to_bigint($5), $6, $7, $8, $9, $10, $11, $12, $13, $14)
 $wrap$ LANGUAGE SQL;
-COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],int,int,boolean,text,boolean)
+COMMENT ON FUNCTION ingest.any_load(text,text,text,text,text,text,text[],int,int,boolean,text,boolean,text,text)
   IS 'Wrap to ingest.any_load(1,2,3,4=real) using string format DD_DD.'
 ;
 
