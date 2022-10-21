@@ -919,7 +919,6 @@ CREATE or replace FUNCTION ingest.any_load(
                  %s as properties,
                  %s -- geom
             FROM %s %s
-            %s
           ) t
       ),
       a0 AS (
@@ -1030,9 +1029,8 @@ CREATE or replace FUNCTION ingest.any_load(
         WHEN lower(p_geom_name)<>'geom' AND p_method= 'geojson2sql' THEN 'ST_GeomFromGeoJSON(' || p_geom_name ||') AS geom'
         WHEN lower(p_geom_name)<>'geom' AND p_method<>'geojson2sql' THEN p_geom_name ||' AS geom'   
     END,
-    p_tabname,
+    CASE WHEN p_partition_name IS NOT NULL THEN ' (SELECT * FROM ' || p_tabname || ' WHERE '|| p_partition_name || ' = ' || p_partition_value || ') zx ' ELSE p_tabname END,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
-    CASE WHEN p_partition_name IS NOT NULL THEN 'WHERE '|| p_tabname || '.' || p_partition_name || ' = ' || p_partition_value ELSE '' END,
     buffer_type,
     p_pck_id,
     q_file_id,
@@ -1252,12 +1250,14 @@ LANGUAGE PLpgSQL
 AS $$
 DECLARE
     r RECORD;
+    t text;
 BEGIN
     FOR r IN EXECUTE format('SELECT DISTINCT %s AS value FROM %s' ,p_partition_name, p_tabname)
     LOOP
-        RAISE NOTICE 'loop value: %.', r.value;
-        PERFORM ingest.any_load(p_method,p_fileref,p_ftname,p_tabname,p_pck_id,p_pck_fileref_sha256,p_tabcols,p_id_profile_params,buffer_type,p_check_file_id_exist,p_geom_name,p_to4326,p_partition_name,(r.value)::text);
+        RAISE NOTICE 'Partition ingestion: %', r.value;
+        SELECT INTO t ingest.any_load(p_method,p_fileref,p_ftname,p_tabname,p_pck_id,p_pck_fileref_sha256,p_tabcols,p_id_profile_params,buffer_type,p_check_file_id_exist,p_geom_name,p_to4326,p_partition_name,(r.value)::text);
         COMMIT;
+        RAISE NOTICE 'Partition % committed. Result: %', r.value, t;
     END LOOP;
 END;
 $$;
