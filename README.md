@@ -1,4 +1,4 @@
-<!-- old digGuard-logoSmall.180px.png --><img align="right" src="docs/assets/icon-DigitalGuard-transp2.262px.png">
+<!-- olds digGuard-logoSmall.180px.png  icon-DigitalGuard-transp2.262px.png--><img align="right" src="docs/assets/icon-DigitalGuard3.180px.png">
 
 ## Preserv
 
