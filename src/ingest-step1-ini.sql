@@ -1011,7 +1011,10 @@ CREATE or replace FUNCTION ingest.any_load(
         INSERT INTO ingest.feature_asis_discarded
         SELECT file_id, gid, properties || jsonb_build_object('error_mask',error_mask), geom
         FROM c
-	    WHERE  bit_count(error_mask) <> 0 
+	    WHERE  bit_count(error_mask) <> 0
+        ON CONFLICT (file_id, feature_id)
+        DO UPDATE
+        SET properties = EXCLUDED.properties, geom = EXCLUDED.geom
         RETURNING 1
       )
       SELECT array_append(array_append( (SELECT * FROM stats), (SELECT COUNT(*) FROM ins_asis) ), (SELECT COUNT(*) FROM ins_asis_discarded))
