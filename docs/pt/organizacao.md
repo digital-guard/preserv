@@ -78,3 +78,12 @@ A *Plataforma de Projetos* do *Instituto ITGS* foi concebida para a gestão de p
 O presente projeto de preservação digital é um deles. Abaixo um diagrama que resume o passo-a-passo da preservação e como ele se relaciona com atividades de outros projetos.
 
 ![](https://github.com/AddressForAll/specifications/raw/master/docs/assets-spec02/image5.png)
+
+## Datasets descentralizados no git
+
+Dados e metadados mantidos pelo Digital-guard em repositórios git podem ser centralizados ou distribuídos por diversas jurisdições.
+
+Com argumentos análogos ao uso de [*distributed hash table*](https://en.wikipedia.org/wiki/Distributed_hash_table) ou [RDD](https://spark.apache.org/docs/latest/rdd-programming-guide.html#resilient-distributed-datasets-rdds), o dataset descentralizado garante maior resiliência no sistema como um todo e maior autonomia nas jurisdições, que assumem a responsabilidade por seus respectivos datasets.
+
+* Planilhas distribuidas: por exemplo as sub-jurisdições de cada país seguem sua hierarquia &emdash; tomando BR como referência, os CSVs de [primeiro nível](https://github.com/digital-guard/preserv-BR/blob/main/data/jurisdictionLevel4.csv) são mantidos pelo país e os segundo nivel (ex. [BR-AC](https://github.com/digital-guard/preserv-BR/blob/main/data/AC/jurisdictionLevel8.csv) ou [BR-SP](https://github.com/digital-guard/preserv-BR/blob/main/data/SP/jurisdictionLevel8.csv)) distribuídos por seus responsáveis.
+* Geometrias GeoJSON distribuidas: optou-se por manter os dados filtrados em git, distribuidos de forma balanceada por quadrantes Geohash. Ver por exemplo as quadras de [preservCutGeo-BR2021/tree/main/data/SP/SaoPaulo/_pk0033.01/block](https://github.com/digital-guard/preservCutGeo-BR2021/tree/main/data/SP/SaoPaulo/_pk0033.01/block). 
