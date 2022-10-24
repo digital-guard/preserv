@@ -1020,7 +1020,11 @@ CREATE or replace FUNCTION ingest.any_load(
       SELECT array_append(array_append( (SELECT * FROM stats), (SELECT COUNT(*) FROM ins_asis) ), (SELECT COUNT(*) FROM ins_asis_discarded))
     $$,
     q_file_id,
-    iif(p_check_file_id_exist,'true'::text,'false'),
+    CASE
+        WHEN p_partition_name IS NOT NULL  THEN 'true'
+        WHEN p_check_file_id_exist IS TRUE THEN 'false'
+        ELSE 'true'
+    END,
     q_file_id,
     iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
     iif(p_to4326,'true'::text,'false'),  -- decide ST_Transform
