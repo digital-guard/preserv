@@ -1022,7 +1022,7 @@ CREATE or replace FUNCTION ingest.any_load(
     q_file_id,
     CASE
         WHEN p_partition_name IS NOT NULL  THEN 'true'
-        WHEN p_check_file_id_exist IS TRUE THEN 'false'
+        WHEN p_check_file_id_exist IS FALSE THEN 'false'
         ELSE 'true'
     END,
     q_file_id,
