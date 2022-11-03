@@ -90,6 +90,8 @@ endif
 	@echo "--- Preparing databse... ---"
 	@echo "--- Running SQL pg_pubLib ---"
 	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_db)
+	@echo "--- Running SQL GGeohash hcode ---"
+	psql $(pg_db_uri) < $(gits_basepath)/_osmc/GGeohash/src/
 	@echo "--- Running Ingest ---"
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/lib-dg_preserv.sql
 	psql $(pg_db_uri) < $(gits_basepath)/_dg/preserv/src/step01def-lib_osm.sql

@@ -572,7 +572,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_signature(
 ) RETURNS jsonb AS $f$
   SELECT jsonb_build_object(
         'ghs_signature',
-        hcode_signature_reduce(ingest.feature_asis_geohashes(p_file_id,ghs_size), 2, 1, (SELECT lineage->'hcode_signature_parameters' FROM ingest.donated_PackComponent WHERE id=p_file_id))
+        hcode.signature_reduce(ingest.feature_asis_geohashes(p_file_id,ghs_size), 2, 1, (SELECT lineage->'hcode_signature_parameters' FROM ingest.donated_PackComponent WHERE id=p_file_id))
     )
   FROM (
     SELECT CASE WHEN (ingest.donated_PackComponent_geomtype(p_file_id))[1]='poly' THEN 5 ELSE 6 END AS ghs_size
@@ -600,7 +600,7 @@ CREATE or replace FUNCTION ingest.feature_asis_assign_format(
    lineage->'feature_asis_summary'->>'n_unit',
    lineage->'feature_asis_summary'->>'bbox_km2',
    CASE WHEN lineage->'feature_asis_summary'?'size' THEN 'Total size: '||(lineage->'feature_asis_summary'->>'size') ||' '|| (lineage->'feature_asis_summary'->>'size_unit') END,
-   hcode_distribution_format(lineage->'feature_asis_summary'->'ghs_feature_distrib', true, p_glink|| layerinfo[3] ||'_'),
+   hcode.distribution_format(lineage->'feature_asis_summary'->'ghs_feature_distrib', true, p_glink|| layerinfo[3] ||'_'),
    lineage_md5,
    lineage->'file_meta'->>'size',
    substr(lineage->'file_meta'->>'modification',1,10)
@@ -1801,7 +1801,7 @@ BEGIN
             ST_SetSRID( ST_geomFromGeohash(replace(t.hcode, '*', '')) ,  4326),
             (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
         ) AS geom
-        FROM hcode_distribution_reduce_recursive_raw_alt(
+        FROM hcode.distribution_reduce_recursive_raw_alt(
             ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix)),
             1,
             (
