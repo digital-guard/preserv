@@ -737,18 +737,19 @@ BEGIN
 
   q := $$
     -- popula optim.donated_PackTpl a partir de tmp_orig.fdw_donatedPack
-    INSERT INTO optim.donated_PackTpl (donor_id, user_resp, pk_count, original_tpl, make_conf_tpl)
+    INSERT INTO optim.donated_PackTpl (donor_id, user_resp, pk_count, original_tpl, make_conf_tpl,info)
     SELECT (
         SELECT jurisd_base_id*1000000+donor_id
         FROM optim.jurisdiction
         WHERE lower(isolabel_ext) = lower(scope)
-        ) AS donor_id, lower(user_resp) AS user_resp, pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(scope, donor_id, pack_count))) AS original_tpl, yamlfile_to_jsonb(optim.format_filepath(scope, donor_id, pack_count)) AS make_conf_tpl
+        ) AS donor_id, lower(user_resp) AS user_resp, pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(scope, donor_id, pack_count))) AS original_tpl, yamlfile_to_jsonb(optim.format_filepath(scope, donor_id, pack_count)) AS make_conf_tpl,
+        to_jsonb(t) AS info
     FROM tmp_orig.fdw_donatedpack%s t
     WHERE file_exists(optim.format_filepath(scope, donor_id, pack_count)) -- verificar make_conf.yaml ausentes
           AND lst_vers=(select MAX(lst_vers) from tmp_orig.fdw_donatedpack%s where donor_id=t.donor_id )
     ON CONFLICT (donor_id,pk_count)
     DO UPDATE 
-    SET original_tpl=EXCLUDED.original_tpl, make_conf_tpl=EXCLUDED.make_conf_tpl, kx_num_files=EXCLUDED.kx_num_files;
+    SET original_tpl=EXCLUDED.original_tpl, make_conf_tpl=EXCLUDED.make_conf_tpl, kx_num_files=EXCLUDED.kx_num_files, info=EXCLUDED.info;
   $$;
 
   EXECUTE format( q, jurisdiction, jurisdiction) ;
