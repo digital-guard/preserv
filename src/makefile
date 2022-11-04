@@ -147,7 +147,7 @@ cmd_rdap:
 	@echo "for donor and donatedPack"
 	@echo "Usage: make cmd_rdap iso=<ISO 3166 country code> pg_datalake=<database>"
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
-	@[ "${iso}" ] && psql $(pg_datalake_uri) -c "SELECT commandline_rdap FROM optim.vw01donorEvidenceCMD WHERE iso=upper($(iso))" || ( echo "Unknown iso code.")
+	@[ "${iso}" ] && psql $(pg_datalake_uri) -c "SELECT commandline_rdap FROM optim.vw01donorEvidenceCMD WHERE iso=upper('$(iso)')" || ( echo "Unknown iso code.")
 
 report:
 	@echo "Relatorios"
