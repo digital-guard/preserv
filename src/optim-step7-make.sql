@@ -651,7 +651,7 @@ SELECT isolabel_ext, iso, line, p, path,
 
 FROM
 (
-    SELECT isolabel_ext, iso, line, p, 
+    SELECT isolabel_ext, iso, line, p,
         CASE cardinality(p)
         WHEN 2 THEN concat('/var/gits/_dg/preserv-',iso,'/data/_donorEvidence/',p[2],'/',p[1],'.',p[2])
         WHEN 3 THEN concat('/var/gits/_dg/preserv-',iso,'/data/_donorEvidence/',p[3],'/',p[2],'.',p[3],'/',p[1],'.',p[2],'.',p[3])
@@ -663,7 +663,7 @@ FROM
     FROM
     (
         SELECT isolabel_ext, iso, line, p,
-            CASE 
+            CASE
             WHEN upper(p[array_upper(p,1)]) IN (SELECT isolabel_ext FROM optim.jurisdiction WHERE isolevel = 1) THEN TRUE
             ELSE false
             END AS is_cctld
