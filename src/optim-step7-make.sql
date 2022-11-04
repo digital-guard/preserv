@@ -640,3 +640,54 @@ CREATE or replace FUNCTION optim.generate_make_conf_with_license(
 $f$ LANGUAGE PLpgSQL;
 -- SELECT optim.generate_make_conf_with_license('BR','16.1','/tmp/pg_io/testmakel','/var/gits/_dg/preserv-BR/data/RJ/Niteroi/_pk0016.01','/var/gits/_dg');
 -- SELECT optim.generate_make_conf_with_license('BR','9.1','/tmp/pg_io/testmakel','/var/gits/_dg/preserv-BR/data/MG/Contagem/_pk0009.01','/var/gits/_dg');
+
+
+---
+
+--DROP VIEW optim.vw01donorEvidenceCMD;
+CREATE or replace VIEW optim.vw01donorEvidenceCMD AS
+SELECT isolabel_ext, iso, line, p, path,
+       concat('mkdir -p ', path, ' && rdap -j ', line, ' > ', path) AS commandline_rdap
+
+FROM
+(
+    SELECT isolabel_ext, iso, line, p, 
+        CASE cardinality(p)
+        WHEN 2 THEN concat('/var/gits/_dg/preserv-',iso,'/data/_donorEvidence/',p[2],'/',p[1],'.',p[2])
+        WHEN 3 THEN concat('/var/gits/_dg/preserv-',iso,'/data/_donorEvidence/',p[3],'/',p[2],'.',p[3],'/',p[1],'.',p[2],'.',p[3])
+        WHEN 4 THEN concat('/var/gits/_dg/preserv-',iso,'/data/_donorEvidence/',p[4],'/',p[3],'.',p[4],'/',p[2],'.',p[3],'.',p[4],'/',p[1],'.',p[2],'.',p[3],'.',p[4])
+        WHEN 5 THEN concat('/var/gits/_dg/preserv-',iso,'/data/_donorEvidence/',p[5],'/',p[4],'.',p[5],'/',p[3],'.',p[4],'.',p[5],'/',p[2],'.',p[3],'.',p[4],'.',p[5],'/',p[1],'.',p[2],'.',p[3],'.',p[4],'.',p[5])
+        WHEN 6 THEN concat('/var/gits/_dg/preserv-',iso,'/data/_donorEvidence/',p[6],'/',p[5],'.',p[6],'/',p[4],'.',p[5],'.',p[6],'/',p[3],'.',p[4],'.',p[5],'.',p[6],'/',p[2],'.',p[3],'.',p[4],'.',p[5],'.',p[6],'/',p[1],'.',p[2],'.',p[3],'.',p[4],'.',p[5],'.',p[6])
+        ELSE ''
+        END AS path
+    FROM
+    (
+        SELECT isolabel_ext, iso, line, p,
+            CASE 
+            WHEN upper(p[array_upper(p,1)]) IN (SELECT isolabel_ext FROM optim.jurisdiction WHERE isolevel = 1) THEN TRUE
+            ELSE false
+            END AS is_cctld
+        FROM
+        (
+            SELECT DISTINCT isolabel_ext , split_part(isolabel_ext,'-',1) AS iso ,  line , regexp_split_to_array (line,'\.') as p
+            FROM
+            (
+                SELECT j.isolabel_ext, str_url_todomain(url) as line
+                FROM optim.donor dn
+                LEFT JOIN optim.jurisdiction j
+                ON dn.scope_osm_id=j.osm_id
+
+                UNION
+
+                SELECT isolabel_ext, str_url_todomain(packtpl_info->>'uri') as line
+                FROM optim.vw01full_donated_PackTpl
+            ) t1
+            WHERE line>''
+            ORDER BY 1,2
+        ) t2
+    ) t3
+) t4
+;
+COMMENT ON VIEW optim.vw01donorEvidenceCMD
+  IS 'Generate commands to update or create evidences for donor and donatedPack.'
+;

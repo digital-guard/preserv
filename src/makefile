@@ -49,6 +49,9 @@ message:
 	echo " status: of databases and disk usage"
 	echo
 	echo " -- ADMIN tools --"
+	echo " cmd_rdap iso=<ISO 3166> pg_datalake=<database>: Update or create rdap.json for donor and donatedPack."
+	echo
+	echo " fix_usergroup username=v: add standard groups to username"
 	echo " fix_usergroup username=v: add standard groups to username"
 	echo " fix_permissions: execute chmod and chown in the standard folders"
 	echo
@@ -138,6 +141,13 @@ approved_donated_packcomponent:
 	@echo "Usage: make approved_donated_packcomponent id=<id from optim.donated_PackComponent_not_approved>"
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	@[ "${id}" ] && psql $(pg_datalake_uri) -c "SELECT optim.approved_packcomponent($(id))" || ( echo "Unknown id.")
+
+cmd_rdap:
+	@echo "Generate list of commands to update or create rdap.json"
+	@echo "for donor and donatedPack"
+	@echo "Usage: make cmd_rdap iso=<ISO 3166 country code> pg_datalake=<database>"
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+	@[ "${iso}" ] && psql $(pg_datalake_uri) -c "SELECT commandline_rdap FROM optim.vw01donorEvidenceCMD WHERE iso=upper($(iso))" || ( echo "Unknown iso code.")
 
 report:
 	@echo "Relatorios"
