@@ -648,12 +648,12 @@ $f$ LANGUAGE PLpgSQL;
 CREATE or replace VIEW optim.vw01donorEvidenceCMD AS
 SELECT isolabel_ext, iso, line, p, path,
        CASE
-       WHEN iso = 'BR' THEN concat('mkdir -p ', path, ' && wget https://rdap.registro.br/domain/', line, ' > ', path, '/rdap.json')
+       WHEN is_cctld IS TRUE AND upper(p[array_upper(p,1)]) = 'BR' THEN concat('mkdir -p ', path, ' && wget https://rdap.registro.br/domain/', line, ' > ', path, '/rdap.json')
        ELSE concat('mkdir -p ', path, ' && rdap -v -j ', line, ' > ', path, '/rdap.json')
        END AS commandline_rdap
 FROM
 (
-    SELECT isolabel_ext, iso, line, p,
+    SELECT isolabel_ext, iso, line, p, is_cctld, 
         CASE cardinality(p)
         WHEN 2 THEN concat('/var/gits/_dg/preserv-',iso,'/data/_donorEvidence/',p[2],'/',p[1],'.',p[2])
         WHEN 3 THEN concat('/var/gits/_dg/preserv-',iso,'/data/_donorEvidence/',p[3],'/',p[2],'.',p[3],'/',p[1],'.',p[2],'.',p[3])
