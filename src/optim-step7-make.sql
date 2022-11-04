@@ -653,7 +653,7 @@ SELECT isolabel_ext, iso, line, p, path,
        END AS commandline_rdap
 FROM
 (
-    SELECT isolabel_ext, iso, line, p, is_cctld, 
+    SELECT isolabel_ext, iso, line, p, is_cctld,
         CASE cardinality(p)
         WHEN 2 THEN concat('/var/gits/_dg/preserv-',iso,'/data/_donorEvidence/',p[2],'/',p[1],'.',p[2])
         WHEN 3 THEN concat('/var/gits/_dg/preserv-',iso,'/data/_donorEvidence/',p[3],'/',p[2],'.',p[3],'/',p[1],'.',p[2],'.',p[3])
