@@ -647,8 +647,10 @@ $f$ LANGUAGE PLpgSQL;
 --DROP VIEW optim.vw01donorEvidenceCMD;
 CREATE or replace VIEW optim.vw01donorEvidenceCMD AS
 SELECT isolabel_ext, iso, line, p, path,
-       concat('mkdir -p ', path, ' && rdap -j ', line, ' > ', path) AS commandline_rdap
-
+       CASE
+       WHEN iso = 'BR' THEN concat('mkdir -p ', path, ' && wget https://rdap.registro.br/domain/', line, ' > ', path, '/rdap.json')
+       ELSE concat('mkdir -p ', path, ' && rdap -v -j ', line, ' > ', path, '/rdap.json')
+       END AS commandline_rdap
 FROM
 (
     SELECT isolabel_ext, iso, line, p,
