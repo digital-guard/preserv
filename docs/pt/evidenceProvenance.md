@@ -172,3 +172,73 @@ por isso precisamos fazer um save-screen
 
 ![](../assets/ex03-DomainOwnner_evidence-SP-Sampa2020.png)
 -->
+
+
+------------------------
+
+## Automação assistida com make
+
+### RDAP
+
+A inclusão dos arquivos `rdap.json` na pasta `/_donorEvidence`  ainda não é 100% automática, mas [foi](https://github.com/digital-guard/preserv/issues/124#issuecomment-1304302903) em sua maior parte automatizada.
+
+O target a seguir gera uma lista de comandos para criar os diretórios, se necessário, e obter o rdap.json.
+
+```
+pushd /var/gits/_dg/preserv/src
+make cmd_rdap iso=br pg_datalake=dl03t_main
+```
+Exemplo de output:
+
+```sh
+make cmd_rdap iso=br pg_datalake=dl03t_main
+Generate list of commands to update or create rdap.json
+for donor and donatedPack
+Usage: make cmd_rdap iso=<ISO 3166 country code> pg_datalake=<database>
+[Press ENTER to continue or Ctrl+C to quit]
+
+commandline_rdap                                                                                                                                                                                   
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ mkdir -p /var/gits/_dg/preserv-BR/data/_donorEvidence/org/addressforall.org && rdap -v -j addressforall.org > /var/gits/_dg/preserv-BR/data/_donorEvidence/org/addressforall.org/rdap.json
+ mkdir -p /var/gits/_dg/preserv-BR/data/_donorEvidence/br/com.br/clicksistema.com.br && wget https://rdap.registro.br/domain/clicksistema.com.br > /var/gits/_dg/preserv-BR/data/_donorEvidence/br/com.br/clicksistema.com.br/rdap.json
+ mkdir -p /var/gits/_dg/preserv-BR/data/_donorEvidence/br/com.br/correios.com.br && wget https://rdap.registro.br/domain/correios.com.br > /var/gits/_dg/preserv-BR/data/_donorEvidence/br/com.br/correios.com.br/rdap.json
+
+...
+
+ mkdir -p /var/gits/_dg/preserv-BR/data/_donorEvidence/br/gov.br/sp.gov.br/sorocaba.sp.gov.br && wget https://rdap.registro.br/domain/sorocaba.sp.gov.br > /var/gits/_dg/preserv-BR/data/_donorEvidence/br/gov.br/sp.gov.br/sorocaba.sp.gov.br/rdap.json
+(109 rows)
+
+(END)
+```
+Por exemplo, os comandos
+
+```sh
+ mkdir -p /var/gits/_dg/preserv-BR/data/_donorEvidence/org/addressforall.org && rdap -v -j addressforall.org > /var/gits/_dg/preserv-BR/data/_donorEvidence/org/addressforall.org/rdap.json
+ mkdir -p /var/gits/_dg/preserv-BR/data/_donorEvidence/br/gov.br/sp.gov.br/sorocaba.sp.gov.br && wget https://rdap.registro.br/domain/sorocaba.sp.gov.br > /var/gits/_dg/preserv-BR/data/_donorEvidence/br/gov.br/sp.gov.br/sorocaba.sp.gov.br/rdap.json
+```
+
+geram a seguinte estrutura de diretórios:
+
+```sh
+/var/gits/_dg/preserv-BR/data/_donorEvidence/
+├── README.md
+├── br
+│   ├── gov.br
+│   │   └── sp.gov.br
+│   │       └── sorocaba.sp.gov.br
+│   │           └── rdap.json
+└── org
+    └── addressforall.org
+        └── rdap.json
+```
+
+_**Tomar os seguintes cuidados**_:
+- Se já existir um rdap.json, não atualizá-lo. Se necessário, mover o atual para a estrutura de diretório criada pelo comando fornecido pelo target;
+- Conforme comentário acima, nem sempre o `rdap` vai retornar uma resposta. Reportar esses casos.
+
+**IMPORTANTE**:
+
+Os valores _(anexo de email)_  presentes na coluna `uri` de [donatedPack.csv](https://github.com/digital-guard/preserv-BR/blob/main/data/donatedPack.csv) devem ser substituídos pelo respectivo email, conforme [Domínios e subdomínios a comprovar](https://github.com/digital-guard/preserv/blob/main/docs/pt/evidenceProvenance.md#dom%C3%ADnios-e-subdom%C3%ADnios-a-comprovar).
+
+### APIs de Datação
+Conforme apresentados acima, os procedimentos para [datação-da-evidência](#datação-da-evidência) dependem de como cada "cartório Web" os define. Pendente pesquisar. Por exempo Web Archive oferece indiretamente [bulk-upload com software Python](https://www.sucho.org/ia-bulk-upload).  
