@@ -161,6 +161,8 @@ BEGIN
 
         dict := jsonb_set( dict, array['packtpl_id'] , to_jsonb((SELECT packtpl_id FROM optim.vw01full_packfilevers WHERE id=packvers_id)));
 
+        -- dict := jsonb_set( dict, array['layers',key,'full_name_layer'] , to_jsonb((SELECT full_name_layer FROM optim.vw01full_packfilevers_ftype WHERE id=packvers_id AND ftid=(SELECT ftid::int FROM optim.feature_type WHERE ftname=lower(key)) )));
+
         -- Caso de BR-PR-Araucaria/_pk0061.01
         IF jsonb_typeof(dict->'layers'->key->'orig_filename') = 'array'
         THEN

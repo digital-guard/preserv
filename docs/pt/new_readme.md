@@ -72,7 +72,7 @@ Exemplo de geração de README.md:
 pushd /var/gits/_dg/preserv-BR/src
 make all
 pushd /var/gits/_dg/preserv-BR/data/AC/RioBranco/_pk0042.01
-make readme pd_db=ingest99
+make readme pg_db=ingest99
 popd
 popd
 ```
