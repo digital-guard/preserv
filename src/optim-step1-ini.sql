@@ -49,6 +49,9 @@ COMMENT ON COLUMN optim.jurisdiction.housenumber_system_type IS 'Housenumber sys
 COMMENT ON COLUMN optim.jurisdiction.lex_urn                 IS 'Housenumber system law.';
 COMMENT ON COLUMN optim.jurisdiction.info                    IS 'Others information.';
 
+CREATE INDEX jurisdiction_isolabel_ext_idx1 ON optim.jurisdiction USING btree (isolabel_ext);
+
+
 CREATE TABLE optim.jurisdiction_geom (
   osm_id bigint PRIMARY KEY,
   isolabel_ext text NOT NULL,
@@ -66,6 +69,7 @@ COMMENT ON COLUMN optim.jurisdiction_geom.geom_svg           IS 'Simplified geom
 --COMMENT ON COLUMN optim.jurisdiction_geom.kx_ghs2_intersects IS '';
 CREATE INDEX optim_jurisdiction_geom_idx1     ON optim.jurisdiction_geom USING gist (geom);
 CREATE INDEX optim_jurisdiction_geom_svg_idx1 ON optim.jurisdiction_geom USING gist (geom_svg);
+CREATE INDEX optim_jurisdiction_geom_isolabel_ext_idx1 ON optim.jurisdiction_geom USING btree (isolabel_ext);
 
 CREATE TABLE optim.auth_user (
   -- authorized users to be a datapack responsible and eclusa-FTP manager
