@@ -1,21 +1,19 @@
 #!/bin/bash
 
-insert_optim(){
-    id_pack=$1
+update_tables(){
+    file_id=$1
     database=$2
     file_name_hash=$3
     url_cloud=$4
+    file_type=$5
 
-    # psql postgres://postgres@localhost/${database} -c""
-}
+    id_pack=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT packvers_id, ftid, lineage_md5 FROM ingest.donated_packcomponent WHERE id=${file_id}")
 
-update_depara(){
-    id_pack=$1
-    database=$2
-    file_name_hash=$3
-    url_cloud=$4
+    packvers_id=$(cut -d'|' -f1 <<< ${id_pack})
+    ftid=$(cut -d'|' -f2 <<< ${id_pack})
+    lineage_md5=$(cut -d'|' -f3 <<< ${id_pack})
 
-    # psql postgres://postgres@localhost/${database} -c""
+    psql postgres://postgres@localhost/dl03t_main -c"INSERT INTO optim.donated_PackComponent_cloudControl(packvers_id,ftid,lineage_md5,hashedfname,hashedfnameuri,hashedfnametype) VALUES (${packvers_id},${ftid},'${lineage_md5}','${file_name_hash}','${url_cloud}','${file_type}');" && psql postgres://postgres@localhost/dl02s_main -c"INSERT INTO download.redirects(fhash,furi) VALUES ('${file_name_hash}','${url_cloud}');"
 }
 
 # gen_shapefile a4a_co_pk0006_02_geoaddress ingest99 1
@@ -47,16 +45,10 @@ gen_shapefile(){
     echo ${file_name_hash}
     echo ${url_cloud}
 
-    #id_pack=$(psql postgres://postgres@localhost/${database} -c"")
-    # inserir no optim
-    # insert_optim ${id_pack} ${database} ${file_name_hash} ${url_cloud}
-
-    # atualizar de_para
-    # update_depara ${id_pack} ${database} ${file_name_hash} ${url_cloud}
+    update_tables ${file_id} ${database} ${file_name_hash} ${url_cloud} 'shp'
 
     popd
 }
-
 
 # gen_csv a4a_co_pk0006_02_geoaddress ingest99 1
 gen_csv(){
@@ -74,7 +66,6 @@ gen_csv(){
 
     psql postgres://postgres@localhost/${database} -c "${COPY_STRING}"
 
-
     file_name="${file_basename}.csv.zip"
     zip -r ${file_name} /tmp/pg_io/${file_basename}.csv
     file_sha256sum=$( sha256sum -b ${file_name} | cut -f1 -d' ' )
@@ -88,12 +79,7 @@ gen_csv(){
     echo ${file_name_hash}
     echo ${url_cloud}
 
-    #id_pack=$(psql postgres://postgres@localhost/${database} -c"")
-    # inserir no optim
-    # insert_optim ${id_pack} ${database} ${file_name_hash} ${url_cloud}
-
-    # atualizar de_para
-    # update_depara ${id_pack} ${database} ${file_name_hash} ${url_cloud}
+    update_tables ${file_id} ${database} ${file_name_hash} ${url_cloud} 'csv'
 
     popd
 }
