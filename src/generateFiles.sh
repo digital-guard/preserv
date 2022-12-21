@@ -20,9 +20,10 @@ update_tables(){
 # gen_shapefile ingest99 1
 gen_shapefile(){
     link_operacao='operacao:preserv.addressforall.org/download/'
-    file_basename=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id FROM ingest.vw03full_layer_file WHERE id=${2} ")
     database=$1
     file_id=$2
+    file_basename=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
+
 
     pushd /tmp/
 
@@ -67,9 +68,11 @@ gen_shapefile(){
 gen_csv(){
     # only geoaddress
     link_operacao='operacao:preserv.addressforall.org/download/'
-    file_basename=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id FROM ingest.vw03full_layer_file WHERE id=${2} ")
     database=$1
     file_id=$2
+
+    file_basename=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
+
 
     pushd /tmp/pg_io
 
