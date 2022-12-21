@@ -25,7 +25,7 @@ gen_shapefile(){
 
     pushd /tmp/
 
-    pgsql2shp -k -f ${file_basename}.shp -h localhost -u postgres -P postgres ${database} "$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT feature_id AS gid,' || array_to_string((SELECT  array_agg(('properties->''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x)),', ') || ', geom FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 10;';")"
+    pgsql2shp -k -f ${file_basename}.shp -h localhost -u postgres -P postgres ${database} "$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT feature_id AS gid,' || array_to_string((SELECT  array_agg(('properties->''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x)),', ') || ', geom FROM ingest.feature_asis WHERE file_id=${file_id};';")"
 
     mkdir ${file_basename}
     mv ${file_basename}.{shp,cpg,dbf,prj,shx} ${file_basename}
@@ -62,7 +62,7 @@ gen_csv(){
 
     CMD_STRING=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT feature_id AS gid,' || array_to_string((SELECT  array_agg(('properties->''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x)),', ') || ', ST_X(geom) AS longitude, ST_Y(geom) AS latitude FROM ingest.feature_asis WHERE file_id=${file_id}'")
 
-    COPY_STRING=$(echo COPY \( ${CMD_STRING} ORDER BY feature_id LIMIT 10 \) TO \'/tmp/pg_io/${file_basename}.csv\' CSV HEADER)
+    COPY_STRING=$(echo COPY \( ${CMD_STRING} ORDER BY feature_id \) TO \'/tmp/pg_io/${file_basename}.csv\' CSV HEADER)
 
     psql postgres://postgres@localhost/${database} -c "${COPY_STRING}"
 
