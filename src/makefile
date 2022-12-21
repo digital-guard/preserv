@@ -245,6 +245,9 @@ redirects_update: pgio
 	@echo Download da tabela de-para ....
 	wget "https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk/export?format=csv&gid=0" -O "$(pg_io)/de-para.csv"
 	psql $(pg_datalake_uri) -c "DELETE FROM download.redirects; COPY download.redirects FROM '$(pg_io)/de-para.csv' CSV HEADER;"
+	psql postgres://postgres@localhost/dl03t_main -c "COPY ( SELECT hashedfname, hashedfnameuri FROM optim.donated_PackComponent_cloudControl ) TO '$(pg_io)/clound_uri_control.csv' CSV HEADER;"
+	psql $(pg_datalake_uri) -c "COPY download.redirects(fhash,furi) FROM '$(pg_io)/clound_uri_control.csv' CSV HEADER;"
+
 
 sha256_update:
 	@echo "Update sha256 in optim.donated_packfilevers"
