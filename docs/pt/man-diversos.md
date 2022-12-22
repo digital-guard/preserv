@@ -298,6 +298,10 @@ Ao alterações no sha256 de arquivos make_conf.yaml:
 ```bash
 tmux
 
+pushd /var/gits/_dg/preservCutGeo-BR2021
+git pull
+popd
+
 DATA_BASE='ingestcutgeo'
 
 pushd /var/gits/_dg/preserv/src
@@ -306,6 +310,8 @@ make ini_ingest pg_db=${DATA_BASE}
 psql postgres://postgres@localhost/${DATA_BASE} < /var/gits/_dg/preserv/src/loadGeojson-step1.sql
 
 find /var/gits/_dg/preservCutGeo-BR2021/data -maxdepth 5 -type d -iwholename "*_pk*\/*" -exec bash loadGeojson.bash {} ${DATA_BASE} \; &> /home/$USER/log_loadCutGeoData_${DATA_BASE}
+
+popd
 ```
 
 ## Inserir size no make_conf.yaml
