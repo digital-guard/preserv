@@ -841,7 +841,7 @@ CREATE TABLE optim.donated_PackComponent_cloudControl(
   hashedfnameuri  text      NOT NULL,
   hashedfnametype text      NOT NULL,
   info            jsonb,
-  UNIQUE(packvers_id,ftid,lineage_md5),
+  UNIQUE(packvers_id,ftid,lineage_md5,hashedfnametype),
   UNIQUE(hashedfname,hashedfnameuri)
 );
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.id              IS 'bigserial identifier.';
