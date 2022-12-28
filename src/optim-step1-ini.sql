@@ -852,3 +852,43 @@ COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfname     IS 's
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfnameuri  IS 'hashedfname file cloud link.';
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfnametype IS 'hashedfname file cloud link.';
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.info            IS 'Others information.';
+
+CREATE or replace VIEW optim.vw01filtered_files AS
+SELECT pack_id, jsonb_build_object('layers', jsonb_agg(jsonb_build_object(
+                  'class_ftname',class_ftname,
+                  'files',files,
+                  'packvers_id', id
+                  ))) AS filtered_files
+FROM
+(
+  SELECT id, pack_id, class_ftname, jsonb_agg(jsonb_build_object(
+                  'hashedfname', hashedfname,
+                  'hashedfnametype',hashedfnametype,
+                  'hashedfname_without_ext', hashedfname_without_ext,
+                  'hashedfname_7_ext', hashedfname_7_ext,
+                  'hashedfnameuri', hashedfnameuri
+                  )) AS files
+  FROM
+  (
+    SELECT pf.id, pf.pack_id,
+
+      pf.ftype_info->>'class_ftname' as class_ftname,
+      substring(pc.hashedfname, '^([0-9a-f]{7}).+$') AS hashedfname_7,
+      substring(pc.hashedfname, '^([0-9a-f]{64,64})\.[a-z0-9]+$') AS hashedfname_without_ext,
+      substring(pc.hashedfname, '^([0-9a-f]{7}).+$') || '...' || substring(pc.hashedfname, '^.+\.([a-z0-9]+)$') AS hashedfname_7_ext,
+      pc.hashedfname,
+      hashedfnameuri,
+      hashedfnametype
+
+    FROM optim.vw01full_packfilevers_ftype pf
+    INNER JOIN optim.donated_PackComponent_cloudControl pc
+    ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
+    ORDER BY pf.pack_id, pf.ftype_info->>'class_ftname', pc.hashedfnametype, pc.hashedfname
+  ) r
+  GROUP BY id, pack_id, class_ftname
+) s
+GROUP BY pack_id
+;
+COMMENT ON VIEW optim.vw01filtered_files
+  IS 'Filtered files in a package.'
+;
