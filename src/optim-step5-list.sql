@@ -61,9 +61,10 @@ FROM
 ;
 
 CREATE or replace FUNCTION optim.generate_list(
-	p_fileref text
+	p_fileref text,
+	p_filtered boolean DEFAULT false
 ) RETURNS text  AS $f$
-    SELECT volat_file_write(p_fileref, jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/list_jurisd.mustache'), y)) AS output_write
+    SELECT volat_file_write(p_fileref, jsonb_mustache_render(pg_read_file( CASE p_filtered WHEN TRUE THEN '/var/gits/_dg/preserv/src/list_jurisd_without_filtered.mustache' ELSE '/var/gits/_dg/preserv/src/list_jurisd.mustache' END), y)) AS output_write
     FROM optim.vw02generate_list
     ;
 $f$ language SQL VOLATILE;
@@ -71,6 +72,7 @@ COMMENT ON FUNCTION optim.generate_list
   IS 'Generate list page.'
 ;
 -- SELECT optim.generate_list('/tmp/pg_io/list_jurisd.txt');
+-- SELECT optim.generate_list('/tmp/pg_io/list_jurisd.txt',true);
 
 CREATE or replace FUNCTION optim.generate_list_hash(
 	p_fileref text
