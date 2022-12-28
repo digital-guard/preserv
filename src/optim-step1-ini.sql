@@ -863,6 +863,7 @@ FROM
 (
   SELECT id, pack_id, class_ftname, jsonb_agg(jsonb_build_object(
                   'hashedfname', hashedfname,
+                  'hashedfname_7', hashedfname_7,
                   'hashedfnametype',hashedfnametype,
                   'hashedfname_without_ext', hashedfname_without_ext,
                   'hashedfname_7_ext', hashedfname_7_ext,

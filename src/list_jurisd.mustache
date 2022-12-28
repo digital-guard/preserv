@@ -15,6 +15,12 @@
    {{#pacotes}}
          - [**{{info.name}}** (`{{hashedfname_7}}`)](http://dl.digital-guard.org/{{hashedfname}})
   {{/pacotes}}
+  {{#filtered_files}}
+         - Filtrados:
+  {{#layers}}
+           - {{class_ftname}}: {{#files}}[**{{hashedfnametype}}** (`{{hashedfname_7}}`)](http://dl.digital-guard.org/{{hashedfname}}) {{/files}}
+  {{/layers}}
+  {{/filtered_files}}
 {{/doadores}}
 {{/iso3}}
 {{/paises}}
