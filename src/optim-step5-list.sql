@@ -1,12 +1,18 @@
 CREATE or replace VIEW optim.vw01generate_list AS
-SELECT scope_label, isolevel, jsonb_build_object('legalName',legalName,'pack_number', MAX(pack_number), 'path_preserv_git', MAX(path_preserv_git), 'local_serial_formated', MAX(local_serial_formated), 'pacotes',jsonb_agg(pf2.*)) AS pacotes
-FROM  
+SELECT scope_label, isolevel, pacotes || coalesce(jsonb_build_object('filtered_files',filtered_files),'{}'::jsonb) AS pacotes
+FROM
 (
-  SELECT pf.*
-  FROM optim.vw01full_packfilevers pf
-) pf2
-GROUP BY country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalName, wikidata_id, url, donor_info, kx_vat_id, isolevel
-ORDER BY scope_label, legalName
+  SELECT pack_id, scope_label, isolevel, jsonb_build_object('legalName',legalName,'pack_number', MAX(pack_number), 'path_preserv_git', MAX(path_preserv_git), 'local_serial_formated', MAX(local_serial_formated), 'pacotes',jsonb_agg(pf2.*)) AS pacotes
+  FROM
+  (
+    SELECT pf.*
+    FROM optim.vw01full_packfilevers pf
+  ) pf2
+  GROUP BY country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalName, wikidata_id, url, donor_info, kx_vat_id, isolevel, pack_id
+  ORDER BY scope_label, legalName
+) r
+LEFT JOIN optim.vw01filtered_files s
+ON r.pack_id = s.pack_id
 ;
 
 CREATE or replace VIEW optim.vw02generate_list AS
