@@ -98,7 +98,7 @@ delete_file:
 
 generate_csvfile:
 	@echo "-- Generate feature_asis CSV files --"
-	@echo "Usage: make generate_files id=<id of ingest.donated_PackComponent> pg_db=<ingest>"
+	@echo "Usage: make generate_csvfile id=<id of ingest.donated_PackComponent> pg_db=<ingest>"
 	@echo ""
 	@echo "       CAUTION: ONLY for geoaddress!"
 	@echo ""
@@ -107,7 +107,7 @@ generate_csvfile:
 
 generate_shapefile:
 	@echo "-- Generate feature_asis SHAPEFILE file --"
-	@echo "Usage: make generate_files id=<id of ingest.donated_PackComponent> pg_db=<ingest>"
+	@echo "Usage: make generate_shapefile id=<id of ingest.donated_PackComponent> pg_db=<ingest>"
 	@echo "       Get id from ingest.donated_PackComponent table"
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	@[ "${id}" ] && bash -c "source $(preservSrc)/generateFiles.sh && gen_shapefile $(pg_db) $(id)" || ( echo "Unknown id.")
