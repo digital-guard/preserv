@@ -49,6 +49,8 @@ COMMENT ON COLUMN optim.jurisdiction.housenumber_system_type IS 'Housenumber sys
 COMMENT ON COLUMN optim.jurisdiction.lex_urn                 IS 'Housenumber system law.';
 COMMENT ON COLUMN optim.jurisdiction.info                    IS 'Others information.';
 
+COMMENT ON TABLE optim.jurisdiction IS 'Information about jurisdictions without geometry.';
+
 CREATE INDEX jurisdiction_isolabel_ext_idx1 ON optim.jurisdiction USING btree (isolabel_ext);
 
 
@@ -71,13 +73,16 @@ CREATE INDEX optim_jurisdiction_geom_idx1     ON optim.jurisdiction_geom USING g
 CREATE INDEX optim_jurisdiction_geom_svg_idx1 ON optim.jurisdiction_geom USING gist (geom_svg);
 CREATE INDEX optim_jurisdiction_geom_isolabel_ext_idx1 ON optim.jurisdiction_geom USING btree (isolabel_ext);
 
+COMMENT ON TABLE optim.jurisdiction_geom IS 'OpenStreetMap geometries for optim.jurisdiction.';
+
 CREATE TABLE optim.auth_user (
-  -- authorized users to be a datapack responsible and eclusa-FTP manager
   username text NOT NULL PRIMARY KEY,
   info jsonb
 );
 COMMENT ON COLUMN optim.auth_user.username IS 'username in host account.';
 COMMENT ON COLUMN optim.auth_user.info     IS 'Other account details on host.';
+
+COMMENT ON TABLE optim.auth_user IS 'Authorized users to be a data pack responsible.';
 
 INSERT INTO optim.auth_user(username) VALUES
 ('carlos','{"git_user":"crebollobr"}'::jsonb),
@@ -98,6 +103,8 @@ COMMENT ON COLUMN optim.codec_type.extension     IS '';
 COMMENT ON COLUMN optim.codec_type.variant       IS '';
 COMMENT ON COLUMN optim.codec_type.descr_mime    IS '';
 COMMENT ON COLUMN optim.codec_type.descr_encode  IS '';
+
+COMMENT ON TABLE optim.codec_type IS 'Custom codec for ingesting files.';
 
 CREATE TABLE optim.donor (
   id integer NOT NULL PRIMARY KEY CHECK (id = country_id*1000000+local_serial),  -- by trigger!
@@ -130,8 +137,9 @@ COMMENT ON COLUMN optim.donor.url            IS 'Official home page of the organ
 COMMENT ON COLUMN optim.donor.info           IS 'Others information.';
 COMMENT ON COLUMN optim.donor.kx_vat_id      IS 'Cache for normalized vat_id.';
 
+COMMENT ON TABLE optim.donor IS 'Data package donor information.';
+
 CREATE TABLE optim.donated_PackTpl(
-   -- donated pack template, Pacote não-versionado, apenas controle de pack_id e registro da entrada. Só metadados comuns às versões.
   id bigint NOT NULL PRIMARY KEY CHECK (id = donor_id::bigint*100::bigint + pk_count::bigint),  -- by trigger!
   donor_id int NOT NULL REFERENCES optim.donor(id),
   user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pelo README e teste do makefile
@@ -150,6 +158,8 @@ COMMENT ON COLUMN optim.donated_PackTpl.original_tpl  IS 'make_conf.yaml backup 
 COMMENT ON COLUMN optim.donated_PackTpl.make_conf_tpl IS 'Cache, parsing result from original_tpl (YAML) to JSON.';
 COMMENT ON COLUMN optim.donated_PackTpl.kx_num_files  IS 'Cache for jsonb_array_length(make_conf_tpl->files).';
 COMMENT ON COLUMN optim.donated_PackTpl.info          IS 'Others information.';
+
+COMMENT ON TABLE optim.donated_PackTpl IS 'Donated pack template, unversioned package, only pack_id control and input logging. Only metadata common to versions.';
 
 CREATE TABLE optim.donated_PackFileVers(
   -- armazena histórico de versões, requer VIEW contendo apenas registros de MAX(pack_item_accepted_date).
@@ -176,6 +186,9 @@ COMMENT ON COLUMN optim.donated_PackFileVers.pack_item_accepted_date IS 'Date of
 COMMENT ON COLUMN optim.donated_PackFileVers.kx_pack_item_version    IS 'Version (serial) corresponding to pack_item_accepted_date. Trigger: next value.';
 COMMENT ON COLUMN optim.donated_PackFileVers.user_resp               IS 'User responsible for ingesting the file.';
 COMMENT ON COLUMN optim.donated_PackFileVers.info                    IS 'Others information.';
+
+COMMENT ON TABLE optim.donated_PackFileVers IS 'Stores history of donated package versions.';
+
 ------------------------
 
 CREATE TABLE optim.feature_type (  -- replacing old optim.origin_content_type
@@ -193,6 +206,8 @@ COMMENT ON COLUMN optim.feature_type.geomtype    IS 'Feature type geometry type.
 COMMENT ON COLUMN optim.feature_type.need_join   IS 'If feature type needs join. false=no, true=yes, null=both (at class)';
 COMMENT ON COLUMN optim.feature_type.description IS 'Feature type description.';
 COMMENT ON COLUMN optim.feature_type.info        IS 'Others information.';
+
+COMMENT ON TABLE optim.feature_type IS 'Describes the types of data that can be ingested.';
 
 INSERT INTO optim.feature_type VALUES
   (0,'address',       'class', null,  'Cadastral address.','{"shortname_pt":"endereço","description_pt":"Endereço cadastral, representação por nome de via e numeração predial.","synonymous_pt":["endereço postal","endereço","planilha dos endereços","cadastro de endereços"]}'::jsonb),
@@ -290,6 +305,8 @@ COMMENT ON COLUMN optim.donated_PackComponent.lineage     IS 'General informatio
 COMMENT ON COLUMN optim.donated_PackComponent.lineage_md5 IS 'md5 from the file.';
 COMMENT ON COLUMN optim.donated_PackComponent.kx_profile  IS 'Others information.';
 
+COMMENT ON TABLE optim.donated_PackComponent IS 'Stores definitive descriptive summaries of each published feature type.';
+
 CREATE TABLE optim.donated_PackComponent_not_approved(
   -- Tabela similar a ingest.layer_file, armazena sumários descritivos de cada layer. Equivale a um subfile do hashedfname.
   id bigserial NOT NULL PRIMARY KEY,  -- layerfile_id
@@ -311,6 +328,8 @@ COMMENT ON COLUMN optim.donated_PackComponent_not_approved.proc_step   IS 'Date 
 COMMENT ON COLUMN optim.donated_PackComponent_not_approved.lineage     IS 'General information.';
 COMMENT ON COLUMN optim.donated_PackComponent_not_approved.lineage_md5 IS 'md5 from the file.';
 COMMENT ON COLUMN optim.donated_PackComponent_not_approved.kx_profile  IS 'Others information.';
+
+COMMENT ON TABLE optim.donated_PackComponent_not_approved IS 'Stores descriptive summaries of each feature type awaiting publication approval.';
 ------------------------
 
 DROP VIEW IF EXISTS optim.vw01info_feature_type CASCADE;
@@ -488,6 +507,8 @@ INSERT INTO optim.housenumber_system_type VALUES
   (1,'street-metric', '[0-9]+[A-Z]? \- [0-9]+ [SNEL]? string', 'First code refers to the previous intersecting street, and the second is the distance to that intersection. Optional last letter is sort-direction. Example: CO-DC-Bogota housenumbers [96A -11, 12 - 34, 14A - 31 E].'),
   (2,'block-metric',  '[0-9]+ \- [0-9]+ integer function',     $$First number refers to the urban-block counter, and the second is the distance to the begin of the block in the city's origin order. Sort function is $1*10000 + $2. Example: BR-SP-Bauru housenumbers [30-14, 2-1890].$$)
 ;
+
+COMMENT ON TABLE optim.housenumber_system_type IS 'Stores descriptive house numbering systems.';
 
 ------------------------
 
@@ -850,8 +871,10 @@ COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.ftid            IS 'F
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.lineage_md5     IS 'md5 from the file.';
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfname     IS 'sha256.ext of filtred file.';
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfnameuri  IS 'hashedfname file cloud link.';
-COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfnametype IS 'hashedfname file cloud link.';
+COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfnametype IS 'type, csv or shp.';
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.info            IS 'Others information.';
+
+COMMENT ON TABLE optim.donated_PackComponent_cloudControl IS 'Stores filtered file hyperlinks for each publication feature type.';
 
 CREATE or replace VIEW optim.vw01filtered_files AS
 SELECT pack_id, jsonb_build_object('layers', jsonb_agg(jsonb_build_object(
