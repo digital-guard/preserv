@@ -6,6 +6,7 @@ Após realizar o processo de ingestão:
 
 ### Gerar os arquivos publicavéis
 
+Para gerar os arquivos que serão publicados no respectivo _preservCutGeo_ do país:
 ```sh
 make publicating_geojsons_<nome_do_layer> # exemplo: make publicating_geojsons_via` gera os arquivos em `/var/gits/_dg/preservCutGeo-BR2021/data/AC/RioBranco/_pk0042.01/via/`
 
@@ -15,13 +16,14 @@ make target audit-geojsons_<nome do layer> # exibe informações sobre os arquiv
 Atualmente, apenas em casos excepcionais é necessário recorrer a [busca de parametros de distribuição](https://github.com/digital-guard/preserv/blob/main/docs/pt/man-diversos.md#par%C3%A2metros-de-publica%C3%A7%C3%A3o).
 
 
-### Pull CutGeo
+### Subir para o repositório
 
-O `pull` dos arquivos gerados deve ser feito em _branch_ diferente da _main_ e exclusiva para o pacote de dados, para aguardar aprovação.
+
+Concluída a geração dos arquivos publicavéis, fazer o `pull` dos arquivos gerados na _branch main_ do  no respectivo _preservCutGeo_ do país, para aguardar aprovação.
 
 
 ### Copiar informações para DL03t_main
-A execução dos targets de ingestão e publicação geram dados na tabela `ingest.donated_packcomponent` da base de dados `ingest` utilizada no processo. A base `ingest` é transitória. Findo os passos anteriores, os dados gerados devem ser movidos para a base de dados permanente `DL03t_main`.
+A execução dos targets de ingestão e publicação geram dados na tabela `ingest.donated_packcomponent` da base de dados `ingest` que foi utilizada no processo. A base `ingest` é transitória. Findo os passos anteriores, os dados gerados devem ser movidos para a base de dados permanente `DL03t_main`.
 
 Para copiar o conteúdo da tabela `ingest.donated_packcomponent` para `optim.donated_PackComponent_not_approved` em `DL03t_main`:
 
@@ -33,7 +35,7 @@ make to_donated_packcomponent pg_db=ingestXX pg_datalake=dl03t_main
 ## Responsabilidade do homologador
 
 ### Aprovação
-A aprovação se dá pela avaliação dos arquivos, _merge_ com a _branch_ _main_ e movendo os dados de `optim.donated_PackComponent_not_approved` para `optim.donated_PackComponent` em `DL03t_main`:
+A aprovação se dá pela avaliação dos arquivos  e movendo os dados de `optim.donated_PackComponent_not_approved` para `optim.donated_PackComponent` em `DL03t_main`:
 
 ```sh
 # obter a variavel id
