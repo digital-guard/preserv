@@ -1036,7 +1036,7 @@ CREATE or replace FUNCTION ingest.any_load(
         WHEN lower(p_geom_name)<>'geom' AND p_method= 'geojson2sql' THEN 'ST_GeomFromGeoJSON(' || p_geom_name ||') AS geom'
         WHEN lower(p_geom_name)<>'geom' AND p_method<>'geojson2sql' THEN p_geom_name ||' AS geom'   
     END,
-    CASE WHEN p_partition_name IS NOT NULL THEN ' (SELECT * FROM ' || p_tabname || ' WHERE '|| p_partition_name || ' = ''' || p_partition_value || '''::text) zx ' ELSE p_tabname END,
+    CASE WHEN p_partition_name IS NOT NULL THEN ' (SELECT * FROM ' || p_tabname || ' WHERE '|| p_partition_name || ' = $$' || p_partition_value || '$$::text) zx ' ELSE p_tabname END,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
     buffer_type,
     p_pck_id,
