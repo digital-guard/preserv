@@ -219,11 +219,11 @@ CREATE or replace VIEW api.stats_donors_prospection AS
     (
         SELECT CASE WHEN donor_status IS NULL THEN '-1' ELSE donor_status END AS donor_status,
             CASE
-            WHEN donor_status = '0' THEN 'Donors contacted'
-            WHEN donor_status = '1' THEN 'Donors interested in collaborating'
-            WHEN donor_status = '2' THEN 'Donated pack received'
-            WHEN donor_status = '3' THEN 'Donated pack published'
-            ELSE 'Unknown'
+            WHEN donor_status = '0' THEN '{"pt":"Doadores contatados","en":"Donors contacted","es":"Donantes contactados","fr":"Donateurs contactés"}'::jsonb
+            WHEN donor_status = '1' THEN '{"pt":"Doadores interessados em colaborar","en":"Donors interested in collaborating","es":"Donantes interesados ​​en colaborar","fr":"Donateurs intéressés à collaborer"}'::jsonb
+            WHEN donor_status = '2' THEN '{"pt":"Pacotes doados recebidos","en":"Donated pack received","es":"Paquetes donados recibidos","fr":"Packs donnés reçus"}'::jsonb
+            WHEN donor_status = '3' THEN '{"pt":"Pacotes doados publicados","en":"Donated pack published","es":"Paquetes donados publicados","fr":"Packs donnés publiés"}'::jsonb
+            ELSE '{"pt":"Desconhecido","en":"Unknown","es":"Desconocido","fr":"Inconnue"}'::jsonb
             END AS label,
             COUNT(*) AS amount
         FROM api.donors
