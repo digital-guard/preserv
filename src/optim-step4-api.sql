@@ -497,15 +497,15 @@ CREATE or replace FUNCTION api.jurisdiction_autocomplete(
 ) RETURNS jsonb AS $f$
 SELECT
 CASE
-WHEN cardinality(u)=2 AND u[1] ~*  '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] NOT IN ('es','en','pt','fr','')       THEN jsonb_build_object('error', 'Unsupported language.')
-WHEN cardinality(u)=2 AND u[1] !~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2]     IN ('es','en','pt','fr'   )       THEN jsonb_build_object('error', 'Isocode wrong format.')
-WHEN cardinality(u)=2 AND u[1] !~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] NOT IN ('es','en','pt','fr','')       THEN jsonb_build_object('error', 'Isocode wrong format and unsupported language.')
+WHEN cardinality(u)=2 AND u[1] ~*  '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] NOT IN ('ES','EN','PT','FR','')       THEN jsonb_build_object('error', 'Unsupported language.')
+WHEN cardinality(u)=2 AND u[1] !~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2]     IN ('ES','EN','PT','FR'   )       THEN jsonb_build_object('error', 'Isocode wrong format.')
+WHEN cardinality(u)=2 AND u[1] !~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] NOT IN ('ES','EN','PT','FR','')       THEN jsonb_build_object('error', 'Isocode wrong format and unsupported language.')
 WHEN cardinality(u)=1 AND u[1] !~* '^[A-Z]{2}(-[A-Z]{1,3})?$'                                                THEN jsonb_build_object('error', 'Isocode wrong format.')
 WHEN (cardinality(u)=1 OR (cardinality(u)=2 AND u[2] IN ('') ))
                  AND u[1] NOT IN (SELECT isolabel_ext FROM optim.jurisdiction WHERE isolevel IN (1,2))       THEN jsonb_build_object('error', 'Isocode does not exist.')
 WHEN (SELECT count(isolabel_ext) FROM optim.jurisdiction WHERE isolabel_ext = u[1]) = 0 AND u[1] NOT IN ('') THEN jsonb_build_object('error', 'No information for this jurisdiction.')
 
-WHEN (cardinality(u)=2 AND u[1] ~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] IN ('es','en','pt','fr','')) OR
+WHEN (cardinality(u)=2 AND u[1] ~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] IN ('ES','EN','PT','FR','')) OR
      (cardinality(u)=1 AND u[1] ~* '^[A-Z]{2}(-[A-Z]{1,3})?$') OR
      p_code IS NULL OR p_code = ''
 THEN
@@ -535,7 +535,7 @@ END
 FROM (SELECT string_to_array(upper(p_code),'/')::text[] AS u ) r, LATERAL (SELECT string_to_array(u[1],'-')::text[] AS v) s
 $f$ LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION api.jurisdiction_autocomplete(text)
-  IS 'Return jurisdiction geojson from isolabel_ext.'
+  IS 'Jurisdictions to autocomplete.'
 ;
 /*
 SELECT api.jurisdiction_autocomplete();
