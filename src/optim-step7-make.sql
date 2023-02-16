@@ -532,7 +532,7 @@ CREATE or replace FUNCTION optim.generate_readme(
 
     RAISE NOTICE 'conf: %', conf_yaml;
 
-    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/readme_' || CASE WHEN jurisd ='BR' THEN 'ptbr' ELSE 'es' || upper(jurisd) END || '.mustache') INTO readme;
+    SELECT pg_read_file(p_path || '/preserv/src/maketemplates/readme_' || CASE WHEN jurisd ='BR' THEN 'ptbr' ELSE 'es' END || '.mustache') INTO readme;
 
     SELECT jsonb_mustache_render(readme, conf_yaml) ||
            (CASE WHEN file_exists(p_yaml->'data_packtpl'->>'path_preserv_server' ||'/attachment.md') THEN pg_read_file(p_yaml->'data_packtpl'->>'path_preserv_server' ||'/attachment.md') ELSE '' END)
