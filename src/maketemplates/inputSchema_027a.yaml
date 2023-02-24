@@ -27,7 +27,7 @@ layers:
     sql_select: [OPCIONAL] lista de nomes de coluna da tabela de referência do method.
     orig_filename: nome do arquivo (ou arquivo de referência como no caso de shape) a ser utilizado pelo método.
     orig_subfilename: para o caso de arquivo compactado dentro de arquivo compactado.
-    join_column: [OPCIONAL] nome da coluna utilizada para join com o respectivo layer de cadastro (que também deve possuir join_column).
+    join_id: [OPCIONAL] nome da coluna utilizada para join com o respectivo layer de cadastro (que também deve possuir join_id).
     orig_ext: utilizada em algumas situações com o método ogr2ogr para indicar a extensão do arquivo. Por exemplo, .gpkg.
     7z_opts: opções para o 7z.
 
@@ -39,4 +39,4 @@ layers:
     sql_view:  (por exemplo) SELECT gid, TIPO_LOGRA || ' ' || NOME_LOGRA AS via_name, geom FROM $(tabname)
     orig_filename: (por exemplo) LOGRADOUROLine
 
-  etc: "geoaddress", "via", etc. consultar os tipos de layer em https://github.com/AddressForAll/WS/blob/0818dae01d3b7c80a41f8fadd3491db7d17a2b6c/src/ingest-step1-ini.sql#L143
+  etc: "geoaddress", "via", etc. consultar os tipos de layer em https://github.com/digital-guard/preserv/blob/main/docs/pt/ftypes.md

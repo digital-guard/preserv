@@ -182,24 +182,24 @@ def main(argv):
 
             if key in listOfDict['layers'] and 'cad' + key in listOfDict['layers']:
                 if listOfDict['layers'][key]['subtype'] == 'ext' and listOfDict['layers']['cad' + key]['subtype'] == 'cmpl':
-                    if listOfDict['layers'][key]['join_column'] and listOfDict['layers']['cad' + key]['join_column']:
+                    if listOfDict['layers'][key]['join_id'] and listOfDict['layers']['cad' + key]['join_id']:
                         listOfDict['joins'][key] = {}
                         listOfDict['joins'][key]['layer'] = key + '_ext'
                         listOfDict['joins'][key]['cadLayer'] = 'cad' + key + '_cmpl'
-                        listOfDict['joins'][key]['layerColumn'] = listOfDict['layers'][key]['join_column']
-                        listOfDict['joins'][key]['cadLayerColumn'] = listOfDict['layers']['cad' + key]['join_column']
+                        listOfDict['joins'][key]['layerColumn'] = listOfDict['layers'][key]['join_id']
+                        listOfDict['joins'][key]['cadLayerColumn'] = listOfDict['layers']['cad' + key]['join_id']
                         listOfDict['joins'][key]['layerFile'] = [x['file'] for x in listOfDict['files'] if x['p'] == listOfDict['layers'][key]['file']][0]
                         listOfDict['joins'][key]['cadLayerFile'] = [x['file'] for x in listOfDict['files'] if x['p'] == listOfDict['layers']['cad' + key]['file']][0]
 
 
             if key == 'geoaddress' and 'address' in listOfDict['layers']:
                 if listOfDict['layers'][key]['subtype'] == 'ext' and listOfDict['layers']['address']['subtype'] == 'cmpl':
-                    if listOfDict['layers'][key]['join_column'] and listOfDict['layers']['address']['join_column']:
+                    if listOfDict['layers'][key]['join_id'] and listOfDict['layers']['address']['join_id']:
                         listOfDict['joins'][key] = {}
                         listOfDict['joins'][key]['layer'] = key + '_ext'
                         listOfDict['joins'][key]['cadLayer'] = 'address' + '_cmpl'
-                        listOfDict['joins'][key]['layerColumn'] = listOfDict['layers'][key]['join_column']
-                        listOfDict['joins'][key]['cadLayerColumn'] = listOfDict['layers']['address']['join_column']
+                        listOfDict['joins'][key]['layerColumn'] = listOfDict['layers'][key]['join_id']
+                        listOfDict['joins'][key]['cadLayerColumn'] = listOfDict['layers']['address']['join_id']
                         listOfDict['joins'][key]['layerFile'] = [x['file'] for x in listOfDict['files'] if x['p'] == listOfDict['layers'][key]['file']][0]
                         listOfDict['joins'][key]['cadLayerFile'] = [x['file'] for x in listOfDict['files'] if x['p'] == listOfDict['layers']['address']['file']][0]
 

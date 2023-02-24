@@ -35,7 +35,7 @@ Os arquivos contém "camadas de dados" temáticas. Os metadados também descreve
 {{#has_other_fields}}#### Outros dados relevantes{{#other_fields}}
 * `{{name}}`{{#comment}}: {{comment}}{{/comment}}{{/other_fields}}{{/has_other_fields}}
 
-{{#isCadLayer}}Complementa [{{join_data.cadLayer}}](#-{{join_data.cadLayer}}) por meio de `{{join_column}}` e `{{join_data.cadLayerColumn}}`{{/isCadLayer}}{{^isCadLayer}}{{#join_column}}<br/>Complementado por [{{join_data.cadLayer}}](#-{{join_data.cadLayer}}) por meio de `{{join_column}}` e `{{join_data.cadLayerColumn}}`{{/join_column}}{{/isCadLayer}}
+{{#isCadLayer}}Complementa [{{join_data.cadLayer}}](#-{{join_data.cadLayer}}) por meio de `{{join_id}}` e `{{join_data.cadLayerColumn}}`{{/isCadLayer}}{{^isCadLayer}}{{#join_id}}<br/>Complementado por [{{join_data.cadLayer}}](#-{{join_data.cadLayer}}) por meio de `{{join_id}}` e `{{join_data.cadLayerColumn}}`{{/join_id}}{{/isCadLayer}}
 {{#value.test_evidence}}#### Evidência de teste
 <img src="{{value.test_evidence}}" width="400"/>{{/value.test_evidence}}
 

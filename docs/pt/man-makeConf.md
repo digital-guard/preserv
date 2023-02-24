@@ -73,7 +73,7 @@ Além das opções mais comuns, outras podem ser utilizadas:
 
   * `orig_subfilename:` nome do arquivo para o caso de `file` possuir arquivo compactado dentro de arquivo compactado.
 
-  * `join_column:` nome da coluna utilizada para correlacionar um layer e seu respectivo layer complementar(cadastral).
+  * `join_id:` nome da coluna utilizada para correlacionar um layer e seu respectivo layer complementar(cadastral).
 
   * `orig_ext:` utilizada em algumas situações com o método ogr2ogr para indicar a extensão do arquivo.
 

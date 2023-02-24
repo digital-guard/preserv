@@ -346,26 +346,26 @@ BEGIN
         IF dict->'layers'?key AND dict->'layers'?('cad'||key)
             AND dict->'layers'->key->>'subtype' = 'ext'
             AND dict->'layers'->('cad'||key)->>'subtype' = 'cmpl'
-            AND dict->'layers'->key?'join_column' AND dict->'layers'->('cad'||key)?'join_column'
+            AND dict->'layers'->key?'join_id' AND dict->'layers'->('cad'||key)?'join_id'
         THEN
             dict := jsonb_set( dict, '{joins}', '{}'::jsonb );
             dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
                 'layer',           key || '_ext'
                 ,'cadLayer',        'cad' || key || '_cmpl'
-                ,'layerColumn',     dict->'layers'->key->'join_column'
-                ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_column'
+                ,'layerColumn',     dict->'layers'->key->'join_id'
+                ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_id'
                 ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
                 ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)')::jsonpath  )->0->>'file'
                 -- check by dict @? ('$.files[*].p ? (@ == $.layers.'|| key ||'.file)')
             ));
             dict := jsonb_set( dict, array['layers',key,'join_data'] , jsonb_build_object(
                 'cadLayer',        'cad' || key
-                ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_column'
+                ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_id'
                 ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)')::jsonpath  )->0->>'file'
             ));
             dict := jsonb_set( dict, array['layers','cad'||key,'join_data'] , jsonb_build_object(
                 'cadLayer',         key
-                ,'cadLayerColumn',  dict->'layers'->key->'join_column'
+                ,'cadLayerColumn',  dict->'layers'->key->'join_id'
                 ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
             ));
         END IF;
@@ -373,26 +373,26 @@ BEGIN
         IF key='geoaddress' AND dict->'layers'?'address'
             AND dict->'layers'->key->>'subtype' = 'ext'
             AND dict->'layers'->'address'->>'subtype' = 'cmpl'
-        AND dict->'layers'->key?'join_column'
-            AND dict->'layers'->'address'?'join_column'
+        AND dict->'layers'->key?'join_id'
+            AND dict->'layers'->'address'?'join_id'
         THEN
             dict := jsonb_set( dict, '{joins}', '{}'::jsonb );
             dict := jsonb_set( dict, array['joins',key] , jsonb_build_object(
                 'layer',           key || '_ext'
                 ,'cadLayer',        'address_cmpl'
-                ,'layerColumn',     dict->'layers'->key->'join_column'
-                ,'cadLayerColumn',  dict->'layers'->'address'->'join_column'
+                ,'layerColumn',     dict->'layers'->key->'join_id'
+                ,'cadLayerColumn',  dict->'layers'->'address'->'join_id'
                 ,'layerFile',       jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
                 ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.address.file)')::jsonpath  )->0->>'file'
             ));
             dict := jsonb_set( dict, array['layers',key,'join_data'] , jsonb_build_object(
                 'cadLayer',        'address'
-                ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_column'
+                ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_id'
                 ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)')::jsonpath  )->0->>'file'
             ));
             dict := jsonb_set( dict, array['layers','cad'||key,'join_data'] , jsonb_build_object(
                 'cadLayer',         key
-                ,'cadLayerColumn',  dict->'layers'->key->'join_column'
+                ,'cadLayerColumn',  dict->'layers'->key->'join_id'
                 ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
             ));
         END IF;
