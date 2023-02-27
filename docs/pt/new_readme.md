@@ -30,7 +30,7 @@ layers:
     subtype: ext
     method: shp2sql
     file: 1
-    sql_select: ['gid', 'numnovo as house_number', 'cod_log', 'geom']
+    sql_select: ['gid', 'numnovo as hnum', 'cod_log', 'geom']
     orig_filename: pg_renumeracoes
     comments: Comentários referente ao layer, se houver.
     test_evidence: endereço da imagem de evidencia do layer.
@@ -39,7 +39,7 @@ layers:
     standardized_fields:
      -
       name: nome do campo ou combinação de campos
-      standard: 'nome padronizado, por exemplo: house_number'
+      standard: 'nome padronizado, por exemplo: hnum'
       comment: comentários sobre o campo, se houver.
 
     # dados relevantes, NÃO padronizados, se houver

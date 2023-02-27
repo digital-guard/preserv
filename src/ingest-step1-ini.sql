@@ -1633,40 +1633,39 @@ BEGIN
         t.ghs,
         t.row_id::int AS gid, 
         CASE p_ftname
-        WHEN 'parcel' THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'ns_name', ns_name, 'nsvia_name', nsvia_name, 'postcode', postcode, 'ref', ref, 'bytes',length(St_asGeoJson(t.geom))) || address ) ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'ns_name', ns_name, 'nsvia_name', nsvia_name, 'postcode', postcode, 'ref', ref) || address) END AS info,
+        WHEN 'parcel' THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'nsvia', nsvia, 'postcode', postcode, 'ref', ref, 'bytes',length(St_asGeoJson(t.geom))) || address ) ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'nsvia', nsvia, 'postcode', postcode, 'ref', ref) || address) END AS info,
         t.geom
   FROM (
       SELECT file_id, fa.geom,
         CASE (SELECT housenumber_system_type FROM ingest.vw03full_layer_file WHERE id=p_file_id)
         WHEN 'metric' THEN
-        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', to_bigint(properties->>'house_number'))
+        ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
         WHEN 'bh-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', to_bigint(regexp_replace(properties->>'house_number', '\D', '', 'g')), regexp_replace(properties->>'house_number', '[^[:alpha:]]', '', 'g') )
+        ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(regexp_replace(properties->>'hnum', '\D', '', 'g')), regexp_replace(properties->>'hnum', '[^[:alpha:]]', '', 'g') )
         WHEN 'street-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', regexp_replace(properties->>'house_number', '[^[:alnum:]]', '', 'g'))
+        ROW_NUMBER() OVER(ORDER BY properties->>'via', regexp_replace(properties->>'hnum', '[^[:alnum:]]', '', 'g'))
         WHEN 'block-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', to_bigint(split_part(replace(properties->>'house_number',' ',''), '-', 1)), to_bigint(split_part(replace(properties->>'house_number',' ',''), '-', 2)))
+        ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 1)), to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 2)))
         ELSE
-        ROW_NUMBER() OVER(ORDER BY properties->>'via_name', to_bigint(properties->>'house_number'))
+        ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
         --ROW_NUMBER() OVER(ORDER BY  properties->>'address')) 
-        -- or (properties->>'via_name')||'#'||properties->>'house_number'
+        -- or (properties->>'via')||'#'||properties->>'hnum'
       END AS row_id,
       CASE WHEN (properties->>'is_agg')::boolean THEN 100 END AS error_code,
       COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
-      properties->>'via_name' AS via_name,
-      properties->>'house_number' AS house_number,
-      properties->>'ns_name' AS ns_name,
-      properties->>'nsvia_name' AS nsvia_name,
+      properties->>'via' AS via,
+      properties->>'hnum' AS hnum,
+      properties->>'nsvia' AS nsvia,
       properties->>'postcode' AS postcode,
       properties->>'ref' AS ref,
-      --COALESCE((properties->>'via_name') || ', ' || (properties->>'house_number'), properties->>'via_name', properties->>'house_number') AS address,
+      --COALESCE((properties->>'via') || ', ' || (properties->>'hnum'), properties->>'via', properties->>'hnum') AS address,
       CASE
-        WHEN          (properties->>'via_name'     IS NULL)
-              OR      (properties->>'house_number' IS NULL)
-              OR (trim(properties->>'house_number') = '')
-              OR (trim(properties->>'via_name')     = '')
-        THEN jsonb_strip_nulls(jsonb_build_object('via_name', NULLIF(trim(properties->>'via_name'),''), 'house_number', NULLIF(trim(properties->>'house_number'),'')))
-        ELSE jsonb_build_object('address',(properties->>'via_name') || ', ' || (properties->>'house_number'))
+        WHEN          (properties->>'via'     IS NULL)
+              OR      (properties->>'hnum' IS NULL)
+              OR (trim(properties->>'hnum') = '')
+              OR (trim(properties->>'via')     = '')
+        THEN jsonb_strip_nulls(jsonb_build_object('via', NULLIF(trim(properties->>'via'),''), 'hnum', NULLIF(trim(properties->>'hnum'),'')))
+        ELSE jsonb_build_object('address',(properties->>'via') || ', ' || (properties->>'hnum'))
       END AS address,
       fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
@@ -1681,10 +1680,9 @@ BEGIN
         t.row_id::int AS gid, 
         jsonb_strip_nulls(
           jsonb_build_object(
-            'via_name', via_name,
+            'via', via,
             'name', name,
-            'ns_name', ns_name,
-            'nsvia_name', nsvia_name,
+            'nsvia', nsvia,
             'ref', ref,
             'bytes',length(St_asGeoJson(t.geom)))
           ) AS info,
@@ -1692,10 +1690,9 @@ BEGIN
   FROM (
       SELECT fa.file_id, fa.geom,
         ROW_NUMBER() OVER(ORDER BY gid) AS row_id,
-        fa.properties->>'via_name'      AS via_name,
+        fa.properties->>'via'      AS via,
         fa.properties->>'name'          AS name,
-        fa.properties->>'ns_name'       AS ns_name,
-        fa.properties->>'nsvia_name'    AS nsvia_name,
+        fa.properties->>'nsvia'    AS nsvia,
         fa.properties->>'ref'           AS ref,
         fa.kx_ghs9                      AS ghs
       FROM ingest.feature_asis AS fa
@@ -1890,16 +1887,16 @@ BEGIN
   CASE (SELECT ft_info->>'class_ftname' FROM ingest.vw03full_layer_file WHERE id=p_file_id)
   WHEN 'geoaddress', 'parcel', 'via' THEN
     EXECUTE format(q_copy,
-    $$fa.properties->>'via_name' AS name$$,
+    $$fa.properties->>'via' AS name$$,
     p_file_id,
-    $$fa.properties->>'via_name'$$,
+    $$fa.properties->>'via'$$,
     p_fileref || '/distrib_viaName_ghs.csv'
     );
   WHEN 'nsvia' THEN
     EXECUTE format(q_copy,
-    $$COALESCE(fa.properties->>'ns_name',fa.properties->>'nsvia_name') AS name$$,
+    $$fa.properties->>'nsvia' AS name$$,
     p_file_id,
-    $$COALESCE(fa.properties->>'ns_name',fa.properties->>'nsvia_name')$$,
+    $$fa.properties->>'nsvia'$$,
     p_fileref || '/distrib_name_ghs.csv'
     );
   WHEN 'genericvia', 'block', 'building' THEN

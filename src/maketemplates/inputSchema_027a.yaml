@@ -36,7 +36,7 @@ layers:
     method: (por exemplo) shp2sql
     p: (por exemplo) 2a
     file: (por exemplo) 2
-    sql_view:  (por exemplo) SELECT gid, TIPO_LOGRA || ' ' || NOME_LOGRA AS via_name, geom FROM $(tabname)
+    sql_view:  (por exemplo) SELECT gid, TIPO_LOGRA || ' ' || NOME_LOGRA AS via, geom FROM $(tabname)
     orig_filename: (por exemplo) LOGRADOUROLine
 
   etc: "geoaddress", "via", etc. consultar os tipos de layer em https://github.com/digital-guard/preserv/blob/main/docs/pt/ftypes.md

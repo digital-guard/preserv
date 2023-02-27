@@ -22,14 +22,14 @@ Fonte para https://yuml.me/diagram/scruffy/class/draw
 // -------------------
 
 // Cadastral address:
-  [address|join_id;via_name;house_number;info]
+  [address|join_id;via;hnum;info]
 // Cadastral via (name of via):
-  [cadvia|join_id;via_name;info]
+  [cadvia|join_id;via;info]
 // Cadastral generic-via (name of generic-via):
-  [cadgenericvia|join_id;via_type;via_name;info]
+  [cadgenericvia|join_id;via_type;via;info]
 
 // Geo-address point:
-  [geoaddress_full|gid;via_name;house_number;geom;info]
+  [geoaddress_full|gid;via;hnum;geom;info]
   [geoaddress_ext|gid;join_id;geom;info]
 // Via line:
   [via_full|gid;name;geom;info]
@@ -38,7 +38,7 @@ Fonte para https://yuml.me/diagram/scruffy/class/draw
   [genericvia_full|gid;via_type;name;geom;info]
   [genericvia_ext|gid;join_id;geom;info]
 // Parcel (urban lot) polygon:
-  [parcel_full|gid;via_name;house_number;geom;info]
+  [parcel_full|gid;via;hnum;geom;info]
   [parcel_ext|gid;join_id;geom;info]
 ```
 
