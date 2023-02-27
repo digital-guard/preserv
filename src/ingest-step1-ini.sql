@@ -1633,7 +1633,10 @@ BEGIN
         t.ghs,
         t.row_id::int AS gid, 
         CASE p_ftname
-        WHEN 'parcel' THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'nsvia', nsvia, 'postcode', postcode, 'ref', ref, 'bytes',length(St_asGeoJson(t.geom))) || address ) ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'nsvia', nsvia, 'postcode', postcode, 'ref', ref) || address) END AS info,
+        WHEN 'parcel'
+        THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'nsvia', nsvia, 'name', name, 'address', address, 'info', infop, 'bytes', length(St_asGeoJson(t.geom))))
+        ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'nsvia', nsvia, 'name', name, 'address', address, 'info', infop                                       ))
+        END AS info,
         t.geom
   FROM (
       SELECT file_id, fa.geom,
@@ -1648,24 +1651,26 @@ BEGIN
         ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 1)), to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 2)))
         ELSE
         ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
-        --ROW_NUMBER() OVER(ORDER BY  properties->>'address')) 
-        -- or (properties->>'via')||'#'||properties->>'hnum'
       END AS row_id,
       CASE WHEN (properties->>'is_agg')::boolean THEN 100 END AS error_code,
       COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
-      properties->>'via' AS via,
-      properties->>'hnum' AS hnum,
-      properties->>'nsvia' AS nsvia,
-      properties->>'postcode' AS postcode,
-      properties->>'ref' AS ref,
-      --COALESCE((properties->>'via') || ', ' || (properties->>'hnum'), properties->>'via', properties->>'hnum') AS address,
+      properties->>'nsvia'    AS nsvia,
+      properties->>'name'     AS name,
+      properties - ARRAY['via','hnum','name','nsvia'] AS infop,
       CASE
-        WHEN          (properties->>'via'     IS NULL)
-              OR      (properties->>'hnum' IS NULL)
-              OR (trim(properties->>'hnum') = '')
-              OR (trim(properties->>'via')     = '')
-        THEN jsonb_strip_nulls(jsonb_build_object('via', NULLIF(trim(properties->>'via'),''), 'hnum', NULLIF(trim(properties->>'hnum'),'')))
-        ELSE jsonb_build_object('address',(properties->>'via') || ', ' || (properties->>'hnum'))
+        WHEN ((trim(properties->>'via')  = '') IS     FALSE)
+         AND ((trim(properties->>'hnum') = '') IS     FALSE)
+          THEN trim(properties->>'via') || ', ' || trim(properties->>'hnum')
+
+        WHEN ((trim(properties->>'via')  = '') IS NOT FALSE)
+         AND ((trim(properties->>'hnum') = '') IS     FALSE)
+          THEN '?, ' || trim(properties->>'hnum')
+
+        WHEN ((trim(properties->>'via')  = '') IS     FALSE)
+         AND ((trim(properties->>'hnum') = '') IS NOT FALSE)
+          THEN trim(properties->>'via') || ', ?'
+
+        ELSE NULL
       END AS address,
       fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
@@ -1678,23 +1683,22 @@ BEGIN
   SELECT 
         t.ghs, 
         t.row_id::int AS gid, 
-        jsonb_strip_nulls(
-          jsonb_build_object(
-            'via', via,
-            'name', name,
-            'nsvia', nsvia,
-            'ref', ref,
-            'bytes',length(St_asGeoJson(t.geom)))
-          ) AS info,
+        jsonb_strip_nulls(jsonb_build_object(
+          'via', via,
+          'name', name,
+          'nsvia', nsvia,
+          'bytes',length(St_asGeoJson(t.geom)),
+          'info', infop
+        )) AS info,
         t.geom
   FROM (
       SELECT fa.file_id, fa.geom,
         ROW_NUMBER() OVER(ORDER BY gid) AS row_id,
-        fa.properties->>'via'      AS via,
-        fa.properties->>'name'          AS name,
-        fa.properties->>'nsvia'    AS nsvia,
-        fa.properties->>'ref'           AS ref,
-        fa.kx_ghs9                      AS ghs
+        fa.properties->>'via'   AS via,
+        fa.properties->>'name'  AS name,
+        fa.properties->>'nsvia' AS nsvia,
+        fa.kx_ghs9              AS ghs,
+        fa.properties - ARRAY['via','name','nsvia'] AS infop
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
   ) t
