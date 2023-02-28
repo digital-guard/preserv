@@ -79,7 +79,7 @@ gen_csv(){
     echo "Generating csv file..."
     [ -e ${file_basename}.csv ] && rm ${file_basename}.csv
 
-    CMD_STRING=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT feature_id AS gid,' || CASE WHEN (SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1) = '{}'::jsonb THEN '' ELSE array_to_string((SELECT  array_agg(('properties->''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x)),', ') || ', ' END || ' ST_X(geom) AS longitude, ST_Y(geom) AS latitude FROM ingest.feature_asis WHERE file_id=${file_id}'")
+    CMD_STRING=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT ' || array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x) WHERE x IN ('via','hnum','nsvia')),', ') || ', ST_X(geom) AS longitude, ST_Y(geom) AS latitude FROM ingest.feature_asis WHERE file_id=${file_id}'")
 
     COPY_STRING=$(echo COPY \( ${CMD_STRING} ORDER BY feature_id \) TO \'/tmp/pg_io/${file_basename}.csv\' CSV HEADER)
 
