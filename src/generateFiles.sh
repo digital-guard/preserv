@@ -28,7 +28,7 @@ gen_shapefile(){
     pushd /tmp/
 
     echo "Generating shapefile..."
-    pgsql2shp -k -f ${file_basename}.shp -h localhost -u postgres -P postgres ${database} "$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT feature_id AS gid,' || CASE WHEN (SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1) = '{}'::jsonb THEN '' ELSE array_to_string((SELECT  array_agg(('properties->''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x)),', ') || ', ' END || ' geom FROM ingest.feature_asis WHERE file_id=${file_id};';")"
+    pgsql2shp -k -f ${file_basename}.shp -h localhost -u postgres -P postgres ${database} "$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT ' || array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x) WHERE x IN ('via','hnum','nsvia','name')),', ') || ', geom FROM ingest.feature_asis WHERE file_id=${file_id};';")"
 
     mkdir ${file_basename}
     mv ${file_basename}.{shp,cpg,dbf,prj,shx} ${file_basename}
