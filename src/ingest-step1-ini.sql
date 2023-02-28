@@ -1656,7 +1656,7 @@ BEGIN
       COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
       properties->>'nsvia'    AS nsvia,
       properties->>'name'     AS name,
-      properties - ARRAY['via','hnum','name','nsvia'] AS infop,
+      NULLIF(properties - ARRAY['via','hnum','name','nsvia'],'{}'::jsonb) AS infop,
       CASE
         WHEN ((trim(properties->>'via')  = '') IS     FALSE)
          AND ((trim(properties->>'hnum') = '') IS     FALSE)
@@ -1698,7 +1698,7 @@ BEGIN
         fa.properties->>'name'  AS name,
         fa.properties->>'nsvia' AS nsvia,
         fa.kx_ghs9              AS ghs,
-        fa.properties - ARRAY['via','name','nsvia'] AS infop
+        NULLIF(fa.properties - ARRAY['via','name','nsvia'],'{}'::jsonb) AS infop
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
   ) t
