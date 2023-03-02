@@ -951,10 +951,10 @@ CREATE or replace FUNCTION ingest.any_load(
            SELECT file_id, gid,
                   properties,
                   CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1])
-                    WHEN 'point' THEN ST_ReducePrecision( ST_Intersection(geom,(SELECT geom FROM mask)), 0.000001 )
+                    WHEN 'point' THEN ST_ReducePrecision( geom, 0.000001 )
                     ELSE ST_SimplifyPreserveTopology( -- remove collinear points 
 			    ST_ReducePrecision( -- round decimal degrees of SRID 4326, ~1 meter
-			      ST_Intersection( geom, (SELECT geom FROM mask) )
+			      geom
 			      ,0.000001
 		            ),
 			    0.00000001
@@ -1372,10 +1372,10 @@ CREATE or replace FUNCTION ingest.osm_load(
            SELECT file_id, gid,
                   properties,
                   CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1])
-                    WHEN 'point' THEN ST_ReducePrecision( ST_Intersection(geom,(SELECT geom FROM mask)), 0.000001 )
+                    WHEN 'point' THEN ST_ReducePrecision( geom, 0.000001 )
                     ELSE ST_SimplifyPreserveTopology( -- remove collinear points 
 			    ST_ReducePrecision( -- round decimal degrees of SRID 4326, ~1 meter
-			      ST_Intersection( geom, (SELECT geom FROM mask) )
+			      geom
 			      ,0.000001
 		            ),
 			    0.00000001
@@ -1640,6 +1640,7 @@ BEGIN
         t.geom
   FROM (
       SELECT file_id, fa.geom,
+
         CASE (SELECT housenumber_system_type FROM ingest.vw03full_layer_file WHERE id=p_file_id)
         WHEN 'metric' THEN
         ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
@@ -1652,11 +1653,14 @@ BEGIN
         ELSE
         ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
       END AS row_id,
+
       CASE WHEN (properties->>'is_agg')::boolean THEN 100 END AS error_code,
+
       COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
       properties->>'nsvia'    AS nsvia,
       properties->>'name'     AS name,
       NULLIF(properties - ARRAY['via','hnum','name','nsvia'],'{}'::jsonb) AS infop,
+
       CASE
         WHEN ((trim(properties->>'via')  = '') IS     FALSE)
          AND ((trim(properties->>'hnum') = '') IS     FALSE)
@@ -1672,6 +1676,7 @@ BEGIN
 
         ELSE NULL
       END AS address,
+
       fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
@@ -1703,6 +1708,7 @@ BEGIN
       WHERE fa.file_id=p_file_id
   ) t
   ORDER BY gid;
+
   WHEN 'datagrid' THEN
   RETURN QUERY
   SELECT
