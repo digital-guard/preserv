@@ -1629,29 +1629,32 @@ BEGIN
   CASE p_ftname
   WHEN 'geoaddress', 'parcel' THEN
   RETURN QUERY
-  SELECT 
+  SELECT
         t.ghs,
-        t.row_id::int AS gid, 
+        t.row_id::int AS gid,
         CASE p_ftname
         WHEN 'parcel'
         THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'nsvia', nsvia, 'name', name, 'address', address, 'info', infop, 'bytes', length(St_asGeoJson(t.geom))))
         ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'nsvia', nsvia, 'name', name, 'address', address, 'info', infop                                       ))
         END AS info,
         t.geom
-  FROM (
+  FROM
+  (
       SELECT file_id, fa.geom,
 
         CASE (SELECT housenumber_system_type FROM ingest.vw03full_layer_file WHERE id=p_file_id)
         WHEN 'metric' THEN
-        ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
         WHEN 'bh-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(regexp_replace(properties->>'hnum', '\D', '', 'g')), regexp_replace(properties->>'hnum', '[^[:alpha:]]', '', 'g') )
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(regexp_replace(properties->>'hnum', '\D', '', 'g')), regexp_replace(properties->>'hnum', '[^[:alpha:]]', '', 'g') )
         WHEN 'street-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY properties->>'via', regexp_replace(properties->>'hnum', '[^[:alnum:]]', '', 'g'))
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', regexp_replace(properties->>'hnum', '[^[:alnum:]]', '', 'g'))
         WHEN 'block-metric' THEN
-        ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 1)), to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 2)))
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 1)), to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 2)))
+        WHEN 'ago-block' THEN
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'), to_bigint(properties->>'blref'), to_bigint(properties->>'pnum') )
         ELSE
-        ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
       END AS row_id,
 
       CASE WHEN (properties->>'is_agg')::boolean THEN 100 END AS error_code,
@@ -1659,22 +1662,34 @@ BEGIN
       COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
       properties->>'nsvia'    AS nsvia,
       properties->>'name'     AS name,
-      NULLIF(properties - ARRAY['via','hnum','name','nsvia'],'{}'::jsonb) AS infop,
+      NULLIF(properties - ARRAY['via','hnum','name','nsvia','blref','pnum'],'{}'::jsonb) AS infop,
 
-      CASE
-        WHEN ((trim(properties->>'via')  = '') IS     FALSE)
-         AND ((trim(properties->>'hnum') = '') IS     FALSE)
-          THEN trim(properties->>'via') || ', ' || trim(properties->>'hnum')
+      CASE (SELECT housenumber_system_type FROM ingest.vw03full_layer_file WHERE id=p_file_id)
+      WHEN 'ago-block' THEN
+      (
+        (CASE WHEN (trim(properties->>'via')   = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'via')   END) || ', '    ||
+        (CASE WHEN (trim(properties->>'hnum')  = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'hnum')  END) || ', QD ' ||
+        (CASE WHEN (trim(properties->>'blref') = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'blref') END) || ' LT '   ||
+        (CASE WHEN (trim(properties->>'pnum')  = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'pnum')  END)
+      )
+      ELSE
+      (
+        CASE
+          WHEN ((trim(properties->>'via')  = '') IS     FALSE)
+           AND ((trim(properties->>'hnum') = '') IS     FALSE)
+            THEN trim(properties->>'via') || ', ' || trim(properties->>'hnum')
 
-        WHEN ((trim(properties->>'via')  = '') IS NOT FALSE)
-         AND ((trim(properties->>'hnum') = '') IS     FALSE)
-          THEN '?, ' || trim(properties->>'hnum')
+          WHEN ((trim(properties->>'via')  = '') IS NOT FALSE)
+           AND ((trim(properties->>'hnum') = '') IS     FALSE)
+            THEN '?, ' || trim(properties->>'hnum')
 
-        WHEN ((trim(properties->>'via')  = '') IS     FALSE)
-         AND ((trim(properties->>'hnum') = '') IS NOT FALSE)
-          THEN trim(properties->>'via') || ', ?'
+          WHEN ((trim(properties->>'via')  = '') IS     FALSE)
+           AND ((trim(properties->>'hnum') = '') IS NOT FALSE)
+            THEN trim(properties->>'via') || ', ?'
 
-        ELSE NULL
+          ELSE NULL
+        END
+      )
       END AS address,
 
       fa.kx_ghs9 AS ghs
@@ -1682,12 +1697,12 @@ BEGIN
       WHERE fa.file_id=p_file_id
   ) t
   ORDER BY gid;
-  
+
   WHEN 'nsvia', 'via', 'genericvia', 'block', 'building' THEN
-  RETURN QUERY 
-  SELECT 
-        t.ghs, 
-        t.row_id::int AS gid, 
+  RETURN QUERY
+  SELECT
+        t.ghs,
+        t.row_id::int AS gid,
         jsonb_strip_nulls(jsonb_build_object(
           'via', via,
           'name', name,
