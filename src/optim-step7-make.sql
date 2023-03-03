@@ -15,6 +15,7 @@ DECLARE
  orig_filename_string text;
  multiple_files jsonb; 
  codec_desc_global jsonb;
+ housenumber_system text;
 
  codec_desc0 jsonb DEFAULT NULL;
  codec_desc_default0 jsonb DEFAULT NULL;
@@ -149,7 +150,7 @@ BEGIN
             dict := jsonb_set( dict, array['layers',key,'file_data','path'] , to_jsonb((dict->>'orig') || '/' || (dict->'layers'->key->'file_data'->>'file') ));
         END IF;
 
-        SELECT id FROM optim.vw01full_packfilevers WHERE hashedfname = dict->'layers'->key->'file_data'->>'file' INTO packvers_id;
+        SELECT id, housenumber_system_type FROM optim.vw01full_packfilevers WHERE hashedfname = dict->'layers'->key->'file_data'->>'file' INTO packvers_id, housenumber_system;
 
         dict := jsonb_set( dict, array['layers',key,'packvers_id'] , to_jsonb(packvers_id));
         dict := jsonb_set( dict, array['layers',key,'layername_root'] , to_jsonb(key));
@@ -398,6 +399,11 @@ BEGIN
         END IF;
 	 END LOOP;
 
+    IF housenumber_system IS NOT NULL
+    THEN
+        dict := jsonb_set( dict, array['housenumber_system_type'], to_jsonb(housenumber_system) );
+    END IF;
+
 	 IF jsonb_array_length(to_jsonb(jsonb_object_keys_asarray(dict->'joins'))) > 0
 	 THEN
         dict := dict || jsonb_build_object( 'joins_keys', jsonb_object_keys_asarray(dict->'joins') );
@@ -416,7 +422,7 @@ $f$ language PLpgSQL;
 -- SELECT optim.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/ES/CachoeiroItapemirim/_pk0091.01/make_conf.yaml') );
 -- SELECT optim.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk0001.01/make_conf.yaml') ); 
 -- SELECT optim.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/SP/SaoPaulo/_pk0033.01/make_conf.yaml') );
-
+-- SELECT optim.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/DF/Brasilia/_pk0068.01/make_conf.yaml') );
 
 CREATE or replace FUNCTION optim.generate_commands(
     jurisd  text,
