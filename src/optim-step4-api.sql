@@ -10,7 +10,7 @@ SELECT osm_id,
       lexlabel,
       isolabel_ext,
       ddd,
-      jsonb_strip_nulls(info) AS info
+      jsonb_strip_nulls(info || jsonb_build_object('sys_housenumbering',housenumber_system_type,'sys_housenumbering_lex',lex_urn)) AS info
 FROM optim.jurisdiction
 ORDER BY jurisd_base_id, isolevel, name
 ;
