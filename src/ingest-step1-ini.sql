@@ -1632,8 +1632,8 @@ BEGIN
   SELECT
         t.ghs,
         t.gid,
-        CASE p_ftname
-        WHEN 'parcel'
+        CASE
+        WHEN p_ftname IN ('parcel','building')
         THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'address', address, 'info', infop, 'bytes', length(St_asGeoJson(t.geom))))
         ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'address', address, 'info', infop                                       ))
         END AS info,
@@ -1740,7 +1740,7 @@ BEGIN
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
   ) t
-  ORDER BY via;
+  ORDER BY via, gid;
 
   WHEN p_ftname IN ('genericvia') THEN
   RETURN QUERY
@@ -1764,7 +1764,7 @@ BEGIN
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
   ) t
-  ORDER BY type, via;
+  ORDER BY type, via, gid;
 
   WHEN p_ftname IN ('nsvia') THEN
   RETURN QUERY
@@ -1786,7 +1786,7 @@ BEGIN
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
   ) t
-  ORDER BY nsvia;
+  ORDER BY nsvia, gid;
 
   WHEN p_ftname IN ('datagrid') THEN
   RETURN QUERY
@@ -1808,7 +1808,7 @@ BEGIN
 END;
 $f$ LANGUAGE PLpgSQL;
 --$f$ LANGUAGE SQL IMMUTABLE;
--- SELECT * FROM ingest.feature_asis_export(3) t LIMIT 1000;
+-- SELECT * FROM ingest.feature_asis_export(5) t LIMIT 1000;
 
 -- ----------------------------
 
