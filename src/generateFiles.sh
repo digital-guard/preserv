@@ -24,11 +24,37 @@ gen_shapefile(){
     file_id=$2
     file_basename=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
 
+    ftname=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT split_part(ftname,'_',1) FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
+
+    if [[ "$ftype" == "geoaddress" ]]
+    then
+        field1="'via','hnum'"
+    elif [[ "$ftype" == "parcel" ]]
+    then
+        field1="'via','hnum'"
+    elif [[ "$ftype" == "via" ]]
+    then
+        field1="'via'"
+    elif [[ "$ftype" == "nsvia" ]]
+    then
+        field1="'via'"
+    elif [[ "$ftype" == "block" ]]
+    then
+        field1="'name'"
+    elif [[ "$ftype" == "building" ]]
+    then
+        field1="'via','hnum'"
+    elif [[ "$ftype" == "genericvia" ]]
+    then
+        field1="'via','type'"
+    else
+        field1="'via','hnum','name','nsvia','type'"
+    fi
 
     pushd /tmp/
 
     echo "Generating shapefile..."
-    pgsql2shp -k -f ${file_basename}.shp -h localhost -u postgres -P postgres ${database} "$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT ' || array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x) WHERE x IN ('via','hnum','nsvia','name')),', ') || (CASE WHEN (SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1) ?| ARRAY['via','hnum','name','nsvia'] THEN '' ELSE ',feature_id AS fid' END) || ', geom FROM ingest.feature_asis WHERE file_id=${file_id};';")"
+    pgsql2shp -k -f ${file_basename}.shp -h localhost -u postgres -P postgres ${database} "$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT ' || array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x) WHERE x IN (${field1})),', ') || (CASE WHEN (SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1) ?| ARRAY[${field1}] THEN '' ELSE ',feature_id AS fid' END) || ', geom FROM ingest.feature_asis WHERE file_id=${file_id};';")"
 
     mkdir ${file_basename}
     mv ${file_basename}.{shp,cpg,dbf,prj,shx} ${file_basename}
@@ -59,7 +85,7 @@ gen_shapefile(){
     echo "Update tables"
     update_tables ${file_id} ${database} ${file_name_hash} ${url_cloud} 'shp'
 
-    echo "End. File available at /tmp/pg_io/${file_name_hash} or http://dl.digital-guard.org/${file_name_hash}"
+    echo "End. File available at /tmp/${file_name_hash} or http://dl.digital-guard.org/${file_name_hash}"
 
     popd
 }
@@ -113,7 +139,10 @@ gen_csv(){
     echo "Update tables"
     update_tables ${file_id} ${database} ${file_name_hash} ${url_cloud} 'csv'
 
-    echo "End. File available at /tmp/pg_io/${file_name_hash} or http://dl.digital-guard.org/${file_name_hash}"
+    mv ${file_name_hash} /tmp
+
+    echo "End. File available at /tmp/${file_name_hash} or http://dl.digital-guard.org/${file_name_hash}"
+
     popd
 }
 
@@ -123,10 +152,10 @@ generate_filtered_files(){
     file_id=$2
     ftname=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT split_part(ftname,'_',1) FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
 
-    echo gen_shapefile ${database} ${file_id}
+    gen_shapefile ${database} ${file_id}
 
     if [[ "$ftname" == "geoaddress" ]]
     then
-        echo gen_csv ${database} ${file_id}
+        gen_csv ${database} ${file_id}
     fi
 }
