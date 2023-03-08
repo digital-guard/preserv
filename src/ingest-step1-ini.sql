@@ -1626,21 +1626,25 @@ DECLARE
     p_ftname text;
 BEGIN
   p_ftname := (SELECT ft_info->>'class_ftname' FROM ingest.vw03full_layer_file WHERE id=p_file_id);
-  CASE p_ftname
-  WHEN 'geoaddress', 'parcel' THEN
+  CASE
+  WHEN ( p_ftname IN ('geoaddress', 'parcel') ) OR ( p_ftname IN ('building') AND ((SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1) ?| ARRAY['via','hnum']) ) THEN
   RETURN QUERY
   SELECT
         t.ghs,
-        t.row_id::int AS gid,
+        t.gid,
         CASE p_ftname
         WHEN 'parcel'
-        THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'nsvia', nsvia, 'name', name, 'address', address, 'info', infop, 'bytes', length(St_asGeoJson(t.geom))))
-        ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'nsvia', nsvia, 'name', name, 'address', address, 'info', infop                                       ))
+        THEN jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'address', address, 'info', infop, 'bytes', length(St_asGeoJson(t.geom))))
+        ELSE jsonb_strip_nulls(jsonb_build_object('error_code', error_code, 'address', address, 'info', infop                                       ))
         END AS info,
         t.geom
   FROM
   (
-      SELECT file_id, fa.geom,
+      SELECT file_id, fa.geom, fa.feature_id::int AS gid, fa.kx_ghs9 AS ghs,
+
+      CASE WHEN (properties->>'is_agg')::boolean THEN 100 END AS error_code,
+      COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
+      NULLIF(properties - ARRAY['via','hnum','blref','pnum'],'{}'::jsonb) AS infop,
 
         CASE (SELECT housenumber_system_type FROM ingest.vw03full_layer_file WHERE id=p_file_id)
         WHEN 'metric' THEN
@@ -1655,14 +1659,7 @@ BEGIN
           ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'), to_bigint(properties->>'blref'), to_bigint(properties->>'pnum') )
         ELSE
           ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
-      END AS row_id,
-
-      CASE WHEN (properties->>'is_agg')::boolean THEN 100 END AS error_code,
-
-      COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
-      properties->>'nsvia'    AS nsvia,
-      properties->>'name'     AS name,
-      NULLIF(properties - ARRAY['via','hnum','name','nsvia','blref','pnum'],'{}'::jsonb) AS infop,
+      END AS address_order,
 
       CASE (SELECT housenumber_system_type FROM ingest.vw03full_layer_file WHERE id=p_file_id)
       WHEN 'ago-block' THEN
@@ -1672,6 +1669,10 @@ BEGIN
         (CASE WHEN (trim(properties->>'blref') = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'blref') END) || ' LT '   ||
         (CASE WHEN (trim(properties->>'pnum')  = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'pnum')  END)
       )
+      -- WHEN 'df-block' THEN
+      -- (
+      --   trim(properties->>'address')
+      -- )
       ELSE
       (
         CASE
@@ -1690,33 +1691,28 @@ BEGIN
           ELSE NULL
         END
       )
-      END AS address,
+      END AS address
 
-      fa.kx_ghs9 AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
   ) t
-  ORDER BY gid;
+  ORDER BY address_order;
 
-  WHEN 'nsvia', 'via', 'genericvia', 'block', 'building' THEN
+  WHEN ( p_ftname IN ('block') ) OR ( p_ftname IN ('building') AND NOT((SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1) ?| ARRAY['via','hnum']) ) THEN
   RETURN QUERY
   SELECT
         t.ghs,
-        t.row_id::int AS gid,
+        t.gid,
         jsonb_strip_nulls(jsonb_build_object(
-          'via', via,
-          'name', name,
-          'nsvia', nsvia,
           'bytes',length(St_asGeoJson(t.geom)),
           'info', infop
         )) AS info,
         t.geom
   FROM (
       SELECT fa.file_id, fa.geom,
-        ROW_NUMBER() OVER(ORDER BY gid) AS row_id,
+        fa.feature_id::int      AS gid,
         fa.properties->>'via'   AS via,
         fa.properties->>'name'  AS name,
-        fa.properties->>'nsvia' AS nsvia,
         fa.kx_ghs9              AS ghs,
         NULLIF(fa.properties - ARRAY['via','name','nsvia'],'{}'::jsonb) AS infop
       FROM ingest.feature_asis AS fa
@@ -1724,18 +1720,86 @@ BEGIN
   ) t
   ORDER BY gid;
 
-  WHEN 'datagrid' THEN
+  WHEN p_ftname IN ('via') THEN
   RETURN QUERY
   SELECT
         t.ghs,
-        t.row_id::int AS gid,
+        t.gid,
+        jsonb_strip_nulls(jsonb_build_object(
+          'via', via,
+          'bytes',length(St_asGeoJson(t.geom)),
+          'info', infop
+        )) AS info,
+        t.geom
+  FROM (
+      SELECT fa.file_id, fa.geom,
+        fa.feature_id::int      AS gid,
+        fa.properties->>'via'   AS via,
+        fa.kx_ghs9              AS ghs,
+        NULLIF(fa.properties - ARRAY['via'],'{}'::jsonb) AS infop
+      FROM ingest.feature_asis AS fa
+      WHERE fa.file_id=p_file_id
+  ) t
+  ORDER BY via;
+
+  WHEN p_ftname IN ('genericvia') THEN
+  RETURN QUERY
+  SELECT
+        t.gid,
+        t.ghs,
+        jsonb_strip_nulls(jsonb_build_object(
+          'via', via,
+          'type', type,
+          'bytes',length(St_asGeoJson(t.geom)),
+          'info', infop
+        )) AS info,
+        t.geom
+  FROM (
+      SELECT fa.file_id, fa.geom,
+        fa.feature_id::int      AS gid,
+        fa.properties->>'via'   AS via,
+        fa.properties->>'type'  AS type,
+        fa.kx_ghs9              AS ghs,
+        NULLIF(fa.properties - ARRAY['via','type'],'{}'::jsonb) AS infop
+      FROM ingest.feature_asis AS fa
+      WHERE fa.file_id=p_file_id
+  ) t
+  ORDER BY type, via;
+
+  WHEN p_ftname IN ('nsvia') THEN
+  RETURN QUERY
+  SELECT
+        t.ghs,
+        t.gid,
+        jsonb_strip_nulls(jsonb_build_object(
+          'nsvia', nsvia,
+          'bytes',length(St_asGeoJson(t.geom)),
+          'info', infop
+        )) AS info,
+        t.geom
+  FROM (
+      SELECT fa.file_id, fa.geom,
+        fa.feature_id::int      AS gid,
+        fa.properties->>'nsvia' AS nsvia,
+        fa.kx_ghs9              AS ghs,
+        NULLIF(fa.properties - ARRAY['nsvia'],'{}'::jsonb) AS infop
+      FROM ingest.feature_asis AS fa
+      WHERE fa.file_id=p_file_id
+  ) t
+  ORDER BY nsvia;
+
+  WHEN p_ftname IN ('datagrid') THEN
+  RETURN QUERY
+  SELECT
+        t.ghs,
+        t.gid,
         jsonb_strip_nulls(jsonb_build_object('bytes',length(St_asGeoJson(t.geom)))) || t.info  AS info,
         t.geom
   FROM (
       SELECT fa.file_id, fa.geom,
-        ROW_NUMBER() OVER(ORDER BY gid) AS row_id,
-        fa.properties AS info,
-        fa.kx_ghs9    AS ghs
+        fa.feature_id::int AS gid,
+        fa.properties      AS info,
+        fa.kx_ghs9         AS ghs
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
   ) t
@@ -1744,7 +1808,7 @@ BEGIN
 END;
 $f$ LANGUAGE PLpgSQL;
 --$f$ LANGUAGE SQL IMMUTABLE;
--- SELECT * FROM ingest.feature_asis_export(1) t LIMIT 1000;
+-- SELECT * FROM ingest.feature_asis_export(3) t LIMIT 1000;
 
 -- ----------------------------
 

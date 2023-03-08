@@ -171,7 +171,15 @@ Idealmente os dados fornecidos possuem geometria e todos os atributos obrigatór
 
 Quando a tabela AsIs do *layer* não apresenta todos os atributos obrigatórios, deve-se recorrer a um cadastro externo com o qual fará JOIN depois de ingerida. Assim, para todo *layer* com sufixo `_ext` é ingerido também o cadastro correspondente.
 
-Relacionamentos obrigatórios:<br/>   ![](../assets/asIs_relations.png)
+Relacionamentos obrigatórios:<br/>   <!--![](../assets/asIs_relations.png)-->
+
+```mermaid
+graph LR
+A[cadgenericvia_cmpl] --- B[genericvia_ext]
+C[cadvia_cmpl] --- D[via_ext]
+E[address_cmpl] --- F[geoaddress_ext]
+G[cadparcel_cmpl] --- H[parcel_ext]
+```
 
 <table role="table">
 <thead>
