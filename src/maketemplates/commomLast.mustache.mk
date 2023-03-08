@@ -96,8 +96,9 @@ delete_file:
 	@[ "${id}" ] && psql $(pg_uri_db) -c "DELETE FROM ingest.donated_packcomponent WHERE id = $(id)" || ( echo "Unknown id.")
 
 generate_filtered_files:
-	@echo "-- Generate feature_asis SHAPEFILE file --"
-	@echo "Usage: make generate_filtered_files id=<id of ingest.donated_PackComponent> pg_db=<ingest>"
-	@echo "       Get id from ingest.donated_PackComponent table"
+	@echo "-- Generate feature_asis SHAPEFILE or CSV file --"
+	@echo "Usage: make generate_filtered_files id=<id of file in ingest.donated_PackComponent> pg_db=<ingest>"
+ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+endif
 	@[ "${id}" ] && bash -c "source $(preservSrc)/generateFiles.sh && gen_shapefile $(pg_db) $(id)" || ( echo "Unknown id.")
