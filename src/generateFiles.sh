@@ -76,7 +76,7 @@ gen_csv(){
 
     pushd /tmp/pg_io
 
-    echo "Generating csv file..."
+    echo "Generating csv file. ONLY for geoaddress!"
     [ -e ${file_basename}.csv ] && rm ${file_basename}.csv
 
     CMD_STRING=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT ' || array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x) WHERE x IN ('via','hnum','nsvia')),', ') || ', ST_X(geom) AS longitude, ST_Y(geom) AS latitude FROM ingest.feature_asis WHERE file_id=${file_id}'")
@@ -115,4 +115,18 @@ gen_csv(){
 
     echo "End. File available at /tmp/pg_io/${file_name_hash} or http://dl.digital-guard.org/${file_name_hash}"
     popd
+}
+
+# generate_filtered_files ingest99 1
+generate_filtered_files(){
+    database=$1
+    file_id=$2
+    ftname=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT split_part(ftname,'_',1) FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
+
+    echo 'gen_shapefile ${database} ${file_id}'
+
+    if [[ "$ftname" == "geoaddress" ]]
+    then
+        echo 'gen_csv ${database} ${file_id}'
+    fi
 }

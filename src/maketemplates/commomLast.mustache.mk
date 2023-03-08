@@ -34,8 +34,7 @@ info:
 	@printf "insert_size: insere size bytes em files de make_conf.yaml.\n"
 	@printf "insert_license: insere detalhes sobre licenças em make_conf.yaml.\n"
 	@printf "delete_file: deleta layer ingestado. Uso: make delete_file id=<id do layer em ingest.donated_PackComponent>\n"
-	@printf "generate_csvfile: gera CSV do layer (SOMENTE para geoaddress). Uso: make generate_csvfile id=<id do layer em ingest.donated_PackComponent> pg_db=<ingest>.\n"
-	@printf "generate_shapefile: gera SHAPEFILE do layer. Uso: make generate_shapefile id=<id do layer em ingest.donated_PackComponent> pg_db=<ingest>. \n"
+	@printf "generate_filtered_files: gera SHAPEFILE ou CSV do layer. Uso: make generate_filtered_files id=<id do layer em ingest.donated_PackComponent> pg_db=<ingest>. \n"
 
 me:
 	@echo "-- Generating makefile --"
@@ -96,18 +95,9 @@ delete_file:
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	@[ "${id}" ] && psql $(pg_uri_db) -c "DELETE FROM ingest.donated_packcomponent WHERE id = $(id)" || ( echo "Unknown id.")
 
-generate_csvfile:
-	@echo "-- Generate feature_asis CSV files --"
-	@echo "Usage: make generate_csvfile id=<id of ingest.donated_PackComponent> pg_db=<ingest>"
-	@echo ""
-	@echo "       CAUTION: ONLY for geoaddress!"
-	@echo ""
-	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
-	@[ "${id}" ] && bash -c "source $(preservSrc)/generateFiles.sh && gen_csv $(pg_db) $(id)" || ( echo "Unknown id.")
-
-generate_shapefile:
+generate_filtered_files:
 	@echo "-- Generate feature_asis SHAPEFILE file --"
-	@echo "Usage: make generate_shapefile id=<id of ingest.donated_PackComponent> pg_db=<ingest>"
+	@echo "Usage: make generate_filtered_files id=<id of ingest.donated_PackComponent> pg_db=<ingest>"
 	@echo "       Get id from ingest.donated_PackComponent table"
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	@[ "${id}" ] && bash -c "source $(preservSrc)/generateFiles.sh && gen_shapefile $(pg_db) $(id)" || ( echo "Unknown id.")
