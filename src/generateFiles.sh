@@ -17,11 +17,13 @@ update_tables(){
     psql postgres://postgres@localhost/dl03t_main -c"INSERT INTO optim.donated_PackComponent_cloudControl(packvers_id,ftid,lineage_md5,hashedfname,hashedfnameuri,hashedfnametype) VALUES (${packvers_id},${ftid},'${lineage_md5}','${file_name_hash}','${url_cloud}','${file_type}') ON CONFLICT (packvers_id,ftid,lineage_md5,hashedfnametype) DO UPDATE SET hashedfname=EXCLUDED.hashedfname, hashedfnameuri=EXCLUDED.hashedfnameuri ;" && psql postgres://postgres@localhost/dl02s_main -c"INSERT INTO download.redirects(fhash,furi) VALUES ('${file_name_hash}','${url_cloud}') ;"
 }
 
-# gen_shapefile ingest99 1
+# gen_shapefile ingest99 1 true
 gen_shapefile(){
     link_operacao='operacao:preserv.addressforall.org/download/'
     database=$1
     file_id=$2
+    up_cloud=$3
+
     file_basename=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
 
     ftname=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT split_part(ftname,'_',1) FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
@@ -72,45 +74,45 @@ gen_shapefile(){
 
     rm -rf ${file_basename}
 
-    echo "Upload to cloud..."
-    sudo rclone copy ${file_name_hash} ${link_operacao}
-    echo "Upload completed."
+    if [ "${up_cloud}" = true ]; then
+        echo "Upload to cloud..."
+        sudo rclone copy ${file_name_hash} ${link_operacao}
+        echo "Upload completed."
 
-    echo "Get uri of cloud file..."
-    url_cloud=$( sudo rclone link ${link_operacao}${file_name_hash})
+        echo "Get uri of cloud file..."
+        url_cloud=$( sudo rclone link ${link_operacao}${file_name_hash})
 
-    echo "File hash: ${file_name_hash}"
-    echo "Link cloud: ${url_cloud}"
+        echo "File hash: ${file_name_hash}"
+        echo "Link cloud: ${url_cloud}"
 
-    echo "Update tables"
-    update_tables ${file_id} ${database} ${file_name_hash} ${url_cloud} 'shp'
+        echo "Update tables"
+        update_tables ${file_id} ${database} ${file_name_hash} ${url_cloud} 'shp'
 
-    echo "End. File available at /tmp/${file_name_hash} or http://dl.digital-guard.org/${file_name_hash}"
+        echo "End. File available at /tmp/${file_name_hash} or http://dl.digital-guard.org/${file_name_hash}."
+    else
+        echo "End. File available at /tmp/${file_name_hash}."
+    fi
 
     popd
 }
 
-# gen_csv ingest99 1
+# gen_csv ingest99 1 true
 gen_csv(){
     # only geoaddress
     link_operacao='operacao:preserv.addressforall.org/download/'
     database=$1
     file_id=$2
+    up_cloud=$3
+
+    echo "Generating csv file. ONLY for geoaddress!"
 
     file_basename=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
 
-
     pushd /tmp/pg_io
 
-    echo "Generating csv file. ONLY for geoaddress!"
     [ -e ${file_basename}.csv ] && rm ${file_basename}.csv
 
-    CMD_STRING=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT ' || array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x) WHERE x IN ('via','hnum')),', ') || ', ST_X(geom) AS longitude, ST_Y(geom) AS latitude FROM ingest.feature_asis WHERE file_id=${file_id}'")
-
-    COPY_STRING=$(echo COPY \( ${CMD_STRING} ORDER BY feature_id \) TO \'/tmp/pg_io/${file_basename}.csv\' CSV HEADER)
-
-    psql postgres://postgres@localhost/${database} -c "${COPY_STRING}"
-
+    psql postgres://postgres@localhost/${database} -c "SELECT ingest.feature_asis_export_csv(${file_id}::bigint);"
 
     file_name="${file_basename}.csv.zip"
 
@@ -126,22 +128,26 @@ gen_csv(){
     echo "Rename zip file to <sha256sum>.zip"
     mv ${file_name} ${file_name_hash}
 
-    echo "Upload to cloud..."
-    sudo rclone copy ${file_name_hash} ${link_operacao}
-    echo "Upload completed."
+    if [ "${up_cloud}" = true ]; then
+        echo "Upload to cloud..."
+        sudo rclone copy ${file_name_hash} ${link_operacao}
+        echo "Upload completed."
 
-    echo "Get uri of cloud file..."
-    url_cloud=$( sudo rclone link ${link_operacao}${file_name_hash})
+        echo "Get uri of cloud file..."
+        url_cloud=$( sudo rclone link ${link_operacao}${file_name_hash})
 
-    echo "File hash: ${file_name_hash}"
-    echo "Link cloud: ${url_cloud}"
+        echo "File hash: ${file_name_hash}"
+        echo "Link cloud: ${url_cloud}"
 
-    echo "Update tables"
-    update_tables ${file_id} ${database} ${file_name_hash} ${url_cloud} 'csv'
+        echo "Update tables"
+        update_tables ${file_id} ${database} ${file_name_hash} ${url_cloud} 'csv'
+
+        echo "End. File available at /tmp/${file_name_hash} or http://dl.digital-guard.org/${file_name_hash}."
+    else
+        echo "End. File available at /tmp/${file_name_hash}."
+    fi
 
     mv ${file_name_hash} /tmp
-
-    echo "End. File available at /tmp/${file_name_hash} or http://dl.digital-guard.org/${file_name_hash}"
 
     popd
 }
@@ -152,10 +158,10 @@ generate_filtered_files(){
     file_id=$2
     ftname=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT split_part(ftname,'_',1) FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
 
-    gen_shapefile ${database} ${file_id}
+    gen_shapefile ${database} ${file_id} true
 
     if [[ "$ftname" == "geoaddress" ]]
     then
-        gen_csv ${database} ${file_id}
+        gen_csv ${database} ${file_id} true
     fi
 }

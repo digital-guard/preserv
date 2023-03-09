@@ -1810,6 +1810,52 @@ $f$ LANGUAGE PLpgSQL;
 --$f$ LANGUAGE SQL IMMUTABLE;
 -- SELECT * FROM ingest.feature_asis_export(5) t LIMIT 1000;
 
+CREATE or replace FUNCTION ingest.feature_asis_export_csv(
+	p_file_id bigint,
+	p_name    text DEFAULT NULL,
+	p_path    text DEFAULT '/tmp/pg_io'
+) RETURNS text  AS $f$
+DECLARE
+    q_copy text;
+    class_ftname text;
+    filename text;
+BEGIN
+
+  SELECT ft_info->>'class_ftname',
+         'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id
+  FROM ingest.vw03full_layer_file WHERE id=p_file_id
+  INTO class_ftname, filename;
+
+  q_copy := $$
+        COPY (
+            SELECT %s, ST_X(geom) AS longitude, ST_Y(geom) AS latitude
+            FROM ingest.feature_asis
+            WHERE file_id=%s
+            ORDER BY %s, feature_id -- order by via, hnum, feature_id
+            ) TO '%s' CSV HEADER
+    $$;
+
+  CASE class_ftname
+  WHEN 'geoaddress' THEN
+    EXECUTE format(q_copy,
+    (SELECT array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1)) t(x) WHERE x IN ('via','hnum')),', ')),
+    p_file_id,
+    (SELECT array_to_string((SELECT array_agg(( CASE WHEN x='hnum' THEN 'to_bigint(properties->>''' || x || ''')' ELSE 'properties->>''' || x || '''' END  )) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1)) t(x) WHERE x IN ('via','hnum')),', ')),
+    p_path || '/' || (CASE WHEN p_name IS NULL THEN filename ELSE p_name END) || '.csv'
+    );
+  ELSE NULL;
+  END CASE;
+
+  RETURN filename
+  ;
+END
+$f$ language PLpgSQL;
+COMMENT ON FUNCTION ingest.feature_asis_export_csv(bigint,text,text)
+  IS 'Export geoaddress layer from ingest.feature_assis table to csv file.'
+;
+-- SELECT ingest.feature_asis_export_csv(3::bigint);
+
+
 -- ----------------------------
 
 CREATE TABLE ingest.publicating_geojsons_p3exprefix(
