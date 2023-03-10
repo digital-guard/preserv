@@ -1863,7 +1863,7 @@ BEGIN
             SELECT %s, ST_X(geom) AS longitude, ST_Y(geom) AS latitude
             FROM ingest.feature_asis
             WHERE file_id=%s
-            ORDER BY %s, feature_id -- order by via, hnum, feature_id
+            ORDER BY feature_id
             ) TO '%s' CSV HEADER
     $$;
 
@@ -1871,9 +1871,9 @@ BEGIN
   WHEN 'geoaddress' THEN
     EXECUTE format(q_copy,
     (SELECT array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys(jproperties) t(x) WHERE x IN ('via','hnum')),', ')),
-    p_file_id,
+    p_file_id/*,
     (SELECT array_to_string((SELECT array_agg(( CASE WHEN x='hnum' THEN 'to_bigint(properties->>''' || x || ''')' ELSE 'properties->>''' || x || '''' END  )) FROM jsonb_object_keys(jproperties) t(x) WHERE x IN ('via','hnum')),', ')),
-    p_path || '/' || (CASE WHEN p_name IS NULL THEN filename ELSE p_name END) || '.csv'
+    p_path || '/' || (CASE WHEN p_name IS NULL THEN filename ELSE p_name END) || '.csv'*/
     );
   ELSE NULL;
   END CASE;
@@ -1906,7 +1906,7 @@ BEGIN
   SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
   INTO jproperties;
 
-  q_copy := $$SELECT %s, geom FROM ingest.feature_asis WHERE file_id=%s ORDER BY %s feature_id$$;
+  q_copy := $$SELECT %s, geom FROM ingest.feature_asis WHERE file_id=%s ORDER BY feature_id$$;
 
   RETURN format(q_copy,
     (
@@ -1945,7 +1945,7 @@ BEGIN
       ELSE 'feature_id AS fid'
       END
     ),
-    p_file_id,
+    p_file_id/*,
     (
       CASE
       WHEN jproperties ?|
@@ -1981,7 +1981,7 @@ BEGIN
         ),', ') || ','
       ELSE ''
       END
-    )
+    )*/
   )
   ;
 END
