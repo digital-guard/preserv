@@ -455,6 +455,34 @@ CREATE VIEW ingest.vw05test_feature_asis AS
   ORDER BY 1,2,3
 ;
 
+CREATE VIEW ingest.vwreport_geometries_discarded AS
+SELECT isolabel_ext, packvers_id, id, ftid, ftname, geomtype, fad.*
+FROM
+(
+    SELECT file_id,
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit,11) = 1))::bigint AS nointersects, -- intersects
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit,10) = 1))::bigint AS invalid, -- invalid
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 9) = 1))::bigint AS nosimple, -- simple
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 8) = 1))::bigint AS empty, -- empty
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 7) = 1))::bigint AS small, -- small
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 6) = 1))::bigint AS null, -- null
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 5) = 1))::bigint AS invalid_type, -- invalid_type
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 4) = 1))::bigint AS duplicate, -- duplicados
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 3) = 1))::bigint AS noclosed, -- is_closed
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 2) = 1))::bigint AS large, -- large
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 1) = 1))::bigint AS reserved1, -- reserved
+        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 0) = 1))::bigint AS reserved2 -- reserved
+    FROM ingest.feature_asis_discarded
+    GROUP BY file_id
+) fad
+LEFT JOIN ingest.vw03full_layer_file vw
+ON vw.id = fad.file_id
+;
+COMMENT ON VIEW ingest.vwreport_geometries_discarded
+  IS 'Reason report for geometries discarded from ingested layers.'
+;
+
+
 /*
 DROP VIEW IF EXISTS ingest.vw06simple_layer CASCADE;
 CREATE VIEW ingest.vw06simple_layer AS
@@ -843,7 +871,7 @@ CREATE or replace FUNCTION ingest.feature_asis_similarity(
         WHEN 'poly' THEN (SELECT array_agg( 2*ST_Area(ST_INTERSECTION(p_geom, n),true)/(ST_Area(p_geom,true)+ST_Area(n,true))) FROM unnest(p_geoms) AS n) END AS geom_cmp_intersec
   ) t;
 $f$ LANGUAGE SQL;
-  
+
 CREATE or replace FUNCTION ingest.any_load(
     p_method text,   -- shp/csv/etc.
     p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
