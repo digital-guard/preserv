@@ -34,7 +34,7 @@ Dado um conjunto de geometrias:
 
 1. Inicialmente se garante que [SRID](https://en.wikipedia.org/wiki/Spatial_reference_system#Identifiers) das geometrias será 4326.
 
-2. Então, são selecionadas apenas as geometrias onde a função [ST_IsValid](https://postgis.net/docs/ST_IsValid.html) é verdadeira.
+2. Então, são selecionadas apenas as geometrias onde a função [ST_IsValid](https://postgis.net/docs/ST_IsValid.html) é verdadeira. Sobre a definição de simplicidade e validade de geometria do OGC, consultar [OGC_Validity](https://postgis.net/docs/using_postgis_dbmanagement.html#OGC_Validity).
 
 3. Em seguida, são selecionadas as geometrias onde a função [ST_IsClosed](https://postgis.net/docs/ST_IsClosed.html) é verdadeira ou forem linhas.
 
