@@ -1814,17 +1814,21 @@ CREATE or replace FUNCTION ingest.feature_asis_export_csv(
 	p_file_id bigint,
 	p_name    text DEFAULT NULL,
 	p_path    text DEFAULT '/tmp/pg_io'
-) RETURNS text  AS $f$
+) RETURNS text AS $f$
 DECLARE
     q_copy text;
     class_ftname text;
     filename text;
+    jproperties jsonb;
 BEGIN
 
   SELECT ft_info->>'class_ftname',
          'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id
   FROM ingest.vw03full_layer_file WHERE id=p_file_id
   INTO class_ftname, filename;
+
+  SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
+  INTO jproperties;
 
   q_copy := $$
         COPY (
@@ -1838,9 +1842,9 @@ BEGIN
   CASE class_ftname
   WHEN 'geoaddress' THEN
     EXECUTE format(q_copy,
-    (SELECT array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1)) t(x) WHERE x IN ('via','hnum')),', ')),
+    (SELECT array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys(jproperties) t(x) WHERE x IN ('via','hnum')),', ')),
     p_file_id,
-    (SELECT array_to_string((SELECT array_agg(( CASE WHEN x='hnum' THEN 'to_bigint(properties->>''' || x || ''')' ELSE 'properties->>''' || x || '''' END  )) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1)) t(x) WHERE x IN ('via','hnum')),', ')),
+    (SELECT array_to_string((SELECT array_agg(( CASE WHEN x='hnum' THEN 'to_bigint(properties->>''' || x || ''')' ELSE 'properties->>''' || x || '''' END  )) FROM jsonb_object_keys(jproperties) t(x) WHERE x IN ('via','hnum')),', ')),
     p_path || '/' || (CASE WHEN p_name IS NULL THEN filename ELSE p_name END) || '.csv'
     );
   ELSE NULL;
@@ -1855,6 +1859,109 @@ COMMENT ON FUNCTION ingest.feature_asis_export_csv(bigint,text,text)
 ;
 -- SELECT ingest.feature_asis_export_csv(3::bigint);
 
+
+CREATE or replace FUNCTION ingest.feature_asis_export_shp_cmd(
+	p_file_id bigint
+) RETURNS text AS $f$
+DECLARE
+    q_copy text;
+    class_ftname text;
+    filename text;
+    jproperties jsonb;
+BEGIN
+
+  SELECT ft_info->>'class_ftname',
+         'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id
+  FROM ingest.vw03full_layer_file WHERE id=p_file_id
+  INTO class_ftname, filename;
+
+  SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
+  INTO jproperties;
+
+  q_copy := $$SELECT %s, geom FROM ingest.feature_asis WHERE file_id=%s ORDER BY %s feature_id$$;
+
+  RETURN format(q_copy,
+    (
+    CASE
+    WHEN jproperties ?|
+      (
+          CASE class_ftname
+          WHEN 'geoaddress' THEN ARRAY['via','hnum']
+          WHEN 'parcel' THEN ARRAY['via','hnum']
+          WHEN 'via' THEN ARRAY['via']
+          WHEN 'nsvia' THEN ARRAY['via']
+          WHEN 'block' THEN ARRAY['name']
+          WHEN 'building' THEN ARRAY['via','hnum']
+          WHEN 'genericvia' THEN ARRAY['via','type']
+          ELSE NULL
+          END
+        )
+      THEN array_to_string(
+        (
+          SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x))
+          FROM jsonb_object_keys(jproperties) t(x)
+          WHERE
+          (
+            CASE class_ftname
+            WHEN 'geoaddress' THEN x IN ('via','hnum')
+            WHEN 'parcel' THEN x IN ('via','hnum')
+            WHEN 'via' THEN x IN ('via')
+            WHEN 'nsvia' THEN x IN ('via')
+            WHEN 'block' THEN x IN ('name')
+            WHEN 'building' THEN x IN ('via','hnum')
+            WHEN 'genericvia' THEN x IN ('via','type')
+            ELSE NULL
+            END
+          )
+        ),', ')
+      ELSE 'feature_id AS fid'
+      END
+    ),
+    p_file_id,
+    (
+      CASE
+      WHEN jproperties ?|
+        (
+          CASE class_ftname
+          WHEN 'geoaddress' THEN ARRAY['via','hnum']
+          WHEN 'parcel' THEN ARRAY['via','hnum']
+          WHEN 'via' THEN ARRAY['via']
+          WHEN 'nsvia' THEN ARRAY['via']
+          WHEN 'block' THEN ARRAY['name']
+          WHEN 'building' THEN ARRAY['via','hnum']
+          WHEN 'genericvia' THEN ARRAY['via','type']
+          ELSE NULL
+          END
+        )
+      THEN array_to_string(
+        (
+          SELECT array_agg(( CASE WHEN x='hnum' THEN 'to_bigint(properties->>''' || x || ''')' ELSE 'properties->>''' || x || '''' END  ))
+          FROM jsonb_object_keys(jproperties) t(x)
+          WHERE
+          (
+            CASE class_ftname
+            WHEN 'geoaddress' THEN x IN ('via','hnum')
+            WHEN 'parcel' THEN x IN ('via','hnum')
+            WHEN 'via' THEN x IN ('via')
+            WHEN 'nsvia' THEN x IN ('via')
+            WHEN 'block' THEN x IN ('name')
+            WHEN 'building' THEN x IN ('via','hnum')
+            WHEN 'genericvia' THEN x IN ('type','via')
+            ELSE NULL
+            END
+          )
+        ),', ') || ','
+      ELSE ''
+      END
+    )
+  )
+  ;
+END
+$f$ language PLpgSQL;
+COMMENT ON FUNCTION ingest.feature_asis_export_shp_cmd(bigint)
+  IS 'Generate query to use in pgsql2shp program.'
+;
+-- SELECT ingest.feature_asis_export_shp_cmd(3::bigint);
 
 -- ----------------------------
 

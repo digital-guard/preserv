@@ -26,37 +26,10 @@ gen_shapefile(){
 
     file_basename=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
 
-    ftname=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT split_part(ftname,'_',1) FROM ingest.vw03full_layer_file WHERE id=${file_id} ")
-
-    if [[ "$ftype" == "geoaddress" ]]
-    then
-        field1="'via','hnum'"
-    elif [[ "$ftype" == "parcel" ]]
-    then
-        field1="'via','hnum'"
-    elif [[ "$ftype" == "via" ]]
-    then
-        field1="'via'"
-    elif [[ "$ftype" == "nsvia" ]]
-    then
-        field1="'via'"
-    elif [[ "$ftype" == "block" ]]
-    then
-        field1="'name'"
-    elif [[ "$ftype" == "building" ]]
-    then
-        field1="'via','hnum'"
-    elif [[ "$ftype" == "genericvia" ]]
-    then
-        field1="'via','type'"
-    else
-        field1="'via','hnum','name','nsvia','type'"
-    fi
-
     pushd /tmp/
 
     echo "Generating shapefile..."
-    pgsql2shp -k -f ${file_basename}.shp -h localhost -u postgres -P postgres ${database} "$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT 'SELECT ' || array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys((SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1)) t(x) WHERE x IN (${field1})),', ') || (CASE WHEN (SELECT properties FROM ingest.feature_asis WHERE file_id=${file_id} LIMIT 1) ?| ARRAY[${field1}] THEN '' ELSE ',feature_id AS fid' END) || ', geom FROM ingest.feature_asis WHERE file_id=${file_id};';")"
+    pgsql2shp -k -f ${file_basename}.shp -h localhost -u postgres -P postgres ${database} "$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT ingest.feature_asis_export_shp_cmd(${file_id});")"
 
     mkdir ${file_basename}
     mv ${file_basename}.{shp,cpg,dbf,prj,shx} ${file_basename}
