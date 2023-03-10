@@ -29,7 +29,7 @@ gen_shapefile(){
     pushd /tmp/
 
     echo "Generating shapefile..."
-    pgsql2shp -k -f ${file_basename}.shp -h localhost -u postgres -P postgres ${database} "$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT ingest.feature_asis_export_shp_cmd(${file_id});")"
+    pgsql2shp -r -k -f ${file_basename}.shp -h localhost -u postgres -P postgres ${database} "$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT ingest.feature_asis_export_shp_cmd(${file_id});")"
 
     mkdir ${file_basename}
     mv ${file_basename}.{shp,cpg,dbf,prj,shx} ${file_basename}
