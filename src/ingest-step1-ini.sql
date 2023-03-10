@@ -367,8 +367,8 @@ CREATE TABLE ingest.feature_asis_discarded (
   file_id bigint NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   feature_id int NOT NULL,
   properties jsonb,
-  geom geometry  CHECK ( st_srid(geom)=4326 ),
-  kx_ghs9 text GENERATED ALWAYS AS (f(geom,file_id,9)) STORED,
+  geom geometry        CHECK ( st_srid(geom)=4326 ),
+  kx_ghs9 text         GENERATED ALWAYS AS (f(geom,file_id,9))  STORED,
   UNIQUE(file_id,feature_id)
 );
 CREATE INDEX ingest_feature_asis_discarded_ghs9_idx ON ingest.feature_asis_discarded (file_id,kx_ghs9);
@@ -999,13 +999,13 @@ CREATE or replace FUNCTION ingest.any_load(
         )
         UNION
         (
-            SELECT file_id, gid, properties, ST_MakeValid(geom) AS geom, B'000100000000' AS error_mask
+            SELECT file_id, gid, properties, geom, B'000100000000' AS error_mask
             FROM a0
             WHERE ST_IsClosed(geom) = FALSE AND GeometryType(geom) NOT IN ('LINESTRING','MULTILINESTRING')
         )
         UNION
         (
-            SELECT file_id, gid, properties, ST_MakeValid(geom) AS geom, B'000000000010' AS error_mask
+            SELECT file_id, gid, properties, geom, B'000000000010' AS error_mask
             FROM scan
             WHERE ST_IsValid(geom) = FALSE
         )
@@ -1420,7 +1420,7 @@ CREATE or replace FUNCTION ingest.osm_load(
         )
         UNION
         (
-            SELECT file_id, gid, properties, ST_MakeValid(geom) AS geom, B'000100000000' AS error_mask
+            SELECT file_id, gid, properties, geom, B'000100000000' AS error_mask
             FROM scan
             WHERE ST_IsClosed(geom) = FALSE AND GeometryType(geom) NOT IN ('LINESTRING','MULTILINESTRING')
         )
