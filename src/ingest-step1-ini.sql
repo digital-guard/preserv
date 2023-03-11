@@ -1900,9 +1900,9 @@ BEGIN
           ELSE NULL
           END
         )
-      THEN array_to_string(
+      THEN ', ' || array_to_string(
         (
-          SELECT ', ' || array_agg(('properties->>''' || x || ''' AS ' || x))
+          SELECT array_agg(('properties->>''' || x || ''' AS ' || x))
           FROM jsonb_object_keys(jproperties) t(x)
           WHERE
           (
@@ -1969,9 +1969,9 @@ BEGIN
           ELSE NULL
           END
         )
-      THEN array_to_string(
+      THEN ', ' || array_to_string(
         (
-          SELECT ', ' || array_agg(('properties->>''' || x || ''' AS ' || x))
+          SELECT array_agg(('properties->>''' || x || ''' AS ' || x))
           FROM jsonb_object_keys(jproperties) t(x)
           WHERE
           (
