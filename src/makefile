@@ -213,6 +213,11 @@ generate_pages:
 	@echo "--- fix_permissions $(folder)"
 	sudo bash fixaPermissoes.sh $(folder)
 
+generate_reproducibility: pg_datalake=dl03t_main
+generate_reproducibility:
+	@echo "-- Generating reproducibility.sh in $(output) --"
+	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_reproducibility('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
+
 generate_readme: pg_datalake=dl03t_main
 generate_readme:
 	@echo "-- Generating README.md in $(output) --"

@@ -489,6 +489,31 @@ CREATE or replace FUNCTION optim.generate_makefile(
 $f$ LANGUAGE PLpgSQL;
 -- SELECT optim.generate_makefile('BR','21.1','/tmp/pg_io/testemakefile','/var/gits/_dg/preserv-BR/data/SP/Atibaia/_pk0021.01','/var/gits/_dg');
 
+CREATE or replace FUNCTION optim.generate_reproducibility(
+    jurisd  text,
+    pack_id text,
+    p_output text,
+    p_path_pack text,
+    p_path  text DEFAULT '/var/gits/_dg'  -- git path
+) RETURNS text AS $f$
+    DECLARE
+        q_query text;
+        p_yaml jsonb;
+    BEGIN
+
+    SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) ||
+           yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml')
+    INTO p_yaml;
+
+    SELECT commands FROM optim.reproducibility WHERE packtpl_id= (p_yaml->>'packtpl_id')::bigint INTO q_query;
+
+    SELECT volat_file_write(p_output,q_query) INTO q_query;
+
+    RETURN q_query;
+    END;
+$f$ LANGUAGE PLpgSQL;
+-- SELECT optim.generate_reproducibility('BR','21.1','/tmp/pg_io/reproducibility.sh','/var/gits/_dg/preserv-BR/data/SP/Atibaia/_pk0021.01','/var/gits/_dg');
+
 CREATE or replace FUNCTION optim.generate_readme(
     jurisd  text,
     pack_id text,

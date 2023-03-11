@@ -35,6 +35,7 @@ info:
 	@printf "insert_license: insere detalhes sobre licenças em make_conf.yaml.\n"
 	@printf "delete_file: deleta layer ingestado. Uso: make delete_file id=<id do layer em ingest.donated_PackComponent>\n"
 	@printf "generate_filtered_files: gera SHAPEFILE ou CSV do layer. Uso: make generate_filtered_files id=<id do layer em ingest.donated_PackComponent> pg_db=<ingest>. \n"
+	@printf "me_reproducibility: gera reproducibility.sh. Uso: make me_reproducibility pg_db=<ingest> \n"
 
 me:
 	@echo "-- Generating makefile --"
@@ -48,6 +49,19 @@ ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 endif
 	mv $(tmpfile) ./makefile
+
+me_reproducibility:
+	@echo "-- Generating reproducibility.sh --"
+	cd $(preservSrc); make generate_reproducibility country=$(country) pack_id=$(pack_id) baseSrcPack=$(baseSrcPack) baseSrc=$(baseSrc) output=$(tmpfile)
+	sudo chmod 777 $(tmpfile)
+	@echo " Check diff, the '<' lines are the new ones. Something changed?"
+	@diff $(tmpfile) ./reproducibility.sh || :
+	@echo "If some changes, and no error in the changes, move the script:"
+	@echo " mv $(tmpfile) ./reproducibility.sh"
+ifneq ($(nointeraction),y)
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+endif
+	mv $(tmpfile) ./reproducibility.sh
 
 readme:
 	@echo "-- Generating README.md --"

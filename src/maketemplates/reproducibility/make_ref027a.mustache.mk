@@ -1,6 +1,8 @@
+#!/bin/bash
+
 {{#layers}}
 {{#address}}
-address:
+# layer address:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -12,7 +14,7 @@ mkdir -p {{pg_io}}
 {{/address}}
 
 {{#block}}
-block:
+# layer block:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -25,7 +27,7 @@ mkdir -p {{pg_io}}
 {{/block}}
 
 {{#building}}
-building:
+# layer building:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -38,7 +40,7 @@ mkdir -p {{pg_io}}
 {{/building}}
 
 {{#cadparcel}}
-cadparcel:
+# layer cadparcel:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -50,7 +52,7 @@ mkdir -p {{pg_io}}
 {{/cadparcel}}
 
 {{#cadvia}}
-cadvia:
+# layer cadvia:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -62,7 +64,7 @@ mkdir -p {{pg_io}}
 {{/cadvia}}
 
 {{#genericvia}}
-genericvia:
+# layer genericvia:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -75,7 +77,7 @@ mkdir -p {{pg_io}}
 {{/genericvia}}
 
 {{#geoaddress}}
-geoaddress:
+# layer geoaddress:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -91,7 +93,7 @@ psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, 
 {{/geoaddress}}
 
 {{#nsvia}}
-nsvia:
+# layer nsvia:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -104,7 +106,7 @@ mkdir -p {{pg_io}}
 {{/nsvia}}
 
 {{#parcel}}
-parcel:
+# layer parcel:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -117,7 +119,7 @@ mkdir -p {{pg_io}}
 {{/parcel}}
 
 {{#via}}
-via:
+# layer via:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -133,7 +135,7 @@ psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS SELECT way, 
 {{/via}}
 
 {{#datagrid}}
-datagrid:
+# layer datagrid:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -147,7 +149,7 @@ mkdir -p {{pg_io}}
 {{/layers}}
 
 {{#openstreetmap}}
-openstreetmap:
+# layer openstreetmap:
 rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
 mkdir -m 777 -p {{sandbox}}
 mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
@@ -158,7 +160,8 @@ psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.jplanet_inserts_and_drops({{data_pac
 {{>common006_clean}}
 {{/openstreetmap}}
 
-{{#joins}}{{#genericvia}}{{>common005_join}}{{/genericvia}}
+{{#joins}}# layer joining
+{{#genericvia}}{{>common005_join}}{{/genericvia}}
 {{#geoaddress}}{{>common005_join}}{{/geoaddress}}
 {{#via}}{{>common005_join}}{{/via}}
 {{#parcel}}{{>common005_join}}{{/parcel}}{{/joins}}
