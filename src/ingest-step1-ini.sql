@@ -1160,7 +1160,7 @@ CREATE or replace FUNCTION ingest.any_load(
                 GROUP BY file_id, kx_ghs9
                 ORDER BY file_id, kx_ghs9
                 ) AS t
-            LEFT JOIN ingest.dup_agg0 f0
+            LEFT JOIN dup_agg0 f0
             ON t.file_id = f0.file_id AND t.kx_ghs9 = f0.kx_ghs9
             LEFT JOIN ingest.feature_asis f
             ON t.file_id = f.file_id AND t.kx_ghs9 = f.kx_ghs9 AND f.feature_id = f0.feature_id
@@ -1168,7 +1168,7 @@ CREATE or replace FUNCTION ingest.any_load(
         ins_asis_discarded AS (
             INSERT INTO ingest.feature_asis_discarded (file_id, feature_id, properties, geom)
             SELECT file_id, feature_id, ( properties || jsonb_build_object('error_mask', error_mask) ) AS properties, geom
-            FROM dup_mask t
+            FROM ( SELECT * FROM dup_mask  WHERE (file_id, feature_id, kx_ghs9) NOT IN ( SELECT file_id, feature_id, kx_ghs9 FROM dup_agg0) ) t
             ON CONFLICT (file_id,feature_id)
             DO UPDATE
             SET properties = EXCLUDED.properties

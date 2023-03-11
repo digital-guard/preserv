@@ -501,11 +501,12 @@ CREATE or replace FUNCTION optim.generate_reproducibility(
         p_yaml jsonb;
     BEGIN
 
-    SELECT yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) ||
+    SELECT optim.jsonb_mustache_prepare(
+           yaml_to_jsonb(pg_read_file(p_path_pack ||'/make_conf.yaml' )) ||
            yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml')
-    INTO p_yaml;
+    ) INTO p_yaml;
 
-    SELECT commands FROM optim.reproducibility WHERE packtpl_id= (p_yaml->>'packtpl_id')::bigint INTO q_query;
+    SELECT commands FROM optim.reproducibility WHERE packtpl_id=(p_yaml->>'packtpl_id')::bigint INTO q_query;
 
     SELECT volat_file_write(p_output,q_query) INTO q_query;
 
