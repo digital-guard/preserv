@@ -1146,16 +1146,24 @@ CREATE or replace FUNCTION ingest.any_load(
         FROM ingest.feature_asis
         WHERE (file_id, kx_ghs9) IN ( SELECT file_id, kx_ghs9 FROM dup)
         ),
+        dup_agg0 AS (
+        SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, min(kx_ghs9) AS kx_ghs9
+        FROM dup_mask t
+        GROUP BY file_id, kx_ghs9
+        ORDER BY file_id, kx_ghs9
+        ),
         dup_agg AS (
-            SELECT t.file_id, t.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb) || ingest.feature_asis_similarity(%s,f.geom,geoms), f.geom
+            SELECT f.file_id, f.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb) || ingest.feature_asis_similarity(%s,f.geom,geoms), f.geom
             FROM (
-                SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, kx_ghs9, array_agg(geom) AS geoms
-                FROM ( SELECT * FROM dup_mask ) t
+                SELECT min(file_id) AS file_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, kx_ghs9, array_agg(geom) AS geoms
+                FROM ( SELECT * FROM dup_mask  WHERE (file_id, feature_id, kx_ghs9) NOT IN ( SELECT file_id, feature_id, kx_ghs9 FROM dup_agg0) ) t
                 GROUP BY file_id, kx_ghs9
                 ORDER BY file_id, kx_ghs9
                 ) AS t
+            LEFT JOIN ingest.dup_agg0 f0
+            ON t.file_id = f0.file_id AND t.kx_ghs9 = f0.kx_ghs9
             LEFT JOIN ingest.feature_asis f
-            ON t.file_id = f.file_id AND t.feature_id = f.feature_id
+            ON t.file_id = f.file_id AND t.kx_ghs9 = f.kx_ghs9 AND f.feature_id = f0.feature_id
         ),
         ins_asis_discarded AS (
             INSERT INTO ingest.feature_asis_discarded (file_id, feature_id, properties, geom)
@@ -1848,6 +1856,7 @@ DECLARE
     class_ftname text;
     filename text;
     jproperties jsonb;
+    jpropertiesd jsonb;
 BEGIN
 
   SELECT ft_info->>'class_ftname',
@@ -1857,6 +1866,9 @@ BEGIN
 
   SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
   INTO jproperties;
+
+  SELECT properties FROM ingest.feature_asis_discarded WHERE file_id=p_file_id LIMIT 1
+  INTO jpropertiesd;
 
   q_copy := $$
         COPY (
@@ -1870,10 +1882,31 @@ BEGIN
   CASE class_ftname
   WHEN 'geoaddress' THEN
     EXECUTE format(q_copy,
-    (SELECT array_to_string((SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x)) FROM jsonb_object_keys(jproperties) t(x) WHERE x IN ('via','hnum')),', ')),
-    p_file_id/*,
-    (SELECT array_to_string((SELECT array_agg(( CASE WHEN x='hnum' THEN 'to_bigint(properties->>''' || x || ''')' ELSE 'properties->>''' || x || '''' END  )) FROM jsonb_object_keys(jproperties) t(x) WHERE x IN ('via','hnum')),', ')),
-    p_path || '/' || (CASE WHEN p_name IS NULL THEN filename ELSE p_name END) || '.csv'*/
+    (
+    CASE
+    WHEN jproperties ?|
+      (
+          CASE class_ftname
+          WHEN 'geoaddress' THEN ARRAY['via','hnum']
+          ELSE NULL
+          END
+        )
+      THEN array_to_string(
+        (
+          SELECT ', ' || array_agg(('properties->>''' || x || ''' AS ' || x))
+          FROM jsonb_object_keys(jproperties) t(x)
+          WHERE
+          (
+            CASE class_ftname
+            WHEN 'geoaddress' THEN x IN ('via','hnum')
+            ELSE NULL
+            END
+          )
+        ),', ')
+      ELSE ''
+      END
+    ),
+    p_file_id
     );
   ELSE NULL;
   END CASE;
@@ -1906,7 +1939,7 @@ BEGIN
   SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
   INTO jproperties;
 
-  q_copy := $$SELECT %s, geom FROM ingest.feature_asis WHERE file_id=%s ORDER BY feature_id$$;
+  q_copy := $$SELECT feature_id AS gid %s, geom FROM ingest.feature_asis WHERE file_id=%s ORDER BY feature_id$$;
 
   RETURN format(q_copy,
     (
@@ -1926,7 +1959,7 @@ BEGIN
         )
       THEN array_to_string(
         (
-          SELECT ARRAY['feature_id AS gid'] || array_agg(('properties->>''' || x || ''' AS ' || x))
+          SELECT ', ' || array_agg(('properties->>''' || x || ''' AS ' || x))
           FROM jsonb_object_keys(jproperties) t(x)
           WHERE
           (
@@ -1942,46 +1975,10 @@ BEGIN
             END
           )
         ),', ')
-      ELSE 'feature_id AS fid'
-      END
-    ),
-    p_file_id/*,
-    (
-      CASE
-      WHEN jproperties ?|
-        (
-          CASE class_ftname
-          WHEN 'geoaddress' THEN ARRAY['via','hnum']
-          WHEN 'parcel' THEN ARRAY['via','hnum']
-          WHEN 'via' THEN ARRAY['via']
-          WHEN 'nsvia' THEN ARRAY['via']
-          WHEN 'block' THEN ARRAY['name']
-          WHEN 'building' THEN ARRAY['via','hnum']
-          WHEN 'genericvia' THEN ARRAY['via','type']
-          ELSE NULL
-          END
-        )
-      THEN array_to_string(
-        (
-          SELECT array_agg(( CASE WHEN x='hnum' THEN 'to_bigint(properties->>''' || x || ''')' ELSE 'properties->>''' || x || '''' END  ))
-          FROM jsonb_object_keys(jproperties) t(x)
-          WHERE
-          (
-            CASE class_ftname
-            WHEN 'geoaddress' THEN x IN ('via','hnum')
-            WHEN 'parcel' THEN x IN ('via','hnum')
-            WHEN 'via' THEN x IN ('via')
-            WHEN 'nsvia' THEN x IN ('via')
-            WHEN 'block' THEN x IN ('name')
-            WHEN 'building' THEN x IN ('via','hnum')
-            WHEN 'genericvia' THEN x IN ('type','via')
-            ELSE NULL
-            END
-          )
-        ),', ') || ','
       ELSE ''
       END
-    )*/
+    ),
+    p_file_id
   )
   ;
 END
