@@ -460,18 +460,18 @@ SELECT isolabel_ext, packvers_id, id, ftid, ftname, geomtype, fad.*
 FROM
 (
     SELECT file_id,
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit,11) = 1))::bigint AS nointersects, -- intersects
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit,10) = 1))::bigint AS invalid, -- invalid
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 9) = 1))::bigint AS nosimple, -- simple
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 8) = 1))::bigint AS empty, -- empty
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 7) = 1))::bigint AS small, -- small
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 6) = 1))::bigint AS null, -- null
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 5) = 1))::bigint AS invalid_type, -- invalid_type
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 4) = 1))::bigint AS duplicate, -- duplicados
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 3) = 1))::bigint AS noclosed, -- is_closed
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 2) = 1))::bigint AS large, -- large
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 1) = 1))::bigint AS reserved1, -- reserved
-        (COUNT(*) filter (WHERE get_bit((properties->>'error_mask')::varbit, 0) = 1))::bigint AS reserved2 -- reserved
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit,11) = 1))::bigint AS nointersects, -- intersects
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit,10) = 1))::bigint AS invalid, -- invalid
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit, 9) = 1))::bigint AS nosimple, -- simple
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit, 8) = 1))::bigint AS empty, -- empty
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit, 7) = 1))::bigint AS small, -- small
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit, 6) = 1))::bigint AS null, -- null
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit, 5) = 1))::bigint AS invalid_type, -- invalid_type
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit, 4) = 1))::bigint AS duplicate, -- duplicados
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit, 3) = 1))::bigint AS noclosed, -- is_closed
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit, 2) = 1))::bigint AS large, -- large
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit, 1) = 1))::bigint AS reserved1, -- reserved
+        (COUNT(*) filter (WHERE get_bit((properties->>'error')::varbit, 0) = 1))::bigint AS reserved2 -- reserved
     FROM ingest.feature_asis_discarded
     GROUP BY file_id
 ) fad
@@ -961,12 +961,12 @@ CREATE or replace FUNCTION ingest.any_load(
       ),
       mask AS (SELECT ingest.buffer_geom(geom,%s) AS geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=(SELECT isolabel_ext FROM ingest.vw01full_packfilevers WHERE id=%s)),
       b AS (
-        SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM mask))))::int::bit ) AS error_mask
+        SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM mask))))::int::bit ) AS error
         FROM a
       ),
       c AS (
         (
-        SELECT file_id, gid, properties, geom, (error_mask | (
+        SELECT file_id, gid, properties, geom, (error | (
             B'00' ||
             (CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) > 2147483647 WHEN 'line' THEN ST_Length(geom,true) > 2147483647 ELSE FALSE END)::int::bit ||
             B'00' ||
@@ -974,7 +974,7 @@ CREATE or replace FUNCTION ingest.any_load(
             (geom IS NULL)::int::bit ||
             (CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) < 5 WHEN 'line' THEN ST_Length(geom,true) < 2 ELSE FALSE END)::int::bit ||
             (ST_IsEmpty(geom))::int::bit ||
-            B'000' )) AS error_mask
+            B'000' )) AS error
         FROM (
            SELECT file_id, gid,
                   properties,
@@ -988,24 +988,24 @@ CREATE or replace FUNCTION ingest.any_load(
 			    0.00000001
 		    )
 	          END AS geom,
-	          error_mask
+	          error
            FROM b
-           WHERE bit_count(error_mask) = 0 
+           WHERE bit_count(error) = 0
            ) t
         )
         UNION
         (
-            SELECT * FROM b WHERE bit_count(error_mask) <> 0
+            SELECT * FROM b WHERE bit_count(error) <> 0
         )
         UNION
         (
-            SELECT file_id, gid, properties, geom, B'000100000000' AS error_mask
+            SELECT file_id, gid, properties, geom, B'000100000000' AS error
             FROM a0
             WHERE ST_IsClosed(geom) = FALSE AND GeometryType(geom) NOT IN ('LINESTRING','MULTILINESTRING')
         )
         UNION
         (
-            SELECT file_id, gid, properties, geom, B'000000000010' AS error_mask
+            SELECT file_id, gid, properties, geom, B'000000000010' AS error
             FROM scan
             WHERE ST_IsValid(geom) = FALSE
         )
@@ -1013,16 +1013,16 @@ CREATE or replace FUNCTION ingest.any_load(
       stats AS (
       SELECT ARRAY [
             (SELECT COUNT(*) FROM scan)::bigint,
-            (COUNT(*) filter (WHERE get_bit(error_mask,11) = 1))::bigint, -- intersects
-            (COUNT(*) filter (WHERE get_bit(error_mask,10) = 1))::bigint, -- invalid
-            (COUNT(*) filter (WHERE get_bit(error_mask, 9) = 1))::bigint, -- simple
-            (COUNT(*) filter (WHERE get_bit(error_mask, 8) = 1))::bigint, -- empty
-            (COUNT(*) filter (WHERE get_bit(error_mask, 7) = 1))::bigint, -- small
-            (COUNT(*) filter (WHERE get_bit(error_mask, 6) = 1))::bigint, -- null
-            (COUNT(*) filter (WHERE get_bit(error_mask, 5) = 1))::bigint, -- invalid_type
+            (COUNT(*) filter (WHERE get_bit(error,11) = 1))::bigint, -- intersects
+            (COUNT(*) filter (WHERE get_bit(error,10) = 1))::bigint, -- invalid
+            (COUNT(*) filter (WHERE get_bit(error, 9) = 1))::bigint, -- simple
+            (COUNT(*) filter (WHERE get_bit(error, 8) = 1))::bigint, -- empty
+            (COUNT(*) filter (WHERE get_bit(error, 7) = 1))::bigint, -- small
+            (COUNT(*) filter (WHERE get_bit(error, 6) = 1))::bigint, -- null
+            (COUNT(*) filter (WHERE get_bit(error, 5) = 1))::bigint, -- invalid_type
                                                                           -- bit 4 é reservado para duplicados
-            (COUNT(*) filter (WHERE get_bit(error_mask, 3) = 1))::bigint, -- is_closed
-            (COUNT(*) filter (WHERE get_bit(error_mask, 2) = 1))::bigint  -- large
+            (COUNT(*) filter (WHERE get_bit(error, 3) = 1))::bigint, -- is_closed
+            (COUNT(*) filter (WHERE get_bit(error, 2) = 1))::bigint  -- large
                                                                           -- bit 1 uso futuro
                                                                           -- bit 0 uso futuro
             ]
@@ -1032,14 +1032,14 @@ CREATE or replace FUNCTION ingest.any_load(
         INSERT INTO ingest.feature_asis
         SELECT file_id, gid, properties, geom
         FROM c
-	    WHERE  bit_count(error_mask) = 0
+	    WHERE  bit_count(error) = 0
         RETURNING 1
       ),
       ins_asis_discarded AS (
         INSERT INTO ingest.feature_asis_discarded
-        SELECT file_id, gid, properties || jsonb_build_object('error_mask',error_mask), geom
+        SELECT file_id, gid, properties || jsonb_build_object('error',error), geom
         FROM c
-	    WHERE  bit_count(error_mask) <> 0
+	    WHERE  bit_count(error) <> 0
         ON CONFLICT (file_id, feature_id)
         DO UPDATE
         SET properties = EXCLUDED.properties, geom = EXCLUDED.geom
@@ -1142,7 +1142,7 @@ CREATE or replace FUNCTION ingest.any_load(
             ORDER BY 1,2
         ),
         dup_mask AS (
-        SELECT *, B'000010000000' AS error_mask
+        SELECT *, B'000010000000' AS error
         FROM ingest.feature_asis
         WHERE (file_id, kx_ghs9) IN ( SELECT file_id, kx_ghs9 FROM dup)
         ),
@@ -1167,7 +1167,7 @@ CREATE or replace FUNCTION ingest.any_load(
         ),
         ins_asis_discarded AS (
             INSERT INTO ingest.feature_asis_discarded (file_id, feature_id, properties, geom)
-            SELECT file_id, feature_id, ( properties || jsonb_build_object('error_mask', error_mask) ) AS properties, geom
+            SELECT file_id, feature_id, ( properties || jsonb_build_object('error', error) ) AS properties, geom
             FROM ( SELECT * FROM dup_mask  WHERE (file_id, feature_id, kx_ghs9) NOT IN ( SELECT file_id, feature_id, kx_ghs9 FROM dup_agg0) ) t
             ON CONFLICT (file_id,feature_id)
             DO UPDATE
@@ -1398,12 +1398,12 @@ CREATE or replace FUNCTION ingest.osm_load(
       ),
       mask AS (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=(SELECT isolabel_ext FROM ingest.vw01full_packfilevers WHERE id=%s)),
       b AS (
-        SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM mask))))::int::bit ) AS error_mask
+        SELECT file_id, gid, properties, geom, ( B'000000000' ||  (NOT(ST_IsSimple(geom)))::int::bit || (NOT(ST_IsValid(geom)))::int::bit || (NOT(ST_Intersects(geom,(SELECT geom FROM mask))))::int::bit ) AS error
         FROM a
       ),
       c AS (
         (
-        SELECT file_id, gid, properties, geom, (error_mask | ( B'00000' || (GeometryType(geom) NOT IN %s)::int::bit || (geom IS NULL)::int::bit || (CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) < 5 WHEN 'line' THEN ST_Length(geom,true) < 2 ELSE FALSE END)::int::bit || (ST_IsEmpty(geom))::int::bit || B'000' )) AS error_mask
+        SELECT file_id, gid, properties, geom, (error | ( B'00000' || (GeometryType(geom) NOT IN %s)::int::bit || (geom IS NULL)::int::bit || (CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1]) WHEN 'poly' THEN ST_Area(geom,true) < 5 WHEN 'line' THEN ST_Length(geom,true) < 2 ELSE FALSE END)::int::bit || (ST_IsEmpty(geom))::int::bit || B'000' )) AS error
         FROM (
            SELECT file_id, gid,
                   properties,
@@ -1417,18 +1417,18 @@ CREATE or replace FUNCTION ingest.osm_load(
 			    0.00000001
 		    )
 	          END AS geom,
-	          error_mask
+	          error
            FROM b
-           WHERE bit_count(error_mask) = 0
+           WHERE bit_count(error) = 0
            ) t
         )
         UNION
         (
-            SELECT * FROM b WHERE bit_count(error_mask) <> 0
+            SELECT * FROM b WHERE bit_count(error) <> 0
         )
         UNION
         (
-            SELECT file_id, gid, properties, geom, B'000100000000' AS error_mask
+            SELECT file_id, gid, properties, geom, B'000100000000' AS error
             FROM scan
             WHERE ST_IsClosed(geom) = FALSE AND GeometryType(geom) NOT IN ('LINESTRING','MULTILINESTRING')
         )
@@ -1436,15 +1436,15 @@ CREATE or replace FUNCTION ingest.osm_load(
       stats AS (
       SELECT ARRAY [
             (SELECT COUNT(*) FROM scan)::bigint,
-            (COUNT(*) filter (WHERE get_bit(error_mask,11) = 1))::bigint, -- intersects
-            (COUNT(*) filter (WHERE get_bit(error_mask,10) = 1))::bigint, -- invalid
-            (COUNT(*) filter (WHERE get_bit(error_mask, 9) = 1))::bigint, -- simple
-            (COUNT(*) filter (WHERE get_bit(error_mask, 8) = 1))::bigint, -- empty
-            (COUNT(*) filter (WHERE get_bit(error_mask, 7) = 1))::bigint, -- small
-            (COUNT(*) filter (WHERE get_bit(error_mask, 6) = 1))::bigint, -- null
-            (COUNT(*) filter (WHERE get_bit(error_mask, 5) = 1))::bigint, -- invalid_type
+            (COUNT(*) filter (WHERE get_bit(error,11) = 1))::bigint, -- intersects
+            (COUNT(*) filter (WHERE get_bit(error,10) = 1))::bigint, -- invalid
+            (COUNT(*) filter (WHERE get_bit(error, 9) = 1))::bigint, -- simple
+            (COUNT(*) filter (WHERE get_bit(error, 8) = 1))::bigint, -- empty
+            (COUNT(*) filter (WHERE get_bit(error, 7) = 1))::bigint, -- small
+            (COUNT(*) filter (WHERE get_bit(error, 6) = 1))::bigint, -- null
+            (COUNT(*) filter (WHERE get_bit(error, 5) = 1))::bigint, -- invalid_type
                                                                           -- bit 4 é reservado para duplicados
-            (COUNT(*) filter (WHERE get_bit(error_mask, 3) = 1))::bigint  -- is_closed
+            (COUNT(*) filter (WHERE get_bit(error, 3) = 1))::bigint  -- is_closed
             ]
         FROM c
       ),
@@ -1452,14 +1452,14 @@ CREATE or replace FUNCTION ingest.osm_load(
         INSERT INTO ingest.feature_asis
         SELECT file_id, gid, properties, geom
         FROM c
-	    WHERE  bit_count(error_mask) = 0
+	    WHERE  bit_count(error) = 0
         RETURNING 1
       ),
       ins_asis_discarded AS (
         INSERT INTO ingest.feature_asis_discarded
-        SELECT file_id, gid, properties || jsonb_build_object('error_mask',error_mask), geom
+        SELECT file_id, gid, properties || jsonb_build_object('error',error), geom
         FROM c
-	    WHERE  bit_count(error_mask) <> 0 
+	    WHERE  bit_count(error) <> 0
         RETURNING 1
       )
       SELECT array_append(array_append( (SELECT * FROM stats), (SELECT COUNT(*) FROM ins_asis) ), (SELECT COUNT(*) FROM ins_asis_discarded))
@@ -1515,7 +1515,7 @@ CREATE or replace FUNCTION ingest.osm_load(
             ORDER BY 1,2
         ),
         dup_mask AS (
-        SELECT *, B'000010000000' AS error_mask
+        SELECT *, B'000010000000' AS error
         FROM ingest.feature_asis
         WHERE (file_id, kx_ghs9) IN ( SELECT file_id, kx_ghs9 FROM dup)
         ),
@@ -1532,7 +1532,7 @@ CREATE or replace FUNCTION ingest.osm_load(
         ),
         ins_asis_discarded AS (
             INSERT INTO ingest.feature_asis_discarded (file_id, feature_id, properties, geom)
-            SELECT file_id, feature_id, ( properties || jsonb_build_object('error_mask', error_mask) ) AS properties, geom
+            SELECT file_id, feature_id, ( properties || jsonb_build_object('error', error) ) AS properties, geom
             FROM dup_mask t
             RETURNING 1
         ),
@@ -1856,7 +1856,6 @@ DECLARE
     class_ftname text;
     filename text;
     jproperties jsonb;
-    jpropertiesd jsonb;
 BEGIN
 
   SELECT ft_info->>'class_ftname',
@@ -1864,18 +1863,26 @@ BEGIN
   FROM ingest.vw03full_layer_file WHERE id=p_file_id
   INTO class_ftname, filename;
 
-  SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
+  SELECT properties || (SELECT properties FROM ingest.feature_asis_discarded WHERE file_id=p_file_id LIMIT 1)
+  FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
   INTO jproperties;
-
-  SELECT properties FROM ingest.feature_asis_discarded WHERE file_id=p_file_id LIMIT 1
-  INTO jpropertiesd;
 
   q_copy := $$
         COPY (
-            SELECT %s, ST_X(geom) AS longitude, ST_Y(geom) AS latitude
-            FROM ingest.feature_asis
-            WHERE file_id=%s
-            ORDER BY feature_id
+              SELECT feature_id AS gid %s, ST_X(geom) AS longitude, ST_Y(geom) AS latitude
+              FROM
+              (
+                SELECT *
+                FROM ingest.feature_asis
+                WHERE file_id=%s
+
+                UNION
+
+                SELECT *
+                FROM ingest.feature_asis_discarded
+                WHERE file_id=%s
+              ) fa
+              ORDER BY feature_id
             ) TO '%s' CSV HEADER
     $$;
 
@@ -1887,7 +1894,9 @@ BEGIN
     WHEN jproperties ?|
       (
           CASE class_ftname
-          WHEN 'geoaddress' THEN ARRAY['via','hnum']
+          --apo via, hnum, blref, pnum
+          --df  blref, set, pnum
+          WHEN 'geoaddress' THEN ARRAY['via','hnum','error']
           ELSE NULL
           END
         )
@@ -1898,7 +1907,7 @@ BEGIN
           WHERE
           (
             CASE class_ftname
-            WHEN 'geoaddress' THEN x IN ('via','hnum')
+            WHEN 'geoaddress' THEN x IN ('via','hnum','error')
             ELSE NULL
             END
           )
@@ -1906,7 +1915,9 @@ BEGIN
       ELSE ''
       END
     ),
-    p_file_id
+    p_file_id,
+    p_file_id,
+    p_path || '/' || (CASE WHEN p_name IS NULL THEN filename ELSE p_name END) || '.csv'
     );
   ELSE NULL;
   END CASE;
@@ -1936,10 +1947,11 @@ BEGIN
   FROM ingest.vw03full_layer_file WHERE id=p_file_id
   INTO class_ftname, filename;
 
-  SELECT properties FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
+  SELECT properties || (SELECT properties FROM ingest.feature_asis_discarded WHERE file_id=p_file_id LIMIT 1)
+  FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
   INTO jproperties;
 
-  q_copy := $$SELECT feature_id AS gid %s, geom FROM ingest.feature_asis WHERE file_id=%s ORDER BY feature_id$$;
+  q_copy := $$SELECT feature_id AS gid %s, geom FROM ((SELECT * FROM ingest.feature_asis WHERE file_id=%s) UNION (SELECT * FROM ingest.feature_asis_discarded WHERE file_id=%s)) fa ORDER BY feature_id$$;
 
   RETURN format(q_copy,
     (
@@ -1947,13 +1959,13 @@ BEGIN
     WHEN jproperties ?|
       (
           CASE class_ftname
-          WHEN 'geoaddress' THEN ARRAY['via','hnum']
-          WHEN 'parcel' THEN ARRAY['via','hnum']
-          WHEN 'via' THEN ARRAY['via']
-          WHEN 'nsvia' THEN ARRAY['via']
-          WHEN 'block' THEN ARRAY['name']
-          WHEN 'building' THEN ARRAY['via','hnum']
-          WHEN 'genericvia' THEN ARRAY['via','type']
+          WHEN 'geoaddress' THEN ARRAY['via','hnum','error']
+          WHEN 'parcel' THEN ARRAY['via','hnum','error']
+          WHEN 'via' THEN ARRAY['via','error']
+          WHEN 'nsvia' THEN ARRAY['via','error']
+          WHEN 'block' THEN ARRAY['name','error']
+          WHEN 'building' THEN ARRAY['via','hnum','error']
+          WHEN 'genericvia' THEN ARRAY['via','type','error']
           ELSE NULL
           END
         )
@@ -1964,13 +1976,13 @@ BEGIN
           WHERE
           (
             CASE class_ftname
-            WHEN 'geoaddress' THEN x IN ('via','hnum')
-            WHEN 'parcel' THEN x IN ('via','hnum')
-            WHEN 'via' THEN x IN ('via')
-            WHEN 'nsvia' THEN x IN ('via')
-            WHEN 'block' THEN x IN ('name')
-            WHEN 'building' THEN x IN ('via','hnum')
-            WHEN 'genericvia' THEN x IN ('via','type')
+            WHEN 'geoaddress' THEN x IN ('via','hnum','error')
+            WHEN 'parcel' THEN x IN ('via','hnum','error')
+            WHEN 'via' THEN x IN ('via','error')
+            WHEN 'nsvia' THEN x IN ('via','error')
+            WHEN 'block' THEN x IN ('name','error')
+            WHEN 'building' THEN x IN ('via','hnum','error')
+            WHEN 'genericvia' THEN x IN ('via','type','error')
             ELSE NULL
             END
           )
@@ -1978,6 +1990,7 @@ BEGIN
       ELSE ''
       END
     ),
+    p_file_id,
     p_file_id
   )
   ;
