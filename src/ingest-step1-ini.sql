@@ -872,6 +872,54 @@ CREATE or replace FUNCTION ingest.feature_asis_similarity(
   ) t;
 $f$ LANGUAGE SQL;
 
+CREATE or replace FUNCTION ingest.any_load_returnmsg(
+    p_file_id bigint  -- ID at ingest.donated_PackComponent
+) RETURNS text AS $f$
+    SELECT
+        CASE
+        WHEN ftid >= 20
+        THEN
+            format(E'Statistics from file_id=%s (%s of %s of %s) in ingest.feature_asis.\n
+            %s\n',
+            id,
+            ftname,
+            packvers_id,
+            isolabel_ext,
+            format(
+            E'Originals: %1$s items.\n
+            Not Intersecs: %2$s items.\n
+            Invalid: %3$s items.\n
+            Not simple: %4$s items.\n
+            Empty: %5$s items.\n
+            Small: %6$s items.\n
+            Null: %7$s items.\n
+            Invalid geometry type: %8$s items.\n
+            Not closed: %9$s items.\n
+            Large: %10$s items.\n
+            Deduplication: %15$s items.\n
+            Resulting in feature_asis: %16$s.\n,
+            Resulting in feature_asis_discarded: %12$s.',
+            VARIADIC (ARRAY(SELECT jsonb_array_elements_text(lineage->'statistics'))::bigint[])
+            ))
+        ELSE
+            format(E'Statistics from file_id=%s (%s of %s of %s) in ingest.cadastral_asis.\n
+            %s\n',
+            id,
+            ftname,
+            packvers_id,
+            isolabel_ext,
+            format(
+            E'Originals: %1$s items.\n
+            Resulting in cadastral_asis: %16$s.',
+            VARIADIC (ARRAY(SELECT jsonb_array_elements_text(lineage->'statistics'))::bigint[])))
+        END
+    FROM ingest.vw03full_layer_file
+    WHERE id = p_file_id
+$f$ LANGUAGE SQL;
+COMMENT ON FUNCTION ingest.any_load_returnmsg(bigint)
+  IS 'Generates the final message after ingesting the layer.'
+;
+
 CREATE or replace FUNCTION ingest.any_load(
     p_method text,   -- shp/csv/etc.
     p_fileref text,  -- apenas referencia para ingest.donated_PackComponent
@@ -894,7 +942,6 @@ CREATE or replace FUNCTION ingest.any_load(
     q_query_cad text;
     feature_id_col text;
     use_tabcols boolean;
-    msg_ret text;
     num_items bigint;
     stats bigint[];
     stats_dup bigint[];
@@ -1105,125 +1152,82 @@ CREATE or replace FUNCTION ingest.any_load(
 
   IF (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower(p_ftname))<20 THEN -- feature_type id
     EXECUTE q_query_cad INTO num_items;
-    msg_ret := format(E'From file_id=%s inserted type=%s\nin cadastral_asis %s items.', q_file_id, p_ftname, num_items);
+    stats := ARRAY[num_items,0,0,0,0,0,0,0,0,0,num_items,0,0,0,0,num_items];
+
+    UPDATE ingest.donated_PackComponent
+    SET --proc_step=2,   -- if insert process occurs after q_query.
+        lineage = lineage || jsonb_build_object('statistics',stats)
+    WHERE id=q_file_id;
   ELSE
     EXECUTE q_query INTO stats;
     num_items := stats[11];
-    msg_ret := format(
-        E'From file_id=%s inserted type=%s.\nStatistics:\n
-        %s\n',
-        q_file_id, p_ftname, format(
-        E'Originals: %s items.\n
-        Not Intersecs: %s items.\n
-        Invalid: %s items.\n
-        Not simple: %s items.\n
-        Empty: %s items.\n
-        Small: %s items.\n
-        Null: %s items.\n
-        Invalid geometry type: %s items.\n
-        Not closed: %s items.\n
-        Large: %s items.\n
-        Inserted feature_asis: %s items.\n
-        Inserted feature_asis_discarded: %s items.\n',
-        VARIADIC stats
-    )
-    );
-  END IF;
-  
-  IF num_items>0 AND (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower(p_ftname))>=20 THEN
-    q_query := format(
-        $$
-        WITH dup AS (
-            SELECT file_id, kx_ghs9, min(feature_id) AS min_feature_id
-            FROM ingest.feature_asis
-            WHERE file_id = %s
-            GROUP BY 1,2
-            HAVING count(*) > 1
-            ORDER BY 1,2
-        ),
-        dup_mask AS (
-        SELECT *, B'000010000000' AS error
-        FROM ingest.feature_asis
-        WHERE (file_id, kx_ghs9) IN ( SELECT file_id, kx_ghs9 FROM dup)
-        ),
-        dup_agg0 AS (
-        SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, min(kx_ghs9) AS kx_ghs9
-        FROM dup_mask t
-        GROUP BY file_id, kx_ghs9
-        ORDER BY file_id, kx_ghs9
-        ),
-        dup_agg AS (
-            SELECT f.file_id, f.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb) || ingest.feature_asis_similarity(%s,f.geom,geoms), f.geom
-            FROM (
-                SELECT min(file_id) AS file_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, kx_ghs9, array_agg(geom) AS geoms
-                FROM ( SELECT * FROM dup_mask  WHERE (file_id, feature_id, kx_ghs9) NOT IN ( SELECT file_id, feature_id, kx_ghs9 FROM dup_agg0) ) t
-                GROUP BY file_id, kx_ghs9
-                ORDER BY file_id, kx_ghs9
-                ) AS t
-            LEFT JOIN dup_agg0 f0
-            ON t.file_id = f0.file_id AND t.kx_ghs9 = f0.kx_ghs9
-            LEFT JOIN ingest.feature_asis f
-            ON t.file_id = f.file_id AND t.kx_ghs9 = f.kx_ghs9 AND f.feature_id = f0.feature_id
-        ),
-        ins_asis_discarded AS (
-            INSERT INTO ingest.feature_asis_discarded (file_id, feature_id, properties, geom)
-            SELECT file_id, feature_id, ( properties || jsonb_build_object('error', error) ) AS properties, geom
-            FROM ( SELECT * FROM dup_mask  WHERE (file_id, feature_id, kx_ghs9) NOT IN ( SELECT file_id, feature_id, kx_ghs9 FROM dup_agg0) ) t
-            ON CONFLICT (file_id,feature_id)
-            DO UPDATE
-            SET properties = EXCLUDED.properties
-            RETURNING 1
-        ),
-        del AS (
-            DELETE FROM ingest.feature_asis WHERE (file_id, kx_ghs9) IN ( SELECT file_id, kx_ghs9 FROM dup)
-            RETURNING 1
-        ),
-        ins AS (
-            INSERT INTO ingest.feature_asis SELECT * FROM dup_agg
-            RETURNING 1
-        )
-        SELECT array_append(array_append((SELECT ARRAY[COUNT(*)] FROM del), (SELECT COUNT(*) FROM ins_asis_discarded) ), (SELECT COUNT(*) FROM ins) )
-        $$, 
-        q_file_id,
-        q_file_id
-    );
-    EXECUTE q_query INTO stats_dup;
 
-    msg_ret := format(
-        E'From file_id=%s inserted type=%s.\n
-        %s\n',
-        q_file_id,
-        p_ftname,
-        format(
-        E'Statistics:\n.
-        Before deduplication:\n
-        Originals: %s items.\n
-        Not Intersecs: %s items.\n
-        Invalid: %s items.\n
-        Not simple: %s items.\n
-        Empty: %s items.\n
-        Small: %s items.\n
-        Null: %s items.\n
-        Invalid geometry type: %s items.\n
-        Not closed: %s items.\n
-        Large: %s items.\n
-        Inserted in feature_asis: %s items.\n
-        Inserted in feature_asis_discarded: %s items.\n\n
-        After deduplication:\n
-        Removed duplicates from feature_asis: %s items.\n
-        Inserted in feature_asis_discarded (duplicates): %s items.\n
-        Inserted in feature_asis (aggregated duplicates): %s items.\n
-        Resulting in feature_asis: %s',
-        VARIADIC (stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]])
-        )
-    );
+    IF num_items>0 THEN
+      q_query := format(
+          $$
+          WITH dup AS (
+              SELECT file_id, kx_ghs9, min(feature_id) AS min_feature_id
+              FROM ingest.feature_asis
+              WHERE file_id = %s
+              GROUP BY 1,2
+              HAVING count(*) > 1
+              ORDER BY 1,2
+          ),
+          dup_mask AS (
+          SELECT *, B'000010000000' AS error
+          FROM ingest.feature_asis
+          WHERE (file_id, kx_ghs9) IN ( SELECT file_id, kx_ghs9 FROM dup)
+          ),
+          dup_agg0 AS (
+          SELECT min(file_id) AS file_id, min(feature_id) AS feature_id, min(kx_ghs9) AS kx_ghs9
+          FROM dup_mask t
+          GROUP BY file_id, kx_ghs9
+          ORDER BY file_id, kx_ghs9
+          ),
+          dup_agg AS (
+              SELECT f.file_id, f.feature_id, f.properties || jsonb_build_object('properties_agg',t.properties,'is_agg','true'::jsonb) || ingest.feature_asis_similarity(%s,f.geom,geoms), f.geom
+              FROM (
+                  SELECT min(file_id) AS file_id, jsonb_agg(properties || jsonb_build_object('feature_id',feature_id)) AS properties, kx_ghs9, array_agg(geom) AS geoms
+                  FROM ( SELECT * FROM dup_mask  WHERE (file_id, feature_id, kx_ghs9) NOT IN ( SELECT file_id, feature_id, kx_ghs9 FROM dup_agg0) ) t
+                  GROUP BY file_id, kx_ghs9
+                  ORDER BY file_id, kx_ghs9
+                  ) AS t
+              LEFT JOIN dup_agg0 f0
+              ON t.file_id = f0.file_id AND t.kx_ghs9 = f0.kx_ghs9
+              LEFT JOIN ingest.feature_asis f
+              ON t.file_id = f.file_id AND t.kx_ghs9 = f.kx_ghs9 AND f.feature_id = f0.feature_id
+          ),
+          ins_asis_discarded AS (
+              INSERT INTO ingest.feature_asis_discarded (file_id, feature_id, properties, geom)
+              SELECT file_id, feature_id, ( properties || jsonb_build_object('error', error) ) AS properties, geom
+              FROM ( SELECT * FROM dup_mask  WHERE (file_id, feature_id, kx_ghs9) NOT IN ( SELECT file_id, feature_id, kx_ghs9 FROM dup_agg0) ) t
+              ON CONFLICT (file_id,feature_id)
+              DO UPDATE
+              SET properties = EXCLUDED.properties
+              RETURNING 1
+          ),
+          del AS (
+              DELETE FROM ingest.feature_asis WHERE (file_id, kx_ghs9) IN ( SELECT file_id, kx_ghs9 FROM dup)
+              RETURNING 1
+          ),
+          ins AS (
+              INSERT INTO ingest.feature_asis SELECT * FROM dup_agg
+              RETURNING 1
+          )
+          SELECT array_append(array_append((SELECT ARRAY[COUNT(*)] FROM del), (SELECT COUNT(*) FROM ins_asis_discarded) ), (SELECT COUNT(*) FROM ins) )
+          $$,
+          q_file_id,
+          q_file_id
+      );
+      EXECUTE q_query INTO stats_dup;
 
-    IF p_check_file_id_exist THEN
-        UPDATE ingest.donated_PackComponent
-        SET proc_step=2,   -- if insert process occurs after q_query.
-            lineage = lineage || ingest.feature_asis_assign(q_file_id) ||
-            jsonb_build_object('statistics',(stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) )
-        WHERE id=q_file_id;
+      IF p_check_file_id_exist THEN
+          UPDATE ingest.donated_PackComponent
+          SET proc_step=2,   -- if insert process occurs after q_query.
+              lineage = lineage || ingest.feature_asis_assign(q_file_id) ||
+              jsonb_build_object('statistics',(stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) )
+          WHERE id=q_file_id;
+      END IF;
     END IF;
   END IF;
 
@@ -1234,7 +1238,7 @@ CREATE or replace FUNCTION ingest.any_load(
     WHERE id=q_file_id;
   END IF;
 
-  RETURN msg_ret;
+  RETURN ingest.any_load_returnmsg(q_file_id);
   END;
 $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],int,int,boolean,text,boolean,text,text)
