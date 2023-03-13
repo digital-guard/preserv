@@ -898,7 +898,7 @@ CREATE or replace FUNCTION ingest.any_load_returnmsg(
             Large: %10$s items.\n
             Deduplication: %15$s items.\n
             Resulting in feature_asis: %16$s.\n,
-            Resulting in feature_asis_discarded: %12$s.',
+            Resulting in feature_asis_discarded: %17$s.',
             VARIADIC (ARRAY(SELECT jsonb_array_elements_text(lineage->'statistics'))::bigint[])
             ))
         ELSE
@@ -1152,7 +1152,7 @@ CREATE or replace FUNCTION ingest.any_load(
 
   IF (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower(p_ftname))<20 THEN -- feature_type id
     EXECUTE q_query_cad INTO num_items;
-    stats := ARRAY[num_items,0,0,0,0,0,0,0,0,0,num_items,0,0,0,0,num_items];
+    stats := ARRAY[num_items,0,0,0,0,0,0,0,0,0,num_items,0,0,0,0,num_items,0];
 
     UPDATE ingest.donated_PackComponent
     SET --proc_step=2,   -- if insert process occurs after q_query.
@@ -1225,7 +1225,7 @@ CREATE or replace FUNCTION ingest.any_load(
           UPDATE ingest.donated_PackComponent
           SET proc_step=2,   -- if insert process occurs after q_query.
               lineage = lineage || ingest.feature_asis_assign(q_file_id) ||
-              jsonb_build_object('statistics',(stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) )
+              jsonb_build_object('statistics',(stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) || ARRAY[stats[12]+stats_dup[2]] )
           WHERE id=q_file_id;
       END IF;
     END IF;
