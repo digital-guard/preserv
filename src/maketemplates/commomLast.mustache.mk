@@ -33,7 +33,7 @@ info:
 	@printf "readme: gera README.md do pacote de dados.\n"
 	@printf "insert_size: insere size bytes em files de make_conf.yaml.\n"
 	@printf "insert_license: insere detalhes sobre licenças em make_conf.yaml.\n"
-	@printf "delete_file: deleta layer ingestado. Uso: make delete_file id=<id do layer em ingest.donated_PackComponent>\n"
+	@printf "delete_file: deleta layer ingestado. Uso: make delete_file id=<id do layer em ingest.donated_PackComponent> pg_db=<ingest>\n"
 	@printf "generate_filtered_files: gera SHAPEFILE ou CSV do layer. Uso: make generate_filtered_files id=<id do layer em ingest.donated_PackComponent> pg_db=<ingest>. \n"
 	@printf "me_reproducibility: gera reproducibility.sh. Uso: make me_reproducibility pg_db=<ingest> \n"
 
@@ -104,7 +104,7 @@ endif
 
 delete_file:
 	@echo "-- Deleting donated donated packcomponent --"
-	@echo "Usage: make delete_file id=<id de donated_packcomponent>"
+	@echo "Usage: make delete_file id=<id de donated_packcomponent> pg_db=<ingest>"
 	@echo "id: $(id)"
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	@[ "${id}" ] && psql $(pg_uri_db) -c "DELETE FROM ingest.donated_packcomponent WHERE id = $(id)" || ( echo "Unknown id.")
