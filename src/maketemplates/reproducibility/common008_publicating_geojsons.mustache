@@ -1,4 +1,4 @@
 mkdir -m777 -p {{path_cutgeo_server}}
 rm -rf {{path_cutgeo_server}}/*.geojson
-psql $(pg_uri_db) -c "SELECT ingest.publicating_geojsons('{{layername_root}}','{{isolabel_ext}}','{{path_cutgeo_server}}','{{buffer_type}}',9,3);"
+psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.publicating_geojsons('{{layername_root}}','{{isolabel_ext}}','{{path_cutgeo_server}}','{{buffer_type}}',9,3);"
 cd /var/gits/_dg/preserv/src; sudo bash fixaPermissoes.sh {{path_cutgeo_server}}

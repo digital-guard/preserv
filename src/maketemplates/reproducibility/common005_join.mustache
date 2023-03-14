@@ -1,1 +1,1 @@
-psql $(pg_uri_db) -c "SELECT ingest.join('{{layer}}','{{{layerColumn}}}','{{layerFile}}','{{cadLayer}}','{{{cadLayerColumn}}}','{{cadLayerFile}}')"
+psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.join('{{layer}}','{{{layerColumn}}}','{{layerFile}}','{{cadLayer}}','{{{cadLayerColumn}}}','{{cadLayerFile}}')"

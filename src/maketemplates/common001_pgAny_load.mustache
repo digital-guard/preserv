@@ -12,9 +12,7 @@
 {{/sql_view}}
 	@echo "Confira os resultados nas tabelas ingest.donated_packcomponent e {{#isCadLayer}}ingest.cadastral_asis{{/isCadLayer}}{{^isCadLayer}}ingest.feature_asis{{/isCadLayer}}".
 {{/multiple_files}}
-{{#isCsv}}
-	psql $(pg_uri_db) -c "DROP FOREIGN TABLE IF EXISTS {{tabname}}"
-{{/isCsv}}
+	psql $(pg_uri_db) -c "DROP {{#isCsv}}FOREIGN{{/isCsv}} TABLE IF EXISTS {{tabname}} CASCADE"
 {{/isOsm}}
 {{#isOsm}}
 	psql $(pg_uri_db) -c "SELECT ingest.osm_load('$(sandbox)/{{orig_filename}}.pbf','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}})"

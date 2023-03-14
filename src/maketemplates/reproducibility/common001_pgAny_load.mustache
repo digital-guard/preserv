@@ -1,9 +1,9 @@
 {{^isOsm}}
 {{^multiple_files}}
-{{#isGdb}}dd if=/dev/random of='$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}/random_data_file' bs=1M count=1{{/isGdb}}
+{{#isGdb}}dd if=/dev/random of='{{sandbox}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}/random_data_file' bs=1M count=1{{/isGdb}}
 {{#sql_view}}
 psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}"
-{{#partition_by}}psql $(pg_uri_db) -c "CALL ingest.any_load_loop('{{method}}','$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{#isGdb}}/random_data_file{{/isGdb}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{#isGdb}}/random_data_file{{/isGdb}}{{/orig_filename_with_extension}}','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}},false,'geom',true,'{{partition_by}}')"{{/partition_by}}{{^partition_by}}psql $(pg_uri_db) -c "SELECT ingest.any_load('{{method}}','$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{#isGdb}}/random_data_file{{/isGdb}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{#isGdb}}/random_data_file{{/isGdb}}{{/orig_filename_with_extension}}','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}})"{{/partition_by}}
+{{#partition_by}}psql {{pg_uri}}/{{pg_db}} -c "CALL ingest.any_load_loop('{{method}}','{{sandbox}}/{{#orig_filename_with_extension}}{{orig_filename}}{{#isGdb}}/random_data_file{{/isGdb}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{#isGdb}}/random_data_file{{/isGdb}}{{/orig_filename_with_extension}}','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}},false,'geom',true,'{{partition_by}}')"{{/partition_by}}{{^partition_by}}psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load('{{method}}','{{sandbox}}/{{#orig_filename_with_extension}}{{orig_filename}}{{#isGdb}}/random_data_file{{/isGdb}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{#isGdb}}/random_data_file{{/isGdb}}{{/orig_filename_with_extension}}','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}})"{{/partition_by}}
 psql {{pg_uri}}/{{pg_db}} -c "DROP VIEW vw{{file}}_{{tabname}}"
 {{/sql_view}}
 {{^sql_view}}
@@ -11,9 +11,7 @@ psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load('{{method}}','{{sandbox}}/_
 {{/sql_view}}
 @echo "Confira os resultados nas tabelas ingest.donated_packcomponent e {{#isCadLayer}}ingest.cadastral_asis{{/isCadLayer}}{{^isCadLayer}}ingest.feature_asis{{/isCadLayer}}".
 {{/multiple_files}}
-{{#isCsv}}
-psql {{pg_uri}}/{{pg_db}} -c "DROP FOREIGN TABLE IF EXISTS {{tabname}}"
-{{/isCsv}}
+psql {{pg_uri}}/{{pg_db}} -c "DROP {{#isCsv}}FOREIGN{{/isCsv}} TABLE IF EXISTS {{tabname}} CASCADE"
 {{/isOsm}}
 {{#isOsm}}
 psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.osm_load('{{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}/{{orig_filename}}.pbf','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}})"
