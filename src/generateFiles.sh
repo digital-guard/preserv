@@ -138,3 +138,18 @@ generate_filtered_files(){
         gen_csv ${database} ${file_id} true
     fi
 }
+
+# gen_all ingest62 7600008401
+gen_all(){
+    database=$1
+    packtpl_id=$2
+
+    echo "Generating all filtred"
+
+    ids=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT id FROM ingest.vw03full_layer_file WHERE pack_id=${packtpl_id} ")
+
+    for id in ${ids}
+    do
+        generate_filtered_files ${database} ${id} false
+    done
+}

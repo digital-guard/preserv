@@ -53,9 +53,8 @@ all:
 {{#via}}
 	@printf "\tpublicating_geojsons_via audit-geojsons_via change_parameters_via\n"
 {{/via}}
-{{#layers_keys_nocad}}
-	@printf "EXPERIMENTAL: target para publicar todos layers não cadastrais:\n\tall_publications\n"
-{{/layers_keys_nocad}}
+	@printf "EXPERIMENTAL: target para publicar todos layers não cadastrais no cutGeo:\n\tall_publications\n"
+	@printf "EXPERIMENTAL: target para gerar e subir na nuvem os filtrados de todos layers não cadastrais:\n\tall_filtered\n"
 {{/layers}}
 
 all_layers: {{#layers_keys}}{{.}} {{/layers_keys}}
@@ -65,6 +64,15 @@ all_joins: {{#joins_keys}}join-{{.}} {{/joins_keys}}
 	@echo "--ALL JOINS--"
 {{/joins}}
 all_publications: {{#layers_keys_nocad}}publicating_geojsons_{{.}} {{/layers_keys_nocad}}
+	@echo "--ALL PUBLICATIONS--"
+
+all_filtered:
+	@echo "-- Generate all filtered files --"
+	@echo "Usage: make all_filtered pg_db=<ingest> packtpl_id=<packtpl_id>"
+ifneq ($(nointeraction),y)
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+endif
+	@[ "${pg_db}" ] && bash -c "source $(preservSrc)/generateFiles.sh && gen_all $(pg_db) {{packtpl_id}} || ( echo "Unknown pg_db.")
 	@echo "--ALL PUBLICATIONS--"
 
 ## ## ## ## ## ## ## ## ##

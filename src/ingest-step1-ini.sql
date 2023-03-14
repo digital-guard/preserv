@@ -410,7 +410,7 @@ COMMENT ON VIEW ingest.vw02simple_feature_asis
 
 --DROP VIEW IF EXISTS ingest.vw03full_layer_file CASCADE;
 CREATE VIEW ingest.vw03full_layer_file AS
-  SELECT pf.isolabel_ext, pf.scope_label, pc.*, ft.ftname, ft.geomtype, pf.housenumber_system_type, ft.need_join, ft.description, ft.info AS ft_info
+  SELECT pf.isolabel_ext, pf.scope_label, pf.pack_id, pc.*, ft.ftname, ft.geomtype, pf.housenumber_system_type, ft.need_join, ft.description, ft.info AS ft_info
   FROM ingest.donated_PackComponent pc
   INNER JOIN ingest.fdw_feature_type ft
     ON pc.ftid=ft.ftid
