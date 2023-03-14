@@ -92,7 +92,7 @@ O arquivo é utilizado para configurações de cada jurisdição ...
 
 * `pg_io:`   ??? /tmp/pg_io
 
-* `orig:`    ??? /var/www/preserv.addressforall.org/download
+* `orig:`    ??? /var/www/dl.digital-guard.org
 
 * `pg_uri:`  URI para conexão com base de dados (postgres://postgres@localhost)
 

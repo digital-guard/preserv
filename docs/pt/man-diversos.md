@@ -1,9 +1,9 @@
 ## No rule to make target
 Ao executar `make layer` ou `make all_layers`, caso encontre um erro do tipo
 ```
-make: *** No rule to make target '/var/www/preserv.addressforall.org/download/bae2054448855305db0fc855d2852cd5a7b369481cc03aeb809a0c3c162a2c04.zip', needed by 'parcel'.  Stop.
+make: *** No rule to make target '/var/www/dl.digital-guard.org/bae2054448855305db0fc855d2852cd5a7b369481cc03aeb809a0c3c162a2c04.zip', needed by 'parcel'.  Stop.
 ```
-o arquivo especificado não está no diretório default `/var/www/preserv.addressforall.org/download`, informado na chave `orig` de uma jurisdição, por exemplo, em [commomFirst.yaml](https://github.com/digital-guard/preserv-BR/blob/main/src/maketemplates/commomFirst.yaml#L2). Significando que o arquivo está armazenado em outro lugar. Isso está indicado  na tabela [de-para](https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk).
+o arquivo especificado não está no diretório default `/var/www/dl.digital-guard.org`, informado na chave `orig` de uma jurisdição, por exemplo, em [commomFirst.yaml](https://github.com/digital-guard/preserv-BR/blob/main/src/maketemplates/commomFirst.yaml#L2). Significando que o arquivo está armazenado em outro lugar. Isso está indicado  na tabela [de-para](https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk).
 
 
 Nesse caso usar:
@@ -15,11 +15,11 @@ make me pg_db=ingestXX
 
 make parcel orig=/diretorio/para/arquivo/baixado pg_db=ingestXX
 ```
-Se o download for realizado em /var/www/preserv.addressforall.org/download utilizar apenas
+Se o download for realizado em /var/www/dl.digital-guard.org utilizar apenas
 
 `make parcel  pg_db=ingestXX`
 
-uma vez que o valor default de orig é /var/www/preserv.addressforall.org/download.
+uma vez que o valor default de orig é /var/www/dl.digital-guard.org.
 
 Observação: atualmente, [common002_layerHeader.mustache](https://github.com/digital-guard/preserv/blob/main/src/maketemplates/common002_layerHeader.mustache#L18) interage com o usuário solicitando a confirmação de download de dl.digital-guard.org ou o fornecimento do valor correto de orig. Caso o download seja realizado, o arquivo estará localizado na respectiva sandbox do layer. Notar que se `nointeraction=y` não haverá interação com o usuário e o download será feito.
 

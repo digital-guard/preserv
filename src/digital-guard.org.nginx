@@ -48,7 +48,7 @@ server {
 
 server {
         server_name dl.digital-guard.org;
-        root /var/www/preserv.addressforall.org/download/;
+        root /var/www/dl.digital-guard.org/;
         index  index.php index.html index.htm;
         access_log /var/log/nginx/digital-guard.org.access_log;
 
@@ -71,7 +71,7 @@ server {
 
 	location ~ "^/download/[a-fA-F0-9]{64}(\.[a-z0-9]+)$" {
 	    #internal
-	    root /var/www/preserv.addressforall.org;
+	    root /var/www/dl.digital-guard.org;
 	    try_files $uri $uri ;
 	}
 

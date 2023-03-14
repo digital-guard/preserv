@@ -312,7 +312,7 @@ CREATE or replace FUNCTION eclusa.cityfolder_run_cpfiles(
   p_user          text, -- ex. igor
   p_output_shfile text DEFAULT '/tmp/pg_io/runCpFiles',
   p_path          text DEFAULT '/home',
-  p_target_path   text DEFAULT '/var/www/preserv.addressforall.org/download/'
+  p_target_path   text DEFAULT '/var/www/dl.digital-guard.org/'
 ) RETURNS text AS $f$
   WITH
   t0 AS (SELECT p_output_shfile ||'-'|| p_user ||'.sh' AS sh_file),
