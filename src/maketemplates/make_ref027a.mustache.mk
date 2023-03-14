@@ -29,7 +29,7 @@ all:
 	@printf "Targets para join de layers:\n\tall_joins {{#joins_keys}}{{.}} {{/joins_keys}}\n"
 {{/joins}}
 	@printf "Demais targets implementados:\n\tmakedirs clean clean_sandbox wget_files me readme delete_file\n"
-	@echo "A geração de layers requer os seguintes comandos e versões:\n\t$(need_commands)"
+# 	@echo "A geração de layers requer os seguintes comandos e versões:\n\t$(need_commands)"
 {{#layers}}
 	@printf "Targets de publicação de layers:\n"
 {{#block}}
@@ -53,6 +53,9 @@ all:
 {{#via}}
 	@printf "\tpublicating_geojsons_via audit-geojsons_via change_parameters_via\n"
 {{/via}}
+{{#layers_keys_nocad}}
+	@printf "EXPERIMENTAL: target para publicar todos layers não cadastrais:\n\tall_publications\n"
+{{/layers_keys_nocad}}
 {{/layers}}
 
 all_layers: {{#layers_keys}}{{.}} {{/layers_keys}}
@@ -61,6 +64,8 @@ all_layers: {{#layers_keys}}{{.}} {{/layers_keys}}
 all_joins: {{#joins_keys}}join-{{.}} {{/joins_keys}}
 	@echo "--ALL JOINS--"
 {{/joins}}
+all_publications: {{#layers_keys_nocad}}publicating_geojsons_{{.}} {{/layers_keys_nocad}}
+	@echo "--ALL PUBLICATIONS--"
 
 ## ## ## ## ## ## ## ## ##
 ## Make targets of the Project Digital Preservation

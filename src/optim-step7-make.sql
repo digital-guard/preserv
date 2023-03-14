@@ -410,6 +410,7 @@ BEGIN
 	 END IF;
 
 	 dict := dict || jsonb_build_object( 'layers_keys', jsonb_object_keys_asarray(dict->'layers') );
+	 dict := dict || jsonb_build_object( 'layers_keys_nocad', ( SELECT  array_agg(x) FROM jsonb_object_keys(dict->'layers') t(x) WHERE x NOT IN ('address','cadvia','cadparcel','cadgenericvia') ) );
 	 dict := jsonb_set( dict, array['pkversion'], to_jsonb(to_char((dict->>'pkversion')::int,'fm000')) );
 	 dict := jsonb_set( dict, '{files,-1,last}','true'::jsonb);
 
