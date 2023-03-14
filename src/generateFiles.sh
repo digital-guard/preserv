@@ -150,6 +150,6 @@ gen_all(){
 
     for id in ${ids}
     do
-        generate_filtered_files ${database} ${id} false
+        generate_filtered_files ${database} ${id}
     done
 }
