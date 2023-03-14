@@ -897,7 +897,7 @@ CREATE or replace FUNCTION ingest.any_load_returnmsg(
             Not closed: %9$s items.\n
             Large: %10$s items.\n
             Deduplication: %15$s items.\n
-            Resulting in feature_asis: %16$s.\n,
+            Resulting in feature_asis: %16$s.\n
             Resulting in feature_asis_discarded: %17$s.',
             VARIADIC (ARRAY(SELECT jsonb_array_elements_text(lineage->'statistics'))::bigint[])
             ))
