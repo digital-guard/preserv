@@ -25,7 +25,6 @@ endif
 	@echo " Downloading file..."
 	wget -P $(orig) http://dl.digital-guard.org/{{file_data.file}}
 	@echo " Fix permissions ..."
-	#cd /var/gits/_dg/preserv/src; sudo bash fixaPermissoes.sh $(orig)
 	sudo chown postgres:www-data $(orig)/{{file_data.file}}
 	@echo " Download completed."
 endif
@@ -35,14 +34,13 @@ endif
 	@tput bold
 	@echo Extracting ....
 	@tput sgr0
-	cd $(sandbox); 7z {{7z_opts}} x -y $(orig)/{{file_data.file}} {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}"*{{orig_filename}}*"{{/orig_filename_string_extract}}
+	cd $(sandbox); 7z {{7z_opts}} x -y $(orig)/{{file_data.file}} {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}"*{{orig_filename}}*"{{/orig_filename_string_extract}} ; chmod -R a+rwx . > /dev/null
 {{/isOsm}}
 {{#isOsm}}
 	@tput bold
 	@echo Copying ....
 	@tput sgr0
-	sudo chown postgres:www-data $(orig)/{{file_data.file}}
-	cd $(sandbox); cp $(orig)/{{file_data.file}} "{{orig_filename}}.pbf"
+	cd $(sandbox); cp $(orig)/{{file_data.file}} "{{orig_filename}}.pbf" ; chmod -R a+rwx . > /dev/null
 {{/isOsm}}
 {{#after_extract}}
 	@echo Aplicando comandos após a extração ...
