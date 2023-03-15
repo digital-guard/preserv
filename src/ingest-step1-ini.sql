@@ -11,7 +11,6 @@ CREATE SCHEMA                  ingest;
 
 CREATE SCHEMA    IF NOT EXISTS tmp_orig;
 CREATE SCHEMA    IF NOT EXISTS api;
-CREATE SCHEMA    IF NOT EXISTS download;
 
 CREATE EXTENSION IF NOT EXISTS file_fdw;
 CREATE SERVER    IF NOT EXISTS files
@@ -1789,6 +1788,7 @@ BEGIN
         t.gid,
         jsonb_strip_nulls(jsonb_build_object(
           'bytes',length(St_asGeoJson(t.geom)),
+          'name', name,
           'info', infop
         )) AS info,
         t.geom
@@ -2414,19 +2414,6 @@ COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int)
   IS 'Wrap to ingest.publicating_geojsons'
 ;
 -- SELECT ingest.publicating_geojsons('geoaddress','BR-MG-BeloHorizonte','folder');
-
--- ----------------------------
-
-CREATE TABLE download.redirects (
-    donor_id          text,
-    filename_original text,
-    package_path      text,
-    fhash             text NOT NULL PRIMARY KEY, -- de_sha256
-    furi              text,                      -- para_url
-    UNIQUE (fhash, furi)
-);
-
-CREATE or replace VIEW api.redirects AS SELECT * FROM download.redirects;
 
 -- ----------------------------
 

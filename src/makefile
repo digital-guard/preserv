@@ -190,7 +190,8 @@ ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 load_optim_csv:
 	@echo "Load tables donor.csv, donatedPack.csv and codec_type into $(pg_datalake_uri), for all jurisdictions."
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
-	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step2-ini.sql
+	psql $(pg_datalake_uri) -c "SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY['BO','BR','CL','CO','EC','PE','PY','SR','UY','VE']) t;"
+	psql $(pg_datalake_uri) -c "SELECT optim.insert_codec_type();"
 
 build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=name
 	@echo "DROP FOREIGN TABLE IF EXISTS $(fdwName);"
@@ -246,12 +247,15 @@ first_makefile:
 	rm maketemplates/commomLast.mustache.mk.tmp
 
 redirects_update: pgio
-	@echo "--- Atualiza redirecionamentos ---"
+	@echo "-- Atualização de redirecionamentos --"
+	@echo "--- de-para dl.digital-guard.org ---"
 	@echo Download da tabela de-para ....
 	wget "https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk/export?format=csv&gid=0" -O "$(pg_io)/de-para.csv"
 	psql $(pg_datalake_uri) -c "DELETE FROM download.redirects; COPY download.redirects FROM '$(pg_io)/de-para.csv' CSV HEADER;"
 	psql postgres://postgres@localhost/dl03t_main -c "COPY ( SELECT hashedfname, hashedfnameuri FROM optim.donated_PackComponent_cloudControl ) TO '$(pg_io)/clound_uri_control.csv' CSV HEADER;"
 	psql $(pg_datalake_uri) -c "COPY download.redirects(fhash,furi) FROM '$(pg_io)/clound_uri_control.csv' CSV HEADER;"
+	rm $(pg_io)/de-para.csv $(pg_io)/clound_uri_control.csv
+	@echo "--- de-para Data VisualiZation ---"
 
 
 sha256_update:
