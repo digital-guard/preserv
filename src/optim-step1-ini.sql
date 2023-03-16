@@ -863,7 +863,7 @@ CREATE TABLE optim.donated_PackComponent_cloudControl(
   hashedfname     text      NOT NULL  CHECK( hashedfname ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
   hashedfnameuri  text      NOT NULL,
   hashedfnametype text      NOT NULL,
-  info            jsonb,
+  info            jsonb, -- viz_uri: url_layer_visualization
   UNIQUE(packvers_id,ftid,lineage_md5,hashedfnametype),
   UNIQUE(hashedfname,hashedfnameuri)
 );

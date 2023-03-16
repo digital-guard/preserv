@@ -256,7 +256,7 @@ redirects_update: pgio
 	psql $(pg_datalake_uri) -c "DELETE FROM download.redirects; COPY download.redirects FROM '$(pg_io)/de-para.csv' CSV HEADER;"
 	rm $(pg_io)/de-para.csv
 	@echo "--- de-para Data VisualiZation ---"
-	psql $(pg_datalake_uri) -c "SELECT download.insert_viz_csv();"
+	psql $(pg_datalake_uri) -c "SELECT download.insert_viz_csv(); SELECT download.update_cloudControl_vizuri();"
 
 sha256_update:
 	@echo "Update sha256 in optim.donated_packfilevers"

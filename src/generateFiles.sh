@@ -13,7 +13,7 @@ update_tables(){
     ftid=$(cut -d'|' -f2 <<< ${id_pack})
     lineage_md5=$(cut -d'|' -f3 <<< ${id_pack})
 
-    echo "Update download.redirects..."
+    echo "Insert data in optim.donated_PackComponent_cloudControl..."
     psql postgres://postgres@localhost/dl03t_main -c"SELECT optim.insert_cloudControl (${packvers_id}::bigint,${ftid}::smallint,'${lineage_md5}','${file_name_hash}','${url_cloud}','${file_type}');"
 }
 
