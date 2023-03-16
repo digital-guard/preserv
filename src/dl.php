@@ -1,5 +1,5 @@
 <?php
-$json_url = "http://127.0.0.1:3102/redirects?fhash=like.".str_replace("/","",$_SERVER['REQUEST_URI'])."*";
+$json_url = "http://127.0.0.1:3103/redirects?fhash=like.".str_replace("/","",$_SERVER['REQUEST_URI'])."*";
 $json     = file_get_contents($json_url);
 $data     = json_decode($json,TRUE);
 

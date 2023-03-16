@@ -11,22 +11,31 @@ CREATE TABLE download.redirects (
     donor_id          text,
     filename_original text,
     package_path      text,
-    fhash             text NOT NULL PRIMARY KEY, -- de_sha256
-    furi              text,                      -- para_url
-    UNIQUE (fhash,furi)
+    hashedfname       text NOT NULL PRIMARY KEY CHECK( hashedfname ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
+    hashedfnameuri    text,                      -- para_url
+    UNIQUE (hashedfname,hashedfnameuri)
 );
-COMMENT ON TABLE CREATE TABLE download.redirects
+COMMENT ON TABLE download.redirects
   IS ''
 ;
--- CREATE INDEX jurisdiction_isolabel_ext_idx1 ON optim.jurisdiction USING btree (fhash);
+CREATE INDEX redirects_hashedfname_idx1 ON download.redirects USING btree (hashedfname);
 
 CREATE or replace VIEW api.redirects AS
-    SELECT *
+    -- arquivos originais
+    SELECT hashedfname AS fhash, hashedfnameuri AS furi
     FROM download.redirects
+
+    UNION
+
+    -- arquivos filtrados
+    SELECT hashedfname, hashedfnameuri
+    FROM optim.donated_PackComponent_cloudControl
 ;
 COMMENT ON VIEW api.redirects
   IS ''
 ;
+
+----------------------
 
 -- Data VisualiZation
 CREATE TABLE download.redirects_viz (

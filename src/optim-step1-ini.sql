@@ -853,7 +853,7 @@ COMMENT ON FUNCTION optim.load_donor_pack
   IS 'Insert from clone-structure FOREIGN TABLE from donor.csv and donatedPack.csv.'
 ;
 
----
+--- arquivo filtrados
 
 CREATE TABLE optim.donated_PackComponent_cloudControl(
   id              bigserial NOT NULL PRIMARY KEY,
@@ -877,6 +877,25 @@ COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfnametype IS 't
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.info            IS 'Others information.';
 
 COMMENT ON TABLE optim.donated_PackComponent_cloudControl IS 'Stores filtered file hyperlinks for each publication feature type.';
+
+CREATE or replace FUNCTION optim.insert_cloudControl(
+  p_packvers_id     bigint,
+  p_ftid            smallint,
+  p_lineage_md5     text,
+  p_hashedfname     text, -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
+  p_hashedfnameuri  text,
+  p_hashedfnametype text
+) RETURNS text AS $f$
+    INSERT INTO optim.donated_PackComponent_cloudControl(packvers_id,ftid,lineage_md5,hashedfname,hashedfnameuri,hashedfnametype)
+    VALUES (p_packvers_id,p_ftid,p_lineage_md5,p_hashedfname,p_hashedfnameuri,p_hashedfnametype)
+    ON CONFLICT (packvers_id,ftid,lineage_md5,hashedfnametype)
+    DO UPDATE SET hashedfname=EXCLUDED.hashedfname, hashedfnameuri=EXCLUDED.hashedfnameuri
+    RETURNING 'Ok, updated table.'
+  ;
+$f$ LANGUAGE SQL;
+COMMENT ON FUNCTION optim.insert_cloudControl(bigint,smallint,text,text,text,text)
+  IS 'Update optim.donated_PackComponent_cloudControl.'
+;
 
 CREATE or replace VIEW optim.vw01filtered_files AS
 SELECT pack_id, jsonb_build_object('layers', jsonb_agg(jsonb_build_object(
