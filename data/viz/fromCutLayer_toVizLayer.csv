@@ -1,5 +1,5 @@
-jurisdiction_pack_layer,url_layer_visualization
-BR-SP-Guarulhos/_pk0081.01/geoaddress,https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=341962cd00c441f8876202f29fc33dcc
-BR-SP-Guarulhos/_pk0081.01/via,https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=83adb68c66154dc8b5c37ccd7fd52059
-BR-SP-Jacarei/_pk0145.01/parcel,https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=d52fcf4feaab43cfb1a26b8163ed7484
-BR-SP-Jacarei/_pk0145.01/via,https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=ead9842855e141b59469547eb82d4952
+jurisdiction_pack_layer,hash_from,url_layer_visualization
+BR-SP-Guarulhos/_pk0081.01/geoaddress,14431e2f209ab8509546de5c54c410689bed1c1abe5d5d6983ee2f28fc8ab394.zip,https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=341962cd00c441f8876202f29fc33dcc
+BR-SP-Guarulhos/_pk0081.01/via,74f511290f9e25669311234026cc37a278989ae66e4a44a5d47b1c8f25a15e9a.zip,https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=83adb68c66154dc8b5c37ccd7fd52059
+BR-SP-Jacarei/_pk0145.01/parcel,168b5045a7eea8f359bc43b297f76859ef526114bac9b73290805daa240766fd.zip,https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=d52fcf4feaab43cfb1a26b8163ed7484
+BR-SP-Jacarei/_pk0145.01/via,c4e0917b866d2bb6aaacedc67439f12164a0a368edac8d3449ff3bea4e805061.zip,https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=ead9842855e141b59469547eb82d4952
