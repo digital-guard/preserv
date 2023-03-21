@@ -56,6 +56,10 @@ server {
             try_files /dl.php?$uri /dl.php;
         }
 
+        location ~ "^/out/([a-zA-Z0-9\_]+\.zip)$" {
+            try_files /dl.php?$1 /dl.php;
+        }
+
 	# usar location  @resolver para redirecionar por index.php os curtos, sem extensão ou externos
         location ~ dl\.php$ {
 	    internal;

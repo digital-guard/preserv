@@ -860,7 +860,7 @@ CREATE TABLE optim.donated_PackComponent_cloudControl(
   packvers_id     bigint    NOT NULL REFERENCES optim.donated_PackFileVers(id),
   ftid            smallint  NOT NULL REFERENCES optim.feature_type(ftid),
   lineage_md5     text      NOT NULL,
-  hashedfname     text      NOT NULL  CHECK( hashedfname ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
+  hashedfname     text      NOT NULL,
   hashedfnameuri  text      NOT NULL,
   hashedfnametype text      NOT NULL,
   info            jsonb, -- viz_uri: url_layer_visualization
@@ -871,7 +871,7 @@ COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.id              IS 'b
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.packvers_id     IS 'donated_PackFileVers identifier.';
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.ftid            IS 'Feature type identifier.';
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.lineage_md5     IS 'md5 from the file.';
-COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfname     IS 'sha256.ext of filtred file.';
+COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfname     IS 'name of filtred file.';
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfnameuri  IS 'hashedfname file cloud link.';
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfnametype IS 'type, csv or shp.';
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.info            IS 'Others information.';
