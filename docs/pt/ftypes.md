@@ -234,3 +234,27 @@ G[cadparcel_cmpl] --- H[parcel_ext]
 </tr>
 </thead>
 </table>
+
+
+-------
+
+## housenumber_system_type
+
+Da mais alta relevância para a correta interpretação da numeração predial e dos nomes de via dentro do sistema de descrição de endereços de um país ou divisão jurisdicional do país. Na AddressForAll foi definida a seguinte **tabela House System Type** (HST ou  `housenumber_system_type`) de definições:  
+
+coluna | tipo | significado
+-------|-------|----
+`hstid` | `smallint` PRIMARY KEY NOT NULL| identificador (id) do HST 
+`hstname` |`text` NOT NULL CHECK(lower(hstname)=hstname)| Rótulo curto e mnemônico do HST
+`regex_sort` | `text` NOT NULL| regular expression da ordenação da numeração predial 
+`description`| `text` NOT NULL|descrição
+
+Atualmente, em 2023, temos apenas os seguintes descritores:
+
+hstid| hstname | regex_sort|description
+------|--------|------------|------
+0 |metric | `[0-9]+` | integer | Distance in meters from city's origin (or similar mark). Example: BR-SP-PIR housenumbers [123, 4560]),
+1 |street-metric |`[0-9]+[A-Z]? \- [0-9]+ [SNEL]?`| string | First code refers to the previous intersecting street, and the second is the distance to that intersection. Optional last letter is sort-direction. Example: `CO-DC-Bogota` housenumbers [96A -11, 12 - 34, 14A - 31 E].
+2 | block-metric | `[0-9]+ \- [0-9]+` | integer function  | First number refers to the urban-block counter, and the second is the distance to the begin of the block in the city's origin order. Sort function is `$1*10000 + $2`. Example: `BR-SP-Bauru` housenumbers [30-14, 2-1890].
+3 | ago-block|  | 
+4 | df-block |  |  
