@@ -250,12 +250,9 @@ first_makefile:
 
 redirects_update: pgio
 	@echo "-- Atualização de redirecionamentos --"
-	@echo "--- de-para dl.digital-guard.org ---"
-	@echo Download da tabela de-para ....
-	wget "https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk/export?format=csv&gid=0" -O "$(pg_io)/de-para.csv"
-	psql $(pg_datalake_uri) -c "DELETE FROM download.redirects; COPY download.redirects FROM '$(pg_io)/de-para.csv' CSV HEADER;"
-	rm $(pg_io)/de-para.csv
-	@echo "--- de-para Data VisualiZation ---"
+	@echo "--- dl.digital-guard.org ---"
+	psql $(pg_datalake_uri) -c "SELECT download.insert_dldg_csv();"
+	@echo "--- Data VisualiZation ---"
 	psql $(pg_datalake_uri) -c "SELECT download.insert_viz_csv(); SELECT download.update_cloudControl_vizuri();"
 
 sha256_update:
