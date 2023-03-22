@@ -1800,7 +1800,7 @@ BEGIN
   FROM ingest.vw03full_layer_file WHERE id=p_file_id
   INTO class_ftname, filename;
 
-  SELECT properties || (SELECT properties FROM ingest.feature_asis_discarded WHERE file_id=p_file_id LIMIT 1)
+  SELECT properties || COALESCE((SELECT properties FROM ingest.feature_asis_discarded WHERE file_id=p_file_id LIMIT 1),'{}'::jsonb)
   FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
   INTO jproperties;
 
@@ -1860,7 +1860,7 @@ DECLARE
     q_copy text;
     jproperties jsonb;
 BEGIN
-  SELECT properties || (SELECT properties FROM ingest.feature_asis_discarded WHERE file_id=p_file_id LIMIT 1)
+  SELECT properties || COALESCE((SELECT properties FROM ingest.feature_asis_discarded WHERE file_id=p_file_id LIMIT 1),'{}'::jsonb)
   FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
   INTO jproperties;
 
