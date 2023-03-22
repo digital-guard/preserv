@@ -57,8 +57,7 @@ server {
         }
 
         location ~ "^/out/([a-zA-Z0-9\_]+\.zip)$" {
-            set $nfi $1;
-            try_files /dl.php?$nfi /dl.php;
+            try_files /dl.php?$uri /dl.php;
         }
 
 	# usar location  @resolver para redirecionar por index.php os curtos, sem extensão ou externos
