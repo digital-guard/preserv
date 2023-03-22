@@ -1654,10 +1654,8 @@ $f$ LANGUAGE SQL;
 -- for use with geohash_checkprefix()
 -- select file_id, ingest.donated_PackComponent_distribution_prefixes(file_id)as prefixes FROM ingest.donated_PackComponent
 
-
 ------------------------
 ------------------------
-
 
 CREATE or replace FUNCTION ingest.feature_asis_export(p_file_id bigint)
 RETURNS TABLE (kx_ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
@@ -1673,43 +1671,29 @@ BEGIN
   INTO jproperties;
 
   CASE
-  WHEN ( p_ftname IN ('geoaddress', 'parcel') )
-    OR ( p_ftname IN ('building')
-         AND
-         (
-            jproperties
-            ?|
-            (
-              CASE sys_housenumber
-              WHEN 'ago-block' THEN ARRAY['via','hnum','blref','pnum']
-              WHEN 'df-block'  THEN ARRAY['blref','set','pnum']
-              ELSE ARRAY['via','hnum']
-              END
-            )
-          )
-       ) THEN
+  WHEN ( p_ftname IN ('geoaddress', 'parcel') ) OR ( p_ftname IN ('building') AND ( (jproperties ?| ARRAY['via','hnum','sup']) ) ) THEN
   RETURN QUERY
   SELECT
         t.ghs,
         t.gid,
         CASE
         WHEN p_ftname IN ('parcel','building')
-        THEN jsonb_strip_nulls(jsonb_build_object('address', address, 'error_code', error_code, 'info', infop, 'bytes', length(St_asGeoJson(t.geom))))
-        ELSE jsonb_strip_nulls(jsonb_build_object('address', address, 'error_code', error_code, 'info', infop                                       ))
+        THEN jsonb_strip_nulls(jsonb_build_object('address', address, 'name', name, 'nsvia', nsvia, 'postcode', postcode, 'error', error_code, 'info', infop, 'bytes', length(St_asGeoJson(t.geom))))
+        ELSE jsonb_strip_nulls(jsonb_build_object('address', address, 'name', name, 'nsvia', nsvia, 'postcode', postcode, 'error', error_code, 'info', infop                                       ))
         END AS info,
         t.geom
   FROM
   (
       SELECT file_id, fa.geom, fa.feature_id::int AS gid, fa.kx_ghs9 AS ghs,
 
+      properties->>'nsvia'    AS nsvia,
+      properties->>'name'     AS name,
+      properties->>'postcode' AS postcode,
+
       CASE WHEN (properties->>'is_agg')::boolean THEN 100 END AS error_code,
       COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
 
-      CASE sys_housenumber
-      WHEN 'ago-block' THEN NULLIF(properties - ARRAY['via','hnum','blref','pnum'],'{}'::jsonb)
-      WHEN 'df-block'  THEN NULLIF(properties - ARRAY['blref','set','pnum'],'{}'::jsonb)
-      ELSE                  NULLIF(properties - ARRAY['via','hnum'],'{}'::jsonb)
-      END AS infop,
+      NULLIF(properties - ARRAY['via','hnum','sup'],'{}'::jsonb) AS infop,
 
       CASE sys_housenumber
       WHEN 'metric' THEN
@@ -1721,9 +1705,9 @@ BEGIN
       WHEN 'block-metric' THEN
         ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 1)), to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 2)))
       WHEN 'ago-block' THEN
-        ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'), to_bigint(properties->>'blref'), to_bigint(properties->>'pnum') )
-      WHEN 'df-block' THEN
-        ROW_NUMBER() OVER(ORDER BY to_bigint(properties->>'blref'),to_bigint(properties->>'set'),to_bigint(properties->>'pnum'))
+        ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'), to_bigint(split_part(properties->>'sup', ',', 1)), to_bigint(split_part(properties->>'sup', ',', 2)) )
+      -- WHEN 'df-block' THEN
+      --   ROW_NUMBER() OVER(ORDER BY to_bigint(properties->>'blref'),to_bigint(properties->>'set'),to_bigint(properties->>'pnum'))
       ELSE
         ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
       END AS address_order,
@@ -1731,34 +1715,14 @@ BEGIN
       CASE sys_housenumber
       WHEN 'ago-block' THEN
       (
-        (CASE WHEN (trim(properties->>'via')   = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'via')   END) || ', '    ||
-        (CASE WHEN (trim(properties->>'hnum')  = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'hnum')  END) || ', QD ' ||
-        (CASE WHEN (trim(properties->>'blref') = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'blref') END) || ' LT '   ||
-        (CASE WHEN (trim(properties->>'pnum')  = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'pnum')  END)
-      )
-      WHEN 'df-block' THEN
-      (
-        (CASE WHEN (trim(properties->>'blref') = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'blref')  END) || ', ' ||
-        (CASE WHEN (trim(properties->>'set')   = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'set') END)    || ' '   ||
-        (CASE WHEN (trim(properties->>'pnum')  = '') IS NOT FALSE THEN '?' ELSE trim(properties->>'pnum')  END)
+        CASE WHEN ((trim(properties->>'via')  = '') IS FALSE) THEN trim(properties->>'via')  ELSE '?' END || ', ' ||
+        CASE WHEN ((trim(properties->>'hnum') = '') IS FALSE) THEN trim(properties->>'hnum') ELSE '?' END || ', ' ||
+        CASE WHEN ((trim(properties->>'sup')  = '') IS FALSE) THEN trim(properties->>'sup')  ELSE '?' END
       )
       ELSE
       (
-        CASE
-          WHEN ((trim(properties->>'via')  = '') IS     FALSE)
-           AND ((trim(properties->>'hnum') = '') IS     FALSE)
-            THEN trim(properties->>'via') || ', ' || trim(properties->>'hnum')
-
-          WHEN ((trim(properties->>'via')  = '') IS NOT FALSE)
-           AND ((trim(properties->>'hnum') = '') IS     FALSE)
-            THEN '?, ' || trim(properties->>'hnum')
-
-          WHEN ((trim(properties->>'via')  = '') IS     FALSE)
-           AND ((trim(properties->>'hnum') = '') IS NOT FALSE)
-            THEN trim(properties->>'via') || ', ?'
-
-          ELSE NULL
-        END
+        CASE WHEN ((trim(properties->>'via')  = '') IS FALSE) THEN trim(properties->>'via')  ELSE '?' END || ', ' ||
+        CASE WHEN ((trim(properties->>'hnum') = '') IS FALSE) THEN trim(properties->>'hnum') ELSE '?' END
       )
       END AS address
 
@@ -1767,109 +1731,36 @@ BEGIN
   ) t
   ORDER BY address_order;
 
-  WHEN ( p_ftname IN ('block') )
-    OR ( p_ftname IN ('building')
-         AND NOT
-        (
-          jproperties
-          ?|
-          (
-            CASE sys_housenumber
-            WHEN 'ago-block' THEN ARRAY['via','hnum','blref','pnum']
-            WHEN 'df-block'  THEN ARRAY['blref','set','pnum']
-            ELSE ARRAY['via','hnum']
-            END
-          )
-        )
-       ) THEN
+  WHEN ( p_ftname IN ('block','via','genericvia','nsvia') ) OR ( p_ftname IN ('building') AND NOT ( (jproperties ?| ARRAY['via','hnum','sup']) ) ) THEN
   RETURN QUERY
   SELECT
         t.ghs,
         t.gid,
         jsonb_strip_nulls(jsonb_build_object(
-          'bytes',length(St_asGeoJson(t.geom)),
-          'name', name,
-          'info', infop
-        )) AS info,
-        t.geom
-  FROM (
-      SELECT fa.file_id, fa.geom,
-        fa.feature_id::int      AS gid,
-        fa.properties->>'name'  AS name,
-        fa.kx_ghs9              AS ghs,
-        NULLIF(fa.properties - ARRAY['name'],'{}'::jsonb) AS infop
-      FROM ingest.feature_asis AS fa
-      WHERE fa.file_id=p_file_id
-  ) t
-  ORDER BY gid;
-
-  WHEN p_ftname IN ('via') THEN
-  RETURN QUERY
-  SELECT
-        t.ghs,
-        t.gid,
-        jsonb_strip_nulls(jsonb_build_object(
-          'via', via,
-          'bytes',length(St_asGeoJson(t.geom)),
-          'info', infop
-        )) AS info,
-        t.geom
-  FROM (
-      SELECT fa.file_id, fa.geom,
-        fa.feature_id::int      AS gid,
-        fa.properties->>'via'   AS via,
-        fa.kx_ghs9              AS ghs,
-        NULLIF(fa.properties - ARRAY['via'],'{}'::jsonb) AS infop
-      FROM ingest.feature_asis AS fa
-      WHERE fa.file_id=p_file_id
-  ) t
-  ORDER BY via, gid;
-
-  WHEN p_ftname IN ('genericvia') THEN
-  RETURN QUERY
-  SELECT
-        t.gid,
-        t.ghs,
-        jsonb_strip_nulls(jsonb_build_object(
-          'via', via,
           'type', type,
-          'bytes',length(St_asGeoJson(t.geom)),
-          'info', infop
-        )) AS info,
-        t.geom
-  FROM (
-      SELECT fa.file_id, fa.geom,
-        fa.feature_id::int      AS gid,
-        fa.properties->>'via'   AS via,
-        fa.properties->>'type'  AS type,
-        fa.kx_ghs9              AS ghs,
-        NULLIF(fa.properties - ARRAY['via','type'],'{}'::jsonb) AS infop
-      FROM ingest.feature_asis AS fa
-      WHERE fa.file_id=p_file_id
-  ) t
-  ORDER BY type, via, gid;
-
-  WHEN p_ftname IN ('nsvia') THEN
-  RETURN QUERY
-  SELECT
-        t.ghs,
-        t.gid,
-        jsonb_strip_nulls(jsonb_build_object(
+          'via', via,
           'nsvia', nsvia,
+          'name', name,
+          'postcode', postcode,
           'bytes',length(St_asGeoJson(t.geom)),
           'info', infop
         )) AS info,
         t.geom
   FROM (
       SELECT fa.file_id, fa.geom,
-        fa.feature_id::int      AS gid,
-        fa.properties->>'nsvia' AS nsvia,
-        fa.kx_ghs9              AS ghs,
-        NULLIF(fa.properties - ARRAY['nsvia'],'{}'::jsonb) AS infop
+        fa.feature_id::int         AS gid,
+        fa.properties->>'via'      AS via,
+        fa.properties->>'type'     AS type,
+        fa.properties->>'nsvia'    AS nsvia,
+        fa.properties->>'name'     AS name,
+        fa.properties->>'postcode' AS postcode,
+        fa.kx_ghs9                 AS ghs,
+        NULLIF(fa.properties - ARRAY['via','postcode','nsvia','name','type'],'{}'::jsonb) AS infop
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
   ) t
-  ORDER BY nsvia, gid;
+  ORDER BY type, via, nsvia, gid
+  ;
 
   WHEN p_ftname IN ('datagrid') THEN
   RETURN QUERY
@@ -1901,16 +1792,13 @@ CREATE or replace FUNCTION ingest.feature_asis_export_csv(
 DECLARE
     q_copy text;
     class_ftname text;
-    sys_housenumber text;
     filename text;
     jproperties jsonb;
 BEGIN
-
   SELECT ft_info->>'class_ftname',
-         housenumber_system_type,
          'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id
   FROM ingest.vw03full_layer_file WHERE id=p_file_id
-  INTO class_ftname, sys_housenumber, filename;
+  INTO class_ftname, filename;
 
   SELECT properties || (SELECT properties FROM ingest.feature_asis_discarded WHERE file_id=p_file_id LIMIT 1)
   FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
@@ -1944,14 +1832,7 @@ BEGIN
       (
         SELECT array_agg(('properties->>''' || x || ''' AS ' || x))
         FROM jsonb_object_keys(jproperties) t(x)
-        WHERE
-        (
-          CASE sys_housenumber
-          WHEN 'ago-block' THEN x IN ('via','hnum','blref','pnum','error')
-          WHEN 'df-block'  THEN x IN ('blref','set','pnum','error')
-          ELSE x IN ('via','hnum','error')
-          END
-        )
+        WHERE x IN ('via','hnum','sup','postcode','nsvia','name','type','ref','error')
       ),', ')
     || ',',',')
     ),
@@ -1977,17 +1858,8 @@ CREATE or replace FUNCTION ingest.feature_asis_export_shp_cmd(
 ) RETURNS text AS $f$
 DECLARE
     q_copy text;
-    class_ftname text;
-    sys_housenumber text;
-    filename text;
     jproperties jsonb;
 BEGIN
-
-  SELECT ft_info->>'class_ftname',
-         'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || split_part(ftname,'_',1) || '_' || packvers_id
-  FROM ingest.vw03full_layer_file WHERE id=p_file_id
-  INTO class_ftname, sys_housenumber,filename;
-
   SELECT properties || (SELECT properties FROM ingest.feature_asis_discarded WHERE file_id=p_file_id LIMIT 1)
   FROM ingest.feature_asis WHERE file_id=p_file_id LIMIT 1
   INTO jproperties;
@@ -2004,47 +1876,8 @@ BEGIN
           WHERE
           (
             CASE
-            WHEN ( class_ftname IN ('geoaddress','parcel') )
-              OR ( class_ftname IN ('building')
-                  AND
-                  (
-                      jproperties
-                      ?|
-                      (
-                        CASE sys_housenumber
-                        WHEN 'ago-block' THEN ARRAY['via','hnum','blref','pnum']
-                        WHEN 'df-block'  THEN ARRAY['blref','set','pnum']
-                        ELSE ARRAY['via','hnum']
-                        END
-                      )
-                    )
-                )
-            THEN
-              (
-                CASE sys_housenumber
-                WHEN 'ago-block' THEN x IN ('via','hnum','blref','pnum','error')
-                WHEN 'df-block'  THEN x IN ('blref','set','pnum','error')
-                ELSE x IN ('via','hnum','error')
-                END
-              )
-            WHEN class_ftname IN ('via') THEN x IN ('via','error')
-            WHEN class_ftname IN ('nsvia') THEN x IN ('via','error')
-            WHEN class_ftname IN ('block') THEN x IN ('name','error')
-            WHEN class_ftname IN ('building')
-                  AND NOT
-                  (
-                      jproperties
-                      ?|
-                      (
-                        CASE sys_housenumber
-                        WHEN 'ago-block' THEN ARRAY['via','hnum','blref','pnum']
-                        WHEN 'df-block'  THEN ARRAY['blref','set','pnum']
-                        ELSE ARRAY['via','hnum']
-                        END
-                      )
-                    )
-            THEN x IN ('name','error')
-            WHEN class_ftname IN ('genericvia') THEN x IN ('via','type','error')
+            WHEN jproperties ?| ARRAY['via','hnum','sup','postcode','nsvia','name','type','ref','error']
+            THEN x IN ('via','hnum','sup','postcode','nsvia','name','type','ref','error')
             ELSE NULL
             END
           )

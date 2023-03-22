@@ -127,7 +127,7 @@ gen_all(){
 
     echo "Generating all filtred."
 
-    ids=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT id FROM ingest.vw03full_layer_file WHERE pack_id=${packtpl_id} ")
+    ids=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT id FROM ingest.vw03full_layer_file WHERE pack_id=${packtpl_id} AND ftid > 19 ")
 
     for id in ${ids}
     do
