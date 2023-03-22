@@ -1832,7 +1832,7 @@ BEGIN
       (
         SELECT array_agg(('properties->>''' || x || ''' AS ' || x))
         FROM jsonb_object_keys(jproperties) t(x)
-        WHERE x IN ('via','hnum','sup','postcode','nsvia','name','type','ref','error')
+        WHERE x IN ('via','hnum','sup','postcode','nsvia','name','type','ref','nsref','blref','error')
       ),', ')
     || ',',',')
     ),
@@ -1876,8 +1876,8 @@ BEGIN
           WHERE
           (
             CASE
-            WHEN jproperties ?| ARRAY['via','hnum','sup','postcode','nsvia','name','type','ref','error']
-            THEN x IN ('via','hnum','sup','postcode','nsvia','name','type','ref','error')
+            WHEN jproperties ?| ARRAY['via','hnum','sup','postcode','nsvia','name','type','ref','nsref','blref','error']
+            THEN x IN ('via','hnum','sup','postcode','nsvia','name','type','ref','nsref','blref','error')
             ELSE NULL
             END
           )
