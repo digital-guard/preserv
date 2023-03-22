@@ -72,7 +72,7 @@ all_filtered:
 ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 endif
-	@[ "${pg_db}" ] && bash -c "source $(preservSrc)/generateFiles.sh && gen_all $(pg_db) {{packtpl_id}}" || ( echo "Unknown pg_db.")
+	@[ "${pg_db}" ] && bash -c "source $(preservSrc)/generateFiles.sh && gen_all $(pg_db) {{packtpl_id}} true" || ( echo "Unknown pg_db.")
 	@echo "-- ALL FILTERED --"
 
 ## ## ## ## ## ## ## ## ##
