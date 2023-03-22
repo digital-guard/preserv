@@ -47,13 +47,13 @@ gen_shapefile(){
 
         update_tables ${file_id} ${database} ${file_namezip} ${url_cloud} 'shp'
 
-        echo "File available at: http://dl.digital-guard.org/${file_basename}"
+        echo "File available at: http://dl.digital-guard.org/out/${file_namezip}"
         echo "File available at: ${url_cloud}"
     fi
 
     rm -rf ${file_basename}
 
-    echo "File available at: /tmp/${file_basename}"
+    echo "File available at: /tmp/${file_namezip}"
     echo "End."
 
     popd
@@ -67,7 +67,7 @@ gen_csv(){
     file_id=$2
     up_cloud=$3
     file_basename=$4
-    file_namezip=${file_basename}.zip
+    file_namezip=${file_basename}_csv.zip
 
     echo "Generating ziped csv."
 
@@ -87,14 +87,14 @@ gen_csv(){
 
         update_tables ${file_id} ${database} ${file_namezip} ${url_cloud} 'csv'
 
-        echo "File available at: http://dl.digital-guard.org/${file_basename}"
+        echo "File available at: http://dl.digital-guard.org/out/${file_namezip}"
         echo "File available at: ${url_cloud}"
     fi
 
     mv ${file_namezip} /tmp
     [ -e ${file_basename}.csv ] && rm ${file_basename}.csv
 
-    echo "File available at: /tmp/${file_basename}"
+    echo "File available at: /tmp/${file_namezip}"
     echo "End."
 
     popd
