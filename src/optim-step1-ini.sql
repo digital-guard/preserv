@@ -937,3 +937,18 @@ GROUP BY pack_id
 COMMENT ON VIEW optim.vw01filtered_files
   IS 'Filtered files in a package.'
 ;
+
+CREATE or replace VIEW optim.vw01fromCutLayer_toVizLayer AS
+    SELECT isolabel_ext || '/_pk' || pack_number || '/' || (pf.ftype_info->>'class_ftname' ) AS jurisdiction_pack_layer,
+           pf.hashedfname AS hash_from,
+           pc.info->>'viz_uri' AS url_layer_visualization
+    FROM optim.vw01full_packfilevers_ftype pf
+    INNER JOIN optim.donated_PackComponent_cloudControl pc
+    ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
+    WHERE pc.hashedfnametype ='shp'
+    ORDER BY pf.pack_id, pf.ftype_info->>'class_ftname', pc.hashedfnametype, pc.hashedfname
+;
+COMMENT ON VIEW optim.vw01fromCutLayer_toVizLayer
+  IS 'For fromCutLayer_toVizLayer csv.'
+;
+-- psql postgres://postgres@localhost/dl03t_main -c "COPY ( SELECT * FROM optim.vw01fromCutLayer_toVizLayer ) TO '/tmp/pg_io/fromCutLayer_toVizLayer.csv' CSV HEADER;"
