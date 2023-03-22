@@ -115,4 +115,4 @@ generate_filtered_files:
 ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 endif
-	@[ "${id}" ] && bash -c "source $(preservSrc)/generateFiles.sh && gen_shapefile $(pg_db) $(id)" || ( echo "Unknown id.")
+	@[ "${id}" ] && bash -c "source $(preservSrc)/generateFiles.sh && gen_shapefile $(pg_db) $(id) true " || ( echo "Unknown id.")
