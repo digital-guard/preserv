@@ -367,11 +367,11 @@ CREATE TABLE ingest.feature_asis_discarded (
   feature_id int NOT NULL,
   properties jsonb,
   geom geometry        CHECK ( st_srid(geom)=4326 ),
-  kx_ghs9 text         GENERATED ALWAYS AS (f(geom,file_id,9))  STORED,
+  kx_ghs9 text,
   UNIQUE(file_id,feature_id)
 );
 CREATE INDEX ingest_feature_asis_discarded_ghs9_idx ON ingest.feature_asis_discarded (file_id,kx_ghs9);
-
+ALTER TABLE ingest.feature_asis_discarded ADD COLUMN kx_ghs9 text constraint;
 CREATE TABLE ingest.cadastral_asis (
   file_id bigint NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   cad_id int NOT NULL,
@@ -1082,7 +1082,7 @@ CREATE or replace FUNCTION ingest.any_load(
         RETURNING 1
       ),
       ins_asis_discarded AS (
-        INSERT INTO ingest.feature_asis_discarded
+        INSERT INTO ingest.feature_asis_discarded (file_id, feature_id, properties, geom)
         SELECT file_id, gid, properties || jsonb_build_object('error',error), geom
         FROM c
 	    WHERE  bit_count(error) <> 0
@@ -1459,7 +1459,7 @@ CREATE or replace FUNCTION ingest.osm_load(
         RETURNING 1
       ),
       ins_asis_discarded AS (
-        INSERT INTO ingest.feature_asis_discarded
+        INSERT INTO ingest.feature_asis_discarded (file_id, feature_id, properties, geom)
         SELECT file_id, gid, properties || jsonb_build_object('error',error), geom
         FROM c
 	    WHERE  bit_count(error) <> 0

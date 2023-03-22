@@ -32,9 +32,10 @@ gen_shapefile(){
     [ -d ${file_basename} ] && rm -rf ${file_basename}
     [ -e ${file_namezip} ]  && rm ${file_namezip}
 
+    echo "Generating ziped shapefile..."
+
     mkdir ${file_basename}
 
-    echo "Generating ziped shapefile..."
     pgsql2shp -r -k -f ${file_basename}/${file_basename} -h localhost -u postgres -P postgres ${database} "$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT ingest.feature_asis_export_shp_cmd(${file_id});")"
 
     zip -r ${file_namezip} ${file_basename}
