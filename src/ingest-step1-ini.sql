@@ -1678,8 +1678,8 @@ BEGIN
         t.gid,
         CASE
         WHEN p_ftname IN ('parcel','building')
-        THEN jsonb_strip_nulls(jsonb_build_object('address', address, 'name', name, 'nsvia', nsvia, 'postcode', postcode, 'error', error_code, 'info', infop, 'bytes', length(St_asGeoJson(t.geom))))
-        ELSE jsonb_strip_nulls(jsonb_build_object('address', address, 'name', name, 'nsvia', nsvia, 'postcode', postcode, 'error', error_code, 'info', infop                                       ))
+        THEN jsonb_strip_nulls(jsonb_build_object('address', address, 'name', name, 'nsvia', nsvia, 'postcode', postcode, 'type', type, 'error', error_code, 'info', infop, 'bytes', length(St_asGeoJson(t.geom))))
+        ELSE jsonb_strip_nulls(jsonb_build_object('address', address, 'name', name, 'nsvia', nsvia, 'postcode', postcode, 'type', type, 'error', error_code, 'info', infop                                       ))
         END AS info,
         t.geom
   FROM
@@ -1689,13 +1689,15 @@ BEGIN
       properties->>'nsvia'    AS nsvia,
       properties->>'name'     AS name,
       properties->>'postcode' AS postcode,
+      properties->>'type'     AS type,
 
       CASE WHEN (properties->>'is_agg')::boolean THEN 100 END AS error_code,
       COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false) AS is_compl,
 
-      NULLIF(properties - ARRAY['via','hnum','sup'],'{}'::jsonb) AS infop,
+      NULLIF(properties - ARRAY['via','hnum','sup','postcode','nsvia','name','type'],'{}'::jsonb) AS infop,
 
       CASE sys_housenumber
+      -- address: [via], [hnum]
       WHEN 'metric' THEN
         ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
       WHEN 'bh-metric' THEN
@@ -1704,10 +1706,17 @@ BEGIN
         ROW_NUMBER() OVER(ORDER BY properties->>'via', regexp_replace(properties->>'hnum', '[^[:alnum:]]', '', 'g'))
       WHEN 'block-metric' THEN
         ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 1)), to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 2)))
+
+        -- address: [via], [hnum], [sup     ]
+        --          [via], [hnum], [[quadra], [lote]]
       WHEN 'ago-block' THEN
         ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'), to_bigint(split_part(properties->>'sup', ',', 1)), to_bigint(split_part(properties->>'sup', ',', 2)) )
-      -- WHEN 'df-block' THEN
-      --   ROW_NUMBER() OVER(ORDER BY to_bigint(properties->>'blref'),to_bigint(properties->>'set'),to_bigint(properties->>'pnum'))
+
+      -- address: [via], [sup]
+      --          [[quadra], [lote]], [sup]
+      WHEN 'df-block' THEN
+        ROW_NUMBER() OVER(ORDER BY split_part(properties->>'via', ',', 1),split_part(properties->>'via', ',', 2),properties->>'sup')
+
       ELSE
         ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
       END AS address_order,
@@ -1715,12 +1724,22 @@ BEGIN
       CASE sys_housenumber
       WHEN 'ago-block' THEN
       (
+        -- address: [via], [hnum], [sup     ]
+        --          [via], [hnum], [[quadra], [lote]]
         CASE WHEN ((trim(properties->>'via')  = '') IS FALSE) THEN trim(properties->>'via')  ELSE '?' END || ', ' ||
         CASE WHEN ((trim(properties->>'hnum') = '') IS FALSE) THEN trim(properties->>'hnum') ELSE '?' END || ', ' ||
         CASE WHEN ((trim(properties->>'sup')  = '') IS FALSE) THEN trim(properties->>'sup')  ELSE '?' END
       )
+      WHEN 'df-block' THEN
+      (
+        -- address: [via], [sup]
+        --          [[quadra], [lote]], [sup]
+        CASE WHEN ((trim(properties->>'via')  = '') IS FALSE) THEN trim(properties->>'via')  ELSE '?, ?' END || ', ' ||
+        CASE WHEN ((trim(properties->>'sup')  = '') IS FALSE) THEN trim(properties->>'sup')  ELSE '?' END
+      )
       ELSE
       (
+        -- address: [via], [hnum]
         CASE WHEN ((trim(properties->>'via')  = '') IS FALSE) THEN trim(properties->>'via')  ELSE '?' END || ', ' ||
         CASE WHEN ((trim(properties->>'hnum') = '') IS FALSE) THEN trim(properties->>'hnum') ELSE '?' END
       )
