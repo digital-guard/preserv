@@ -53,10 +53,8 @@ COMMENT ON FUNCTION download.insert_dldg_csv
 CREATE TABLE download.redirects_viz (
     jurisdiction_pack_layer text NOT NULL PRIMARY KEY, -- BR-SP-Guarulhos/_pk0081.01/geoaddress
     hashedfname_from        text NOT NULL CHECK( hashedfname_from ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
-    url_layer_visualization text NOT NULL,            -- https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=341962cd00c441f8876202f29fc33dcc
-    UNIQUE (jurisdiction_pack_layer),
-    UNIQUE (hashedfname_from),
-    UNIQUE (url_layer_visualization),
+    url_layer_visualization text,            -- https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=341962cd00c441f8876202f29fc33dcc
+    UNIQUE (jurisdiction_pack_layer,hashedfname_from),
     UNIQUE (jurisdiction_pack_layer,hashedfname_from,url_layer_visualization)
 );
 COMMENT ON TABLE download.redirects_viz
@@ -104,18 +102,81 @@ COMMENT ON FUNCTION download.update_cloudControl_vizuri
 ;
 -- SELECT download.update_cloudControl_vizuri();
 
+
+----------------------
+
 CREATE or replace FUNCTION api.redirects_viz(
    p_uri text
 ) RETURNS jsonb AS $f$
-    SELECT jsonb_build_object('error', 'Multiple results.')
+    WITH results AS (
+        SELECT *
+        FROM download.redirects_viz
+        WHERE
+        ( -- 'BR-SP-Jacarei/_pk0145.01/parcel'
+          p_uri ~*  '^[A-Z]{2}-[A-Z]{1,3}-[A-Z]+\/\_pk[0-9]{4}\.[0-9]{2}\/[A-Z]+$' AND
+          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'([A-Z]{2}-[A-Z]{1,3}-[A-Z]+\/\_pk[0-9]{4}\.[0-9]{2}\/[A-Z]+)','\1%','i')
+        )
+        OR
+        ( -- 'BR-SP-Jacarei/parcel'
+          p_uri ~*  '^[A-Z]{2}-[A-Z]{1,3}-[A-Z]+\/[A-Z]+$' AND
+          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'([A-Z]{2}-[A-Z]{1,3}-[A-Z]+)\/([A-Z]+)','\1%\2%','i')
+        )
+        OR
+        ( -- BR/pk0081
+          -- BR/_pk0081
+          -- BR/81
+          p_uri ~*  '^[A-Z]{2}\/(\_?pk)?[0-9]+(\.[0-9]{1,2})?$' AND
+          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'([A-Z]{2})\/(\_?pk)?([0-9]+)(\.[0-9]{1,2})?','\1%\3%','i')
+        )
+        OR
+        ( -- BR/pk0081/via
+          -- BR/_pk0081/via
+          -- BR/81/via
+          p_uri ~*  '^[A-Z]{2}\/(\_?pk)?[0-9]+(\.[0-9]{1,2})?\/[A-Z]+$' AND
+          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'([A-Z]{2})\/(\_?pk)?([0-9]+)(\.[0-9]{1,2})?(\/[A-Z]+)','\1%\3%\5%','i')
+        )
+        OR
+        ( -- c26c149b/geoaddress
+          p_uri ~*  '^([a-fA-F0-9]{6,64})(\.[a-z0-9]+)?\/([A-Z]+)$' AND
+          hashedfname_from ILIKE regexp_replace(p_uri,'([a-fA-F0-9]{6,64})(\.[a-z0-9]+)?\/([A-Z]+)','\1%','i') AND
+          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'([a-fA-F0-9]{6,64})(\.[a-z0-9]+)?\/([A-Z]+)','%\3%','i')
+        )
+    )
+    SELECT
+     coalesce
+     (
+      (
+        SELECT jsonb_build_object(
+        'jurisdiction_pack_layer',jurisdiction_pack_layer,
+        'url_layer_visualization',url_layer_visualization,
+        'error',
+
+          CASE
+          WHEN url_layer_visualization IS NULL THEN  'no uri.'
+          ELSE NULL
+          END
+        )
+        FROM results WHERE (SELECT COUNT(*) FROM results) = 1
+      ),
+      jsonb_build_object
+      (
+        'error',
+          CASE
+          WHEN (SELECT COUNT(*) FROM results) > 1 THEN  'Multiple results.'
+          ELSE  'no result'
+          END
+      )
+    )
     ;
 $f$ LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION api.redirects_viz(text)
-  IS ''
+  IS 'Jurisdictions to autocomplete.'
 ;
 -- SELECT api.redirects_viz('BR-SP-Jacarei/_pk0145.01/parcel');
-
-----------------------
+-- SELECT api.redirects_viz('BR-SP-Jacarei/parcel');
+-- SELECT api.redirects_viz('c26c149b/geoaddress');
+-- SELECT api.redirects_viz('d101e729/geoaddress');
+-- SELECT api.redirects_viz('BR/81');
 
 CREATE or replace VIEW api.redirects AS
     -- dl.digital-guard
