@@ -1,4 +1,4 @@
-# Conectar em um PostGis remoto com SSH e QGis
+# Conectar em um PostGIS remoto com SSH e QGIS
 
 ## Passo 1: Local Port Fowarding
 
@@ -38,19 +38,19 @@ No navegador lateral clicar com o botão direito do mouse em _PostGIS_ (ícone d
 * Porta: **5555** (porta_máquina_local)
 * Banco de dados: **ingestXX** (nome da base de dados)
 
-Depois de preencher as informações da conexão, clicar no botão _OK_ e adicionar _usuário_ e _senha_ (ambos iguais a _postgres_), veja a imagem a seguir:
+Depois de preencher as informações da conexão, clicar no botão _OK_ e adicione _usuário_ e _senha_ (ambos iguais a _postgres_), veja a imagem a seguir:
 
 
 <img src="../assets/postgis_remote_in_qgis.png"/>
 
 
-Com isso todos os _schemas_ existentes na base de dados serão listados no navegador lateral:
+Com isso os _schemas_ existentes na base de dados serão listados no navegador lateral:
 
 
 <img src="../assets/postgis_remote_in_qgis1.png"/>
 
 
-Ao expandir algum dos _schemas_ existentes, as tabelas com geometrias estarão disponíveis para serem adicionadas como camadas ao projeto. No exemplo a seguir, _feature_asis_ foi adicionada sobre o OpenStreetMap:
+Ao expandir algum dos _schemas_, as tabelas estarão disponíveis para serem adicionadas como camadas ao projeto. No exemplo a seguir, _feature_asis_ foi adicionada sobre o OpenStreetMap:
 
 
 <img src="../assets/postgis_remote_in_qgis2.png"/>
@@ -66,10 +66,10 @@ Cada ingestão realizada gera um _file_id_, como mostra o output da ingestão de
 <img src="../assets/ingest_output_example.png"/>
 
 
-O _file_id_ pode ser utilizado em conjuto com a ferramenta de filtro do QGIS para visualizar apenas as geometrias de um layer de interesse dentre os disponiveis na tabela `ingest.feature_asis`:
+O _file_id_ pode ser utilizado em conjuto com a ferramenta de filtro do QGIS para visualizar apenas as geometrias de um _layer_ de interesse dentre os disponiveis na tabela _ingest.feature_asis_:
 
 
 <img src="../assets/postgis_remote_in_qgis4.png"/>
 
 
-Para avaliar as _features_ que a ingestão encontrou problemas, usar a tabela ingest.feature_asis_discarded.
+Para avaliar as _features_ que a ingestão encontrou problemas, usar a tabela _ingest.feature_asis_discarded_.
