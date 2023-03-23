@@ -78,8 +78,9 @@ CREATE or replace FUNCTION download.insert_viz_csv(
   INSERT INTO download.redirects_viz(jurisdiction_pack_layer,hashedfname_from,url_layer_visualization)
   SELECT jurisdiction_pack_layer, hash_from, url_layer_visualization
   FROM tmp_orig.redirects_viz
-  ON CONFLICT (jurisdiction_pack_layer,hashedfname_from,url_layer_visualization)
-  DO NOTHING
+  ON CONFLICT (jurisdiction_pack_layer,hashedfname_from)
+  DO UPDATE
+  SET url_layer_visualization=EXCLUDED.url_layer_visualization
   RETURNING 'Ok, updated download.redirects_viz.'
   ;
 $f$ LANGUAGE SQL;
@@ -92,8 +93,14 @@ CREATE or replace FUNCTION download.update_cloudControl_vizuri(
 ) RETURNS text AS $f$
   UPDATE optim.donated_PackComponent_cloudControl c
   SET info = coalesce(info,'{}'::jsonb) || jsonb_build_object('viz_uri', url_layer_visualization)
-  FROM tmp_orig.redirects_viz v
-  WHERE c.hashedfname= v.hash_from
+  FROM
+  (
+    SELECT pv.id, v.*
+    FROM tmp_orig.redirects_viz v
+    LEFT JOIN optim.donated_packfilevers pv
+    ON v.hash_from = pv.hashedfname
+  ) r
+  WHERE c.packvers_id= r.id
   RETURNING 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.'
   ;
 $f$ LANGUAGE SQL;
@@ -113,33 +120,38 @@ CREATE or replace FUNCTION api.redirects_viz(
         FROM download.redirects_viz
         WHERE
         ( -- 'BR-SP-Jacarei/_pk0145.01/parcel'
-          p_uri ~*  '^[A-Z]{2}-[A-Z]{1,3}-[A-Z]+\/\_pk[0-9]{4}\.[0-9]{2}\/[A-Z]+$' AND
-          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'([A-Z]{2}-[A-Z]{1,3}-[A-Z]+\/\_pk[0-9]{4}\.[0-9]{2}\/[A-Z]+)','\1%','i')
+          p_uri ~*  '^/?[A-Z]{2}-[A-Z]{1,3}-[A-Z]+\/\_pk[0-9]{4}\.[0-9]{2}\/[A-Z]+$' AND
+          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'/?([A-Z]{2}-[A-Z]{1,3}-[A-Z]+\/\_pk[0-9]{4}\.[0-9]{2}\/[A-Z]+)','\1%','i')
         )
         OR
         ( -- 'BR-SP-Jacarei/parcel'
-          p_uri ~*  '^[A-Z]{2}-[A-Z]{1,3}-[A-Z]+\/[A-Z]+$' AND
-          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'([A-Z]{2}-[A-Z]{1,3}-[A-Z]+)\/([A-Z]+)','\1%\2%','i')
+          p_uri ~*  '^/?[A-Z]{2}-[A-Z]{1,3}-[A-Z]+\/[A-Z]+$' AND
+          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'/?([A-Z]{2}-[A-Z]{1,3}-[A-Z]+)\/([A-Z]+)','\1%\2%','i')
         )
         OR
         ( -- BR/pk0081
           -- BR/_pk0081
           -- BR/81
-          p_uri ~*  '^[A-Z]{2}\/(\_?pk)?[0-9]+(\.[0-9]{1,2})?$' AND
-          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'([A-Z]{2})\/(\_?pk)?([0-9]+)(\.[0-9]{1,2})?','\1%\3%','i')
+          p_uri ~*  '^/?[A-Z]{2}\/(\_?pk)?[0-9]+(\.[0-9]{1,2})?$' AND
+          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'/?([A-Z]{2})\/(\_?pk)?([0-9]+)(\.[0-9]{1,2})?','\1%\3%','i')
         )
         OR
         ( -- BR/pk0081/via
           -- BR/_pk0081/via
           -- BR/81/via
-          p_uri ~*  '^[A-Z]{2}\/(\_?pk)?[0-9]+(\.[0-9]{1,2})?\/[A-Z]+$' AND
-          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'([A-Z]{2})\/(\_?pk)?([0-9]+)(\.[0-9]{1,2})?(\/[A-Z]+)','\1%\3%\5%','i')
+          p_uri ~*  '^/?[A-Z]{2}\/(\_?pk)?[0-9]+(\.[0-9]{1,2})?\/[A-Z]+$' AND
+          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'/?([A-Z]{2})\/(\_?pk)?([0-9]+)(\.[0-9]{1,2})?(\/[A-Z]+)','\1%\3%\5%','i')
         )
         OR
         ( -- c26c149b/geoaddress
-          p_uri ~*  '^([a-fA-F0-9]{6,64})(\.[a-z0-9]+)?\/([A-Z]+)$' AND
-          hashedfname_from ILIKE regexp_replace(p_uri,'([a-fA-F0-9]{6,64})(\.[a-z0-9]+)?\/([A-Z]+)','\1%','i') AND
-          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'([a-fA-F0-9]{6,64})(\.[a-z0-9]+)?\/([A-Z]+)','%\3%','i')
+          p_uri ~*  '^/?([a-f0-9]{1,64})(\.[a-z0-9]+)?\/([A-Z]+)$' AND
+          hashedfname_from ILIKE regexp_replace(p_uri,'/?([a-f0-9]{6,64})(\.[a-z0-9]+)?\/([A-Z]+)','\1%','i') AND
+          jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'/?([a-f0-9]{1,64})(\.[a-z0-9]+)?\/([A-Z]+)','%\3%','i')
+        )
+        OR
+        ( -- c26c149b
+          p_uri ~*  '^/?([a-f0-9]{1,64})(\.[a-z0-9]+)?$' AND
+          hashedfname_from ILIKE regexp_replace(p_uri,'/?([a-f0-9]{1,64})(\.[a-z0-9]+)?','\1%','i')
         )
     )
     SELECT
@@ -149,6 +161,7 @@ CREATE or replace FUNCTION api.redirects_viz(
         SELECT jsonb_build_object(
         'jurisdiction_pack_layer',jurisdiction_pack_layer,
         'url_layer_visualization',url_layer_visualization,
+        'hashedfname_from',hashedfname_from,
         'error',
 
           CASE
