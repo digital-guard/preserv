@@ -75,6 +75,20 @@ CREATE INDEX optim_jurisdiction_geom_isolabel_ext_idx1 ON optim.jurisdiction_geo
 
 COMMENT ON TABLE optim.jurisdiction_geom IS 'OpenStreetMap geometries for optim.jurisdiction.';
 
+CREATE TABLE optim.jurisdiction_eez (
+  osm_id bigint PRIMARY KEY,
+  isolabel_ext text NOT NULL,
+  geom geometry(Geometry,4326),
+  UNIQUE(isolabel_ext)
+);
+COMMENT ON COLUMN optim.jurisdiction_eez.osm_id             IS 'Relation identifier in OpenStreetMap.';
+COMMENT ON COLUMN optim.jurisdiction_eez.isolabel_ext       IS 'ISO 3166-1 alpha-2 code; e.g. BR.';
+COMMENT ON COLUMN optim.jurisdiction_eez.geom               IS 'Geometry for osm_id identifier';
+CREATE INDEX optim_jurisdiction_eez_idx1              ON optim.jurisdiction_eez USING gist (geom);
+CREATE INDEX optim_jurisdiction_eez_isolabel_ext_idx1 ON optim.jurisdiction_eez USING btree (isolabel_ext);
+
+COMMENT ON TABLE optim.jurisdiction_eez IS 'OpenStreetMap exclusive economic zone (EEZ) for optim.jurisdiction.';
+
 CREATE TABLE optim.auth_user (
   username text NOT NULL PRIMARY KEY,
   info jsonb
