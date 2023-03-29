@@ -1,5 +1,25 @@
 -- https://github.com/osm-codes/WS/issues/11
 
+CREATE OR REPLACE FUNCTION public.st_charactdiam(g geometry)
+ RETURNS double precision
+ LANGUAGE sql
+ IMMUTABLE
+AS $function$
+  SELECT CASE
+      WHEN tp IS NULL OR tp IN ('POINT','MULTIPOINT') THEN 0.0  -- or use convexHull for MULTIPOINT
+      WHEN is_poly AND poly_p<2*poly_a THEN (poly_a+poly_p)/2.0 -- normal perimeter
+      WHEN is_poly THEN (2*poly_a+SQRT(poly_p))/3.0  -- fractal perimeter
+      ELSE ST_Length(g)/2.0  -- or use buffer or convexHull
+    END
+  FROM (
+    SELECT tp, is_poly,
+           CASE WHEN is_poly THEN SQRT(ST_Area(g)) ELSE 0 END AS poly_a,
+           CASE WHEN is_poly THEN ST_Perimeter(g)/3.5 ELSE 0 END AS poly_p
+    FROM (SELECT GeometryType(g)) t(tp),
+         LATERAL (SELECT CASE WHEN tp IN ('POLYGON','MULTIPOLYGON') THEN true ELSE false END) t2(is_poly)
+  ) t3
+$function$
+
 CREATE OR REPLACE FUNCTION public.shapedescr_sizes(gbase geometry, p_decplacesof_zero integer DEFAULT 6, p_dwmin double precision DEFAULT 99999999.0, p_deltaimpact double precision DEFAULT 9999.0)
  RETURNS double precision[]
  LANGUAGE plpgsql
