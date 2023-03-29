@@ -40,8 +40,9 @@ BEGIN
   ON CONFLICT (hashedfname,hashedfnameuri)
   DO UPDATE
   SET donor_id=EXCLUDED.donor_id, filename_original=EXCLUDED.filename_original, package_path=EXCLUDED.package_path
-  RETURNING 'Ok, updated download.redirects.'
+  -- RETURNING 'Ok, updated download.redirects.'
   ;
+  RETURN 'Ok, updated download.redirects.';
 END;
 $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION download.insert_dldg_csv
@@ -84,8 +85,9 @@ BEGIN
   ON CONFLICT (jurisdiction_pack_layer,hashedfname_from)
   DO UPDATE
   SET url_layer_visualization=EXCLUDED.url_layer_visualization
-  RETURNING 'Ok, updated download.redirects_viz.'
+  -- RETURNING 'Ok, updated download.redirects_viz.'
   ;
+  RETURN 'Ok, updated download.redirects_viz.'
 END;
 $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION download.insert_viz_csv
@@ -106,8 +108,9 @@ BEGIN
     ON v.hash_from = pv.hashedfname
   ) r
   WHERE c.packvers_id= r.id
-  RETURNING 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.'
+  -- RETURNING 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.'
   ;
+  RETURN 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.'
 END;
 $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION download.update_cloudControl_vizuri
