@@ -1004,11 +1004,3 @@ COMMENT ON VIEW optim.vw01fromCutLayer_toVizLayer
   IS 'For fromCutLayer_toVizLayer csv.'
 ;
 -- psql postgres://postgres@localhost/dl03t_main -c "COPY ( SELECT jurisdiction_pack_layer, hash_from, url_layer_visualization FROM optim.vw01fromCutLayer_toVizLayer ) TO '/tmp/pg_io/fromCutLayer_toVizLayer.csv' CSV HEADER;"
-
-    SELECT isolabel_ext,(pf.ftype_info->>'class_ftname' ),'https://dl.digital-guard.org/out/a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || (pf.ftype_info->>'class_ftname' ) || '_' || pc.packvers_id || '.zip'
-    FROM optim.vw01full_packfilevers_ftype pf
-    INNER JOIN optim.donated_PackComponent_cloudControl pc
-    ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
-    WHERE pc.hashedfnametype ='shp'
-    ORDER BY pf.pack_id, pf.ftype_info->>'class_ftname', pc.hashedfnametype, pc.hashedfname
-;
