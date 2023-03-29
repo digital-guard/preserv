@@ -19,6 +19,27 @@ AS $function$
          LATERAL (SELECT CASE WHEN tp IN ('POLYGON','MULTIPOLYGON') THEN true ELSE false END) t2(is_poly)
   ) t3
 $function$
+;
+
+CREATE OR REPLACE FUNCTION public.st_transform_resilient(g geometry, srid integer, size_fraction double precision DEFAULT 0.05)
+ RETURNS geometry
+ LANGUAGE sql
+ IMMUTABLE
+AS $function$
+  -- discuss ideal at https://gis.stackexchange.com/q/444441/7505
+  SELECT CASE
+    WHEN size>0.0 THEN  ST_Transform(  ST_Segmentize(g,size)  , srid  )
+    ELSE  ST_Transform(g,srid)
+    END
+  FROM (
+    SELECT CASE
+         WHEN size_fraction IS NULL THEN 0.0
+         WHEN size_fraction<0 THEN -size_fraction
+         ELSE ST_CharactDiam(g) * size_fraction
+         END
+  ) t1(size)
+$function$
+;
 
 CREATE OR REPLACE FUNCTION public.shapedescr_sizes(gbase geometry, p_decplacesof_zero integer DEFAULT 6, p_dwmin double precision DEFAULT 99999999.0, p_deltaimpact double precision DEFAULT 9999.0)
  RETURNS double precision[]
