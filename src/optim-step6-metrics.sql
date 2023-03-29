@@ -1,5 +1,71 @@
 -- https://github.com/osm-codes/WS/issues/11
 
+CREATE OR REPLACE FUNCTION public.shapedescr_sizes(gbase geometry, p_decplacesof_zero integer DEFAULT 6, p_dwmin double precision DEFAULT 99999999.0, p_deltaimpact double precision DEFAULT 9999.0)
+ RETURNS double precision[]
+ LANGUAGE plpgsql
+ IMMUTABLE
+AS $function$
+  DECLARE
+    ret float[];
+    dw float;
+    b float;
+    L_estim float;
+    H_estim float;
+    aorig float;
+    gaux geometry;
+    g1 geometry;
+    A0 float;
+    A1 float;
+    c float;
+    delta float;
+    per float;
+    errcod float;
+  BEGIN
+    errcod=0.0;
+    IF gbase IS NULL OR NOT(ST_IsClosed(gbase)) THEN
+        errcod=1;                  -- ERROR1 (die)
+        RAISE EXCEPTION 'error %: invalid input geometry',errcod;
+    END IF;
+    A0 := ST_Area(gbase);
+    per := st_perimeter(gbase);
+    dw := sqrt(A0)/p_deltaimpact;
+    IF dw>p_dwmin THEN dw:=p_dwmin; END IF;
+    g1 = ST_Buffer(gbase,dw);
+    A1 = ST_area(g1);
+    IF A0>A1 THEN
+        errcod=10;                 -- ERROR2 (die)
+        RAISE EXCEPTION 'error %: invalid buffer/geometry with A0=% g.t. A1=%',errcod,A0,A1;
+    END IF;
+    IF (A1-A0)>1.001*dw*per THEN
+        gaux := ST_Buffer(g1,-dw);  -- closing operation.
+        A0 = ST_Area(gaux);         -- changed area
+        per := ST_Perimeter(gaux);  -- changed
+        errcod:=errcod + 0.1;       -- Warning3
+    END IF;
+    C := 2.0*dw;
+    b := -(A1-A0)/C+C;
+    delta := b^2-4.0*A0;
+    IF delta<0.0 AND round(delta,p_decplacesof_zero)<=0.0 THEN
+           delta=0.0; -- for regular shapes like the square
+           errcod:=errcod + 0.01;  -- Warning2
+    END IF;
+    IF delta<0.0 THEN
+        L_estim := NULL;
+        H_estim := NULL;
+        errcod:=errcod+100;        -- ERROR3
+    ELSE
+        L_estim := (-b + sqrt(delta))/2.0;
+        H_estim := (-b - sqrt(delta))/2.0;
+    END IF;
+    IF abs(A0-L_estim*H_estim)>0.001 THEN
+        errcod:=errcod + 0.001;    -- Warning1
+    END IF;
+    ret := array[L_estim,H_estim,a0,per,dw,errcod];
+    return ret;
+  END
+$function$
+;
+
 DROP VIEW IF EXISTS optim.vw03prepare_jurisdiction_metrics1;
 CREATE VIEW optim.vw03prepare_jurisdiction_metrics1 AS
  SELECT osm_id, isolabel_ext,   round(area_m/1000000.0)::int as area_km2,
