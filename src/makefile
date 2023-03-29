@@ -23,7 +23,8 @@ countries       := "'BR','CL','CO','EC','PE','VE'"  # em uso e conforme data/jur
 gits_basepath   := /var/gits
 sbx_path        := /tmp/sandbox
 
-DB_TEST         := $(shell psql $(pg_uri_root) -c "\l" | grep $(pg_db) | cut -d'|' -f1 | tr -d ' ')
+DB_TEST         := $(shell psql $(pg_uri_root) -c "\l" | grep $(pg_db)       | cut -d'|' -f1 | tr -d ' ')
+DL_TEST         := $(shell psql $(pg_uri_root) -c "\l" | grep $(pg_datalake) | cut -d'|' -f1 | tr -d ' ')
 
 ## ## ## ##
 ## -- CONFIGS --
@@ -161,6 +162,11 @@ report:
 	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw01report_median;"
 
 ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
+ifeq ($(DL_TEST),$(pg_datalake))
+	@echo "... DROP old database $(pg_datalake)?"
+	@read -p "[Press ENTER to drop or Ctrl+C to quit]" _press_enter_
+	psql $(pg_uri_root) -c "DROP DATABASE $(pg_datalake)"
+endif
 	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_datalake)"
 	@echo "--- Preparing filesystem... ---"
 	rm -f $(lockpath)/digitalPreservation-makeSQL.~feito

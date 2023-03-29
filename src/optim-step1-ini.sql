@@ -98,7 +98,7 @@ COMMENT ON COLUMN optim.auth_user.info     IS 'Other account details on host.';
 
 COMMENT ON TABLE optim.auth_user IS 'Authorized users to be a data pack responsible.';
 
-INSERT INTO optim.auth_user(username) VALUES
+INSERT INTO optim.auth_user(username,info) VALUES
 ('carlos','{"git_user":"crebollobr"}'::jsonb),
 ('igor','{"git_user":"IgorEliezer"}'::jsonb),
 ('enio','{"git_user":""}'::jsonb),
