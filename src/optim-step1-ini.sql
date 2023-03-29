@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   ddd          integer, -- Direct distance dialing
   housenumber_system_type text, -- housenumber system
   lex_urn text, -- housenumber system law
-  info JSONb -- creation, extinction, postalCode_ranges, notes, etc.
+  info JSONb, -- creation, extinction, postalCode_ranges, notes, etc.
   name_en text,
   isolevel integer,
   ,UNIQUE(isolabel_ext)
