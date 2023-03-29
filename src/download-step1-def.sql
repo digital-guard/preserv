@@ -95,6 +95,7 @@ COMMENT ON FUNCTION download.insert_viz_csv
 
 CREATE or replace FUNCTION download.update_cloudControl_vizuri(
 ) RETURNS text AS $f$
+BEGIN
   UPDATE optim.donated_PackComponent_cloudControl c
   SET info = coalesce(info,'{}'::jsonb) || jsonb_build_object('viz_uri', url_layer_visualization)
   FROM
@@ -107,7 +108,8 @@ CREATE or replace FUNCTION download.update_cloudControl_vizuri(
   WHERE c.packvers_id= r.id
   RETURNING 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.'
   ;
-$f$ LANGUAGE SQL;
+END;
+$f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION download.update_cloudControl_vizuri
   IS 'Update viz_uri in info of optim.donated_PackComponent_cloudControl'
 ;
