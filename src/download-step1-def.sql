@@ -33,6 +33,7 @@ COMMENT ON FUNCTION download.load_dldg_csv
 
 CREATE or replace FUNCTION download.insert_dldg_csv(
 ) RETURNS text AS $f$
+BEGIN
   INSERT INTO download.redirects(donor_id,filename_original,package_path,hashedfname,hashedfnameuri)
   SELECT donor_id,filename_original,package_path,de_sha256,para_url
   FROM tmp_orig.redirects_dlguard
@@ -41,7 +42,8 @@ CREATE or replace FUNCTION download.insert_dldg_csv(
   SET donor_id=EXCLUDED.donor_id, filename_original=EXCLUDED.filename_original, package_path=EXCLUDED.package_path
   RETURNING 'Ok, updated download.redirects.'
   ;
-$f$ LANGUAGE SQL;
+END;
+$f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION download.insert_dldg_csv
   IS 'Update download.redirects from tmp_orig.redirects_dlguard'
 ;
@@ -75,6 +77,7 @@ COMMENT ON FUNCTION download.load_viz_csv
 
 CREATE or replace FUNCTION download.insert_viz_csv(
 ) RETURNS text AS $f$
+BEGIN
   INSERT INTO download.redirects_viz(jurisdiction_pack_layer,hashedfname_from,url_layer_visualization)
   SELECT jurisdiction_pack_layer, hash_from, url_layer_visualization
   FROM tmp_orig.redirects_viz
@@ -83,7 +86,8 @@ CREATE or replace FUNCTION download.insert_viz_csv(
   SET url_layer_visualization=EXCLUDED.url_layer_visualization
   RETURNING 'Ok, updated download.redirects_viz.'
   ;
-$f$ LANGUAGE SQL;
+END;
+$f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION download.insert_viz_csv
   IS 'Update download.redirects_viz from tmp_orig.redirects_viz'
 ;
