@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   lex_urn text, -- housenumber system law
   info JSONb, -- creation, extinction, postalCode_ranges, notes, etc.
   name_en text,
-  isolevel integer,
+  isolevel integer
   ,UNIQUE(isolabel_ext)
   ,UNIQUE(wikidata_id)
   ,UNIQUE(jurisd_base_id,jurisd_local_id)
