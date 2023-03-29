@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   housenumber_system_type text, -- housenumber system
   lex_urn text, -- housenumber system law
   info JSONb -- creation, extinction, postalCode_ranges, notes, etc.
+  name_en text,
+  isolevel integer,
   ,UNIQUE(isolabel_ext)
   ,UNIQUE(wikidata_id)
   ,UNIQUE(jurisd_base_id,jurisd_local_id)
@@ -48,6 +50,8 @@ COMMENT ON COLUMN optim.jurisdiction.ddd                     IS 'Direct distance
 COMMENT ON COLUMN optim.jurisdiction.housenumber_system_type IS 'Housenumber system.';
 COMMENT ON COLUMN optim.jurisdiction.lex_urn                 IS 'Housenumber system law.';
 COMMENT ON COLUMN optim.jurisdiction.info                    IS 'Others information.';
+COMMENT ON COLUMN optim.jurisdiction.name_en                 IS 'City name in english.';
+COMMENT ON COLUMN optim.jurisdiction.isolevel                IS '1=country, 2=state, 3=mun';
 
 COMMENT ON TABLE optim.jurisdiction IS 'Information about jurisdictions without geometry.';
 
