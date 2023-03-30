@@ -294,7 +294,7 @@ FROM (
 ) t
 ;
 
---DROP MATERIALIZED VIEW mvwjurisdiction_synonym;
+DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym;
 CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
 SELECT DISTINCT lower(synonym) AS synonym, isolabel_ext
 FROM
@@ -541,21 +541,3 @@ COMMENT ON FUNCTION api.jurisdiction_autocomplete(text)
 SELECT api.jurisdiction_autocomplete();
 SELECT api.jurisdiction_autocomplete('CO-ANT');
 */
-
-CREATE or replace FUNCTION str_geocodeiso_decode(iso text)
-RETURNS text[] as $f$
-  SELECT isolabel_ext || array[split_part(isolabel_ext,'-',1)]
-  FROM mvwjurisdiction_synonym
-  WHERE synonym = lower((
-    SELECT
-      CASE
-        WHEN cardinality(u)=2 AND u[2] ~ '^\d+?$'
-        THEN u[1]::text || '-' || ((u[2])::integer)::text
-        ELSE iso
-      END
-    FROM (SELECT regexp_split_to_array(iso,'(-)')::text[] AS u ) r
-  ))
-$f$ LANGUAGE SQL IMMUTABLE;
-COMMENT ON FUNCTION str_geocodeiso_decode(text)
-  IS 'Decode abbrev isolabel_ext.'
-;
