@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   admin_level smallint NOT NULL CHECK(admin_level>0 AND admin_level<100), -- 2=country (e.g. BR), at BR: 4=UFs, 8=municipios.
   name    text  NOT NULL CHECK(length(name)<60), -- city name for admin_level=8.
   parent_abbrev   text  NOT NULL, -- state is admin-level2, country level1
-  abbrev text  CHECK(length(abbrev)>=2 AND length(abbrev)<=5), -- ISO and other abbreviations
+  abbrev text,  --CHECK(length(abbrev)>=2 AND length(abbrev)<=5), -- ISO and other abbreviations
   wikidata_id  bigint,  --  from '^Q\d+'
   lexlabel     text NOT NULL,  -- cache from name; e.g. 'sao.paulo'.
   isolabel_ext text NOT NULL,  -- cache from parent_abbrev (ISO) and name (camel case); e.g. 'BR-SP-SaoPaulo'.
