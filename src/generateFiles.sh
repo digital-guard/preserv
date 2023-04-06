@@ -14,7 +14,7 @@ update_tables(){
     lineage_md5=$(cut -d'|' -f3 <<< ${id_pack})
 
     echo "Insert infos in optim.donated_PackComponent_cloudControl..."
-    psql postgres://postgres@localhost/dl03t_main -c"SELECT optim.insert_cloudControl (${packvers_id}::bigint,${ftid}::smallint,'${lineage_md5}','${file_namezip}','${url_cloud}','${file_type}');"
+    psql postgres://postgres@localhost/dl05s_main -c"SELECT optim.insert_cloudControl (${packvers_id}::bigint,${ftid}::smallint,'${lineage_md5}','${file_namezip}','${url_cloud}','${file_type}');"
 }
 
 # gen_shapefile ingest99 1 true

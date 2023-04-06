@@ -155,13 +155,13 @@ Esse comportamento pode ser alterado utilizando a chave buffer_type em layer do 
 - `buffer_type: 3`, aplica um buffer de aproximadamente 50 km. Para utilizá-lo, deve-se informá-lo no respectivo layer do _make_conf.yaml_
 - `buffer_type: 4`, aplica um buffer de aproximadamente 500 km. Para utilizá-lo, deve-se informá-lo no respectivo layer do _make_conf.yaml_
 
-## Atualizar tabelas de optim (atualmente em `dl03t_main`):
+## Atualizar tabelas de optim (atualmente em `dl05s_main`):
 
 Se donatedPack.csv ou donor.csv (em qualquer jurisdição) forem alterados ou um novo _make_conf.yaml_ for criado (se não existia e passou a existir), é necessário atualizar as tabelas do [schema optim](https://github.com/digital-guard/preserv/blob/main/src/optim-step1-ini.sql). Para isso, utilizar:
 
 ```
 pushd /var/gits/_dg/preserv/src
-make load_optim_csv pg_datalake=dl03t_main
+make load_optim_csv pg_datalake=dl05s_main
 ```
 
 Notar que se as restrições das tabelas não forem respeitadas o carregamento ou atualização dos dados não acontece. Retornando erro.
@@ -195,7 +195,7 @@ Propriedade que variam conforme os layers:
 Exemplo:
 
 ```
-dl03t_main=# select * from optim.vw01report;
+dl05s_main=# select * from optim.vw01report;
  isolabel_ext  |            legalname            |         vat_id          | ID de pack_componente |     ftname      | ftid | step | data_feito |    n_items     |  size   
 ---------------+---------------------------------+-------------------------+-----------------------+-----------------+------+------+------------+----------------+---------
  BR-RJ-Niteroi | Prefeitura Municipal de Niterói | cnpj:28.521.748/0001-59 | br0016.01.3.01        | nsvia_ext       |   72 |    6 | 2020-05-22 | 65 polygons    | 133 km2
@@ -210,7 +210,7 @@ dl03t_main=# select * from optim.vw01report;
 Exemplo:
 
 ```
-dl03t_main=# select * from optim.vw02report_simple;
+dl05s_main=# select * from optim.vw02report_simple;
  isolabel_ext  |     ftname
 ---------------+-----------------
  BR-RJ-Niteroi | nsvia_ext
@@ -222,10 +222,10 @@ dl03t_main=# select * from optim.vw02report_simple;
 
 ### vw01report_median
 
-A view optim.vw01report_median (em dl03t_main) retorna a quantidade de arquivos, sua a mediana, média, mínimo e máximo em _kibibytes_. Exemplo:
+A view optim.vw01report_median (em dl05s_main) retorna a quantidade de arquivos, sua a mediana, média, mínimo e máximo em _kibibytes_. Exemplo:
 
 ```
-dl03t_main=# select * from optim.vw01report_median ;
+dl05s_main=# select * from optim.vw01report_median ;
  isolabel_ext  | pack_number | class_ftname | n  | mdn_n | avg_n | min_n | max_n
 ---------------+-------------+--------------+----+-------+-------+-------+-------
  BR-RJ-Niteroi | 0016.01     | nsvia        |  2 |   154 |   272 |   154 |   390
@@ -294,7 +294,7 @@ Ao alterações no sha256 de arquivos make_conf.yaml:
 
 1. incrementar `pkversion`;
 2. insrir nova entrada no arquivo donatePack.csv;
-3. excecutar https://github.com/digital-guard/preserv/blob/main/docs/pt/man-diversos.md#atualizar-tabelas-de-optim-atualmente-em-dl03t_main
+3. excecutar https://github.com/digital-guard/preserv/blob/main/docs/pt/man-diversos.md#atualizar-tabelas-de-optim-atualmente-em-dl05s_main
 
 
 ## Load arquivos do CutGeo a partir de um diretório

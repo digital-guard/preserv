@@ -10,7 +10,7 @@ lockpath        := /var/gits/_lock-mkStatus
 
 pg_uri_root     := postgres://postgres@localhost
 
-## Danger dl03t_main, ingest1.
+## Danger dl05s_main, ingest1.
 ## Use dummy 99 to test.
 pg_db           := ingest99
 pg_datalake     := dl99t_main
@@ -112,7 +112,7 @@ load_hcode_parameters:
 	@echo "--- hcode_parameters load ---"
 	psql $(pg_db_uri) -c "SELECT ingest.load_hcode_parameters('$(gits_basepath)/_dg/preserv/data/hcode_parameters.csv',',');"
 
-load_license_tables: pg_datalake=dl03t_main
+load_license_tables: pg_datalake=dl05s_main
 load_license_tables: pgio
 	@echo "--- license table load ---"
 # 	wget "https://github.com/digital-guard/licenses/raw/master/data/families.csv" -O "$(pg_io)/families.csv"
@@ -152,7 +152,7 @@ cmd_rdap:
 
 report:
 	@echo "Relatorios"
-	@echo "Uso make report pg_datalake=dl03t_main "
+	@echo "Uso make report pg_datalake=dl05s_main "
 	@echo "Doc: https://github.com/digital-guard/preserv/blob/main/docs/pt/man-diversos.md#relat%C3%B3rios"
 # 	@echo "View optim.vw01report:"
 # 	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw01report;"
@@ -222,27 +222,27 @@ generate_pages:
 	@echo "--- fix_permissions $(folder)"
 	sudo bash fixaPermissoes.sh $(folder)
 
-generate_reproducibility: pg_datalake=dl03t_main
+generate_reproducibility: pg_datalake=dl05s_main
 generate_reproducibility:
 	@echo "-- Generating reproducibility.sh in $(output) --"
 	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_reproducibility('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
 
-generate_readme: pg_datalake=dl03t_main
+generate_readme: pg_datalake=dl05s_main
 generate_readme:
 	@echo "-- Generating README.md in $(output) --"
 	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_readme('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
 
-generate_makefile: pg_datalake=dl03t_main
+generate_makefile: pg_datalake=dl05s_main
 generate_makefile:
 	@echo "-- Generating makefile in $(output) --"
 	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_makefile('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
 
-insert_license: pg_datalake=dl03t_main
+insert_license: pg_datalake=dl05s_main
 insert_license:
 	@echo "-- Inserting files_licenses in make_conf $(output) --"
 	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_make_conf_with_license('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)');"
 
-insert_size: pg_datalake=dl03t_main
+insert_size: pg_datalake=dl05s_main
 insert_size:
 	@echo "-- Inserting size in files of make_conf --"
 	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_make_conf_with_size('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)','$(orig)');"
@@ -296,7 +296,7 @@ status_schEtc:
 	@echo "-- OSM testing database DL01t_osm:"
 	psql $(pg_uri_root)/dl01t_osm  -c "\dn"
 	@echo "-- MAIN testing database DL03t_main:"
-	psql $(pg_uri_root)/dl03t_main -c "\dn"
+	psql $(pg_uri_root)/dl05s_main -c "\dn"
 
 status_schProd:
 	@echo "-- -- -- ON-PRODUCTION SCHEMAS -- -- --"

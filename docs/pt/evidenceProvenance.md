@@ -186,12 +186,12 @@ O target a seguir gera uma lista de comandos para criar os diretórios, se neces
 
 ```
 pushd /var/gits/_dg/preserv/src
-make cmd_rdap iso=br pg_datalake=dl03t_main
+make cmd_rdap iso=br pg_datalake=dl05s_main
 ```
 Exemplo de output:
 
 ```sh
-make cmd_rdap iso=br pg_datalake=dl03t_main
+make cmd_rdap iso=br pg_datalake=dl05s_main
 Generate list of commands to update or create rdap.json
 for donor and donatedPack
 Usage: make cmd_rdap iso=<ISO 3166 country code> pg_datalake=<database>

@@ -1,6 +1,6 @@
 # Passos gerais para adicionar/atualizar geometrias jurisdicionais:
 
-1. Dump de `dl03t_main`, antes de qualquer alteração;
+1. Dump de `dl05s_main`, antes de qualquer alteração;
 
 2. Download dos dados do _OpenStreetMap_ e criação do _make_conf_;
 
@@ -12,7 +12,7 @@
 
 6. Preparar os dados na `ingest`;
 
-7. Dump da `ingest` para `dl03t_main`;
+7. Dump da `ingest` para `dl05s_main`;
 
 7. Insert/Update em [optim.jurisdiction](https://github.com/digital-guard/preserv/blob/main/src/optim-step1-ini.sql#L9) e [optim.jurisdiction_geom](https://github.com/digital-guard/preserv/blob/main/src/optim-step1-ini.sql#L52);
 
