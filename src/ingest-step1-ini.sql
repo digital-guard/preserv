@@ -19,7 +19,7 @@ CREATE SERVER    IF NOT EXISTS files
 CREATE EXTENSION IF NOT EXISTS postgres_fdw;
 CREATE SERVER    IF NOT EXISTS foreign_server_dl03
          FOREIGN DATA WRAPPER postgres_fdw
-         OPTIONS (dbname 'dl03t_main')
+         OPTIONS (dbname 'dl05s_main')
 ;
 CREATE USER MAPPING FOR PUBLIC SERVER foreign_server_dl03;
 
