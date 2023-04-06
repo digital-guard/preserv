@@ -370,8 +370,7 @@ CREATE TABLE ingest.feature_asis_discarded (
   kx_ghs9 text,
   UNIQUE(file_id,feature_id)
 );
-CREATE INDEX ingest_feature_asis_discarded_ghs9_idx ON ingest.feature_asis_discarded (file_id,kx_ghs9);
-ALTER TABLE ingest.feature_asis_discarded ADD COLUMN kx_ghs9 text constraint;
+
 CREATE TABLE ingest.cadastral_asis (
   file_id bigint NOT NULL REFERENCES ingest.donated_PackComponent(id) ON DELETE CASCADE,
   cad_id int NOT NULL,
