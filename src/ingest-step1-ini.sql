@@ -1850,7 +1850,7 @@ BEGIN
       (
         SELECT array_agg(('properties->>''' || x || ''' AS ' || x))
         FROM jsonb_object_keys(jproperties) t(x)
-        WHERE x IN ('via','hnum','sup','postcode','nsvia','nsvia2','name','type','ref','nsref','blref','error')
+        -- WHERE x IN ('via','hnum','sup','postcode','nsvia','nsvia2','name','type','ref','nsref','blref','error')
       ),', ')
     || ',',',')
     ),
@@ -1891,14 +1891,14 @@ BEGIN
         (
           SELECT array_agg(('properties->>''' || x || ''' AS ' || x))
           FROM jsonb_object_keys(jproperties) t(x)
-          WHERE
-          (
-            CASE
-            WHEN jproperties ?| ARRAY['via','hnum','sup','postcode','nsvia','nsvia2','name','type','ref','nsref','blref','error']
-            THEN x IN ('via','hnum','sup','postcode','nsvia','nsvia2','name','type','ref','nsref','blref','error')
-            ELSE NULL
-            END
-          )
+          -- WHERE
+          -- (
+          --   CASE
+          --   WHEN jproperties ?| ARRAY['via','hnum','sup','postcode','nsvia','nsvia2','name','type','ref','nsref','blref','error']
+          --   THEN x IN ('via','hnum','sup','postcode','nsvia','nsvia2','name','type','ref','nsref','blref','error')
+          --   ELSE NULL
+          --   END
+          -- )
         ),', ') || ','
     ,',')
     ),
