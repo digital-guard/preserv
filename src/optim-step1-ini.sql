@@ -83,16 +83,48 @@ CREATE TABLE optim.jurisdiction_eez (
   osm_id bigint PRIMARY KEY,
   isolabel_ext text NOT NULL,
   geom geometry(Geometry,4326),
+  geom_svg geometry(Geometry,4326),
   UNIQUE(isolabel_ext)
 );
 COMMENT ON COLUMN optim.jurisdiction_eez.osm_id             IS 'Relation identifier in OpenStreetMap.';
 COMMENT ON COLUMN optim.jurisdiction_eez.isolabel_ext       IS 'ISO 3166-1 alpha-2 code; e.g. BR.';
 COMMENT ON COLUMN optim.jurisdiction_eez.geom               IS 'Geometry for osm_id identifier';
+COMMENT ON COLUMN optim.jurisdiction_eez.geom_svg           IS 'Simplified geometry version to use in svg interface.';
 CREATE INDEX optim_jurisdiction_eez_idx1              ON optim.jurisdiction_eez USING gist (geom);
 CREATE INDEX optim_jurisdiction_eez_isolabel_ext_idx1 ON optim.jurisdiction_eez USING btree (isolabel_ext);
 
 COMMENT ON TABLE optim.jurisdiction_eez IS 'OpenStreetMap exclusive economic zone (EEZ) for optim.jurisdiction.';
 
+DROP MATERIALIZED VIEW IF EXISTS optim.mvwjurisdiction_geomeez;
+CREATE MATERIALIZED VIEW optim.mvwjurisdiction_geomeez AS
+  SELECT *
+  FROM optim.jurisdiction_geom
+  WHERE osm_id IN
+    (
+        SELECT osm_id
+        FROM optim.jurisdiction
+        WHERE isolevel=1 AND COALESCE( (info->>'use_jurisdiction_eez')::boolean,false) IS FALSE
+    )
+
+  UNION
+
+  SELECT g.osm_id, g.isolabel_ext, ST_UNION(g.geom,e.geom), ST_UNION(g.geom_svg,e.geom_svg), g.kx_ghs1_intersects, g.kx_ghs2_intersects
+  FROM optim.jurisdiction_geom g
+  LEFT JOIN optim.jurisdiction_eez e
+  ON g.osm_id = e.osm_id
+  WHERE g.osm_id IN
+    (
+        SELECT osm_id
+        FROM optim.jurisdiction
+        WHERE isolevel=1 AND (info->>'use_jurisdiction_eez')::boolean IS TRUE
+    )
+;
+CREATE INDEX optim_mvwjurisdiction_geomeez_idx1              ON optim.mvwjurisdiction_geomeez USING gist (geom);
+CREATE INDEX optim_mvwjurisdiction_geomeez_isolabel_ext_idx1 ON optim.mvwjurisdiction_geomeez USING btree (isolabel_ext);
+
+COMMENT ON MATERIALIZED VIEW optim.mvwjurisdiction_geomeez
+ IS 'Merge geom and eez geometries when ''info->use_jurisdiction_eez'' is true'
+;
 
 CREATE TABLE optim.jurisdiction_abbrev_ref (
  abbrevref_id int PRIMARY KEY,
