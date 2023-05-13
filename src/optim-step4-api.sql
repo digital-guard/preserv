@@ -476,7 +476,8 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
                         'area', ST_Area(geom,true),
                         'jurisd_base_id', jurisd_base_id,
                         'is_multipolygon', CASE WHEN GeometryType(geom) IN ('MULTIPOLYGON') THEN TRUE ELSE FALSE END,
-                        'size_shortestprefix', size_shortestprefix
+                        'size_shortestprefix', size_shortestprefix,
+                        'canonical_pathname', CASE WHEN jurisd_base_id=170 THEN 'CO-'|| jurisd_local_id ELSE isolabel_ext END
                         )
                     )::jsonb)
             )
