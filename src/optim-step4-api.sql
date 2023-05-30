@@ -488,7 +488,7 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
     (
       SELECT MIN(LENGTH(kx_prefix)) AS size_shortestprefix
       FROM osmc.coverage
-      WHERE isolabel_ext = g.isolabel_ext
+      WHERE isolabel_ext = g.isolabel_ext AND is_overlay IS FALSE
     ) s
 
     WHERE g.isolabel_ext = (SELECT (str_geocodeiso_decode(p_code))[1])
