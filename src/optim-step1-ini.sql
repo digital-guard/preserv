@@ -79,6 +79,21 @@ CREATE INDEX optim_jurisdiction_geom_isolabel_ext_idx1 ON optim.jurisdiction_geo
 
 COMMENT ON TABLE optim.jurisdiction_geom IS 'OpenStreetMap geometries for optim.jurisdiction.';
 
+CREATE TABLE optim.jurisdiction_geom_point (
+  osm_id bigint PRIMARY KEY,
+  isolabel_ext text,
+  jurisd_local_id int,
+  wikidata_id  bigint,
+  geom geometry(Point,4326)
+);
+COMMENT ON COLUMN optim.jurisdiction_geom_point.osm_id          IS 'Relation identifier in OpenStreetMap.';
+COMMENT ON COLUMN optim.jurisdiction_geom_point.isolabel_ext    IS 'ISO 3166-1 alpha-2 code and name (camel case); e.g. BR-SP-SaoPaulo.';
+COMMENT ON COLUMN optim.jurisdiction_geom_point.jurisd_local_id IS 'Numeric official ID like IBGE_ID of BR jurisdiction. For example ACRE is 12 and its cities are {1200013, 1200054,etc}.';
+COMMENT ON COLUMN optim.jurisdiction_geom_point.wikidata_id     IS 'wikidata identifier without Q prefix.';
+COMMENT ON COLUMN optim.jurisdiction_geom_point.geom            IS 'Geometry for osm_id identifier';
+CREATE INDEX optim_jurisdiction_geom_point_idx1                 ON optim.jurisdiction_geom_point USING gist (geom);
+COMMENT ON TABLE optim.jurisdiction_geom_point                  IS 'Wikidata point for optim.jurisdiction.';
+
 CREATE TABLE optim.jurisdiction_eez (
   osm_id bigint PRIMARY KEY,
   isolabel_ext text NOT NULL,
@@ -440,6 +455,16 @@ CREATE VIEW optim.vw01full_jurisdiction_geom AS
 ;
 COMMENT ON VIEW optim.vw01full_jurisdiction_geom
   IS 'Add geom to optim.jurisdiction.'
+;
+
+CREATE VIEW optim.vw01full_jurisdiction_geom_point AS
+    SELECT j.*, g.geom
+    FROM optim.jurisdiction j
+    LEFT JOIN optim.jurisdiction_geom_point g
+    ON j.osm_id = g.osm_id
+;
+COMMENT ON VIEW optim.vw01full_jurisdiction_geom_point
+  IS 'Add geom point to optim.jurisdiction.'
 ;
 
 CREATE or replace VIEW optim.vw01full_donated_PackTpl AS
