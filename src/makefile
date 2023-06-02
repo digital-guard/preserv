@@ -161,6 +161,25 @@ report:
 	@echo "View vw01report_median:"
 	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw01report_median;"
 
+get_wikidata_points:
+	@echo "Get points wikidata: BR and CO."
+	curl -o /tmp/wikidata_coord.csv -G 'https://query.wikidata.org/sparql' \
+	--header "Accept: text/csv"  \
+	--data-urlencode query=' \
+	PREFIX schema: <http://schema.org/> \
+	SELECT ?wikidata ?local_id ?osm_id ?geom ?wikidataLabel\
+	WHERE { \
+		{?wikidata wdt:P31 wd:Q3184121.} # brasil \
+		UNION \
+		{?wikidata wdt:P31 wd:Q2555896.} # colombia \
+		OPTIONAL { ?wikidata wdt:P402 ?osm_id. } \
+		OPTIONAL { ?wikidata wdt:P1585 ?local_id. } #ibgegeocodico \
+		OPTIONAL { ?wikidata wdt:P7325 ?local_id. } #divipola \
+		OPTIONAL { ?wikidata wdt:P625 ?geom. } \
+		SERVICE wikibase:label { bd:serviceParam wikibase:language "es,pt-br". } } \
+	ORDER BY ?local_id \
+	# '
+
 ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 ifeq ($(DL_TEST),$(pg_datalake))
 	@echo "... DROP old database $(pg_datalake)?"
