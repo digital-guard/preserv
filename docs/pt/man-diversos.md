@@ -1,33 +1,3 @@
-## No rule to make target
-Ao executar `make layer` ou `make all_layers`, caso encontre um erro do tipo
-```
-make: *** No rule to make target '/var/www/dl.digital-guard.org/bae2054448855305db0fc855d2852cd5a7b369481cc03aeb809a0c3c162a2c04.zip', needed by 'parcel'.  Stop.
-```
-o arquivo especificado não está no diretório default `/var/www/dl.digital-guard.org`, informado na chave `orig` de uma jurisdição, por exemplo, em [commomFirst.yaml](https://github.com/digital-guard/preserv-BR/blob/main/src/maketemplates/commomFirst.yaml#L2). Significando que o arquivo está armazenado em outro lugar. Isso está indicado  na tabela [de-para](https://docs.google.com/spreadsheets/d/1CL6f0I9DSpqKxKC7QNJGCfyabq7mDOVab5QBGV5VLOk).
-
-
-Nesse caso usar:
-
-```
-wget -P /diretorio/para/arquivo/baixado http://dl.digital-guard.org/bae2054448855305db0fc855d2852cd5a7b369481cc03aeb809a0c3c162a2c04.zip
-
-make me pg_db=ingestXX
-
-make parcel orig=/diretorio/para/arquivo/baixado pg_db=ingestXX
-```
-Se o download for realizado em /var/www/dl.digital-guard.org utilizar apenas
-
-`make parcel  pg_db=ingestXX`
-
-uma vez que o valor default de orig é /var/www/dl.digital-guard.org.
-
-Observação: atualmente, [common002_layerHeader.mustache](https://github.com/digital-guard/preserv/blob/main/src/maketemplates/common002_layerHeader.mustache#L18) interage com o usuário solicitando a confirmação de download de dl.digital-guard.org ou o fornecimento do valor correto de orig. Caso o download seja realizado, o arquivo estará localizado na respectiva sandbox do layer. Notar que se `nointeraction=y` não haverá interação com o usuário e o download será feito.
-
-## Clean sandbox
-
-O processo de ingestão utiliza subpastas no caminho informado em `sandbox`, cujo valor default é informado no _commomFirst.yaml_.
-Antes na execução da ingestão de cada layer, o target `makedirs` cria ou limpa a subpasta utilizada pelo layer. Após a execução, o target `clean-sandbox` remove a subpasta, evitando que arquivos não mais necessários permanecem no sistema de arquivos.
-
 ## Resumo do tratamento aplicado às geometrias no processo de ingestão:
 
 Dado um conjunto de geometrias:
@@ -134,16 +104,6 @@ Exemplo de saída produzida após a execução de uma ingestão:
 [^3]: sendo utilizado `tolerance = 0.00000001`, com a intensão do algoritmo [Douglas-Peucker](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) remover apenas pontos colineares.
 [^4]: As medidas de similaridade são calculadas pela função `feature_asis_similarity`no _schema_ `ingest`.
 
-## make layer sem interação com usuário:
-
-Para rodar um _target_ sem serem solicitadas confirmações do usuário, utilizar `nointeraction=y`.
-
-Por exemplo, `make block nointeraction=y` faz a ingestão dos dados sem solicitar confirmações do usuário.[^5]
-
-Essa variável só produz efeito em _target_ `layer`, `publicating_geojsons_layer` ou `me`. Para os demais, não.
-
-[^5]: _Layer_ com `method` que utiliza o _ogr2ogr_ via docker, ou target `me`, podem solicitar a senha do usuário.
-
 ## Buffer em geometrias jurisdicionais:
 
 Foi adotada a aplicação de um buffer, por _default_, nas geometrias de jurisdição. Atualmente essa valor é de 50 metros.
@@ -154,20 +114,6 @@ Esse comportamento pode ser alterado utilizando a chave buffer_type em layer do 
 - `buffer_type: 2`, aplica um buffer de aproximadamente 5000 metros. Para utilizá-lo, deve-se informá-lo no respectivo layer do _make_conf.yaml_
 - `buffer_type: 3`, aplica um buffer de aproximadamente 50 km. Para utilizá-lo, deve-se informá-lo no respectivo layer do _make_conf.yaml_
 - `buffer_type: 4`, aplica um buffer de aproximadamente 500 km. Para utilizá-lo, deve-se informá-lo no respectivo layer do _make_conf.yaml_
-
-## Atualizar tabelas de optim (atualmente em `dl05s_main`):
-
-Se donatedPack.csv ou donor.csv (em qualquer jurisdição) forem alterados ou um novo _make_conf.yaml_ for criado (se não existia e passou a existir), é necessário atualizar as tabelas do [schema optim](https://github.com/digital-guard/preserv/blob/main/src/optim-step1-ini.sql). Para isso, utilizar:
-
-```
-pushd /var/gits/_dg/preserv/src
-make load_optim_csv pg_datalake=dl05s_main
-```
-
-Notar que se as restrições das tabelas não forem respeitadas o carregamento ou atualização dos dados não acontece. Retornando erro.
-
-Caso for alterado o sha256 em um make_conf.yaml já existente, ver [preserv-BR/issues/68](https://github.com/digital-guard/preserv-BR/issues/68#issuecomment-1081026983).
-
 
 ## Especificações mosaico:
 
@@ -288,15 +234,6 @@ make load_hcode_parameters
 popd
 ```
 
-## Alterações de sha256 em make_conf.yaml
-
-Ao alterações no sha256 de arquivos make_conf.yaml:
-
-1. incrementar `pkversion`;
-2. insrir nova entrada no arquivo donatePack.csv;
-3. excecutar https://github.com/digital-guard/preserv/blob/main/docs/pt/man-diversos.md#atualizar-tabelas-de-optim-atualmente-em-dl05s_main
-
-
 ## Load arquivos do CutGeo a partir de um diretório
 
 ```bash
@@ -315,20 +252,5 @@ psql postgres://postgres@localhost/${DATA_BASE} < /var/gits/_dg/preserv/src/load
 
 find /var/gits/_dg/preservCutGeo-BR2021/data -maxdepth 5 -type d -iwholename "*_pk*\/*" -exec bash loadGeojson.bash {} ${DATA_BASE} \; &> /home/$USER/log_loadCutGeoData_${DATA_BASE}
 
-popd
-```
-
-## Inserir size no make_conf.yaml
-Procedimento para inserir `size` em `files` de um make_conf:
-
-```
-pushd /var/gits/_dg/preserv-BR/src
-make all
-pushd /var/gits/_dg/preserv-BR/data/AC/RioBranco/_pk0042.01
-make me
-make wget_files orig=/tmp/pg_io/tmpfolder
-make insert_size orig=/tmp/pg_io/tmpfolder
-rm -rf /tmp/pg_io/tmpfolder
-popd
 popd
 ```
