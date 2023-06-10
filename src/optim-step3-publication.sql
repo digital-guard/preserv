@@ -1,5 +1,6 @@
 CREATE or replace VIEW optim.vw03publication AS
 SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
+    'packtpl_id', packtpl_id,
     'isolabel_ext', isolabel_ext,
     'legalname', legalname,
     'vat_id', vat_id,
@@ -13,6 +14,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
     'license_evidences',license_evidences,
     'path_cutgeo_notree', replace(replace(path_cutgeo_git,'tree/',''),'http://git.digital-guard.org/',''),
     'layers',  jsonb_agg(jsonb_build_object(
+                'id', id,
                 'class_ftname', class_ftname,
                 'shortname', shortname,
                 'description', description,
@@ -22,11 +24,13 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
                 'isFirst', iif(row_num=1,'true'::jsonb,'false'::jsonb),
                 'geom_type_abbr', geom_type_abbr,
                 'publication_summary', publication_summary,
-                'url_page', lower(isolabel_ext) || '_pk' || pack_number || '_' ||  class_ftname || '.html'
+                'url_page', lower(isolabel_ext) || '_pk' || pack_number || '_' ||  class_ftname || '.html',
+                'filtered_name', 'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || class_ftname || '_' || id || '.zip',
+                'viz_name', isolabel_ext || '_pk' || pack_number || '/' || class_ftname
                 ))
     ) AS page
 FROM (
-  SELECT pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.kx_pack_item_version, pf.local_serial, pf.pk_count, pf.pack_number,
+  SELECT pf.packtpl_id, pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.kx_pack_item_version, pf.local_serial, pf.pk_count, pf.pack_number,
   pf.user_resp_initcap AS user_resp, pf.path_preserv_git, pf.path_cutgeo_git,
   row_number() OVER (PARTITION BY pf.isolabel_ext, pf.local_serial, pf.pk_count ORDER BY pf.ftype_info->'class_ftname' ASC ) AS row_num,
   pf.ftype_info->>'class_ftname' as class_ftname,
@@ -36,6 +40,7 @@ FROM (
   pf.hashedfname, 
   pf.hashedfname_without_ext,
   pf.hashedfname_7_ext,
+  pf.id,
   CASE pf.geomtype
             WHEN 'poly'  THEN 'pols'
             WHEN 'line'  THEN 'lns'
@@ -82,7 +87,7 @@ FROM (
   WHERE pf.ftid > 19
   ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
 ) t
-GROUP BY isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv_git, pack_number, path_cutgeo_git, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences
+GROUP BY packtpl_id, isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv_git, pack_number, path_cutgeo_git, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences
 ;
 COMMENT ON VIEW optim.vw03publication
   IS 'Generate json for mustache template for preservDataViz pages.'

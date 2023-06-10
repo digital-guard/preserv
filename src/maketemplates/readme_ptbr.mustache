@@ -44,7 +44,10 @@ Os arquivos contêm "camadas de dados" temáticas. Os metadados também descreve
 
 {{#value.publication_data}}{{#value.publication_data.publication_summary}}#### Dados publicados
 [{{path_cutgeo_git}}]({{path_cutgeo_git}})<br/>{{bytes}} bytes ({{bytes_mb_round2}} <abbr title="mebibyte">MiB</abbr>)<br/>{{itens}} {{geom_type}}{{^isGeoaddress}} com {{size_round2}} <abbr title="{{geom_unit_ext}}">{{geom_unit_abr}}</abbr><br/>densidade média: {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}{{#isGeoaddress}}<br/>densidade média de {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}{{/value.publication_data.publication_summary}}{{/value.publication_data}}
-{{/value}}{{/layers}}
+{{/value}}
+
+{{^isCadLayer}}#### Visualização
+[{{viz_name}}](https://viz.addressforall.org/{{viz_name}}){{/isCadLayer}}{{/layers}}
 
 {{#test_evidence}}
 # Evidências de teste
