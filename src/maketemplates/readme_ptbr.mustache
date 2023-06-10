@@ -25,7 +25,8 @@ Nota. O presente documento README foi gerado por software a partir das informaç
 
 Os arquivos contêm "camadas de dados" temáticas. Os metadados também descrevem como cada camada foi avaliada e seus dados filtrados de forma padronizada.
 
-{{#layers}}{{#value}}## <img src="https://raw.githubusercontent.com/digital-guard/preserv/main/docs/assets/layerIcon-{{layername_root}}.png" alt="{{layername_root}}" width="20"/> {{layername_root}}
+{{#layers}}{{#value}}
+## <img src="https://raw.githubusercontent.com/digital-guard/preserv/main/docs/assets/layerIcon-{{layername_root}}.png" alt="{{layername_root}}" width="20"/> {{layername_root}}
 
 {{#file_data}}Nome do arquivo: `{{orig_filename}}`.<br/>*Download* e integridade: [{{file_data.file}}](http://dl.digital-guard.org/{{file_data.file}}){{#file_data.name}}<br/>Descrição: {{file_data.name}}{{/file_data.name}}{{#file_data.comments}}<br/>Comentário: {{file_data.comments}}{{/file_data.comments}}{{#file_data.size}}<br/>Tamanho do arquivo: {{file_data.size}} bytes{{#file_data.size_mb_round2}} ({{file_data.size_mb_round2}} <abbr title="mebibyte">MiB</abbr>){{/file_data.size_mb_round2}}{{/file_data.size}}{{/file_data}}<br/>Formato: {{#extension}}{{extension}}{{/extension}}{{#srid}}<br/>SRID: {{#srid_proj}}{{#insertSrid}}{{srid_proj}}{{/insertSrid}}{{^insertSrid}}{{srid}}{{/insertSrid}}{{/srid_proj}}{{^srid_proj}}{{srid}}{{/srid_proj}}{{/srid}}
 
@@ -45,9 +46,8 @@ Os arquivos contêm "camadas de dados" temáticas. Os metadados também descreve
 {{#value.publication_data}}{{#value.publication_data.publication_summary}}#### Dados publicados
 [{{path_cutgeo_git}}]({{path_cutgeo_git}})<br/>{{bytes}} bytes ({{bytes_mb_round2}} <abbr title="mebibyte">MiB</abbr>)<br/>{{itens}} {{geom_type}}{{^isGeoaddress}} com {{size_round2}} <abbr title="{{geom_unit_ext}}">{{geom_unit_abr}}</abbr><br/>densidade média: {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}{{#isGeoaddress}}<br/>densidade média de {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}{{/value.publication_data.publication_summary}}{{/value.publication_data}}
 
-{{^isCadLayer}}#### Visualização
-[{{viz_name}}](https://viz.addressforall.org/{{viz_name}}){{/isCadLayer}}
-{{/value}}{{/layers}}
+{{#value.publication_data}}{{^isCadLayer}}#### Visualização
+[{{viz_name}}](https://viz.addressforall.org/{{viz_name}}){{/isCadLayer}}{{/value.publication_data}}{{/value}}{{/layers}}
 
 {{#test_evidence}}
 # Evidências de teste
