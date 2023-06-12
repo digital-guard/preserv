@@ -1,0 +1,20 @@
+{{#paises}}
+* {{jurisd.name_en}} ({{scope_label}})
+{{#iso1}}
+** {{legalName}}
+*** [{{path_preserv_git}} _pk{{local_serial_formated}}]
+   {{#pacotes}}
+**** [http://dl.digital-guard.org/{{hashedfname}} '''{{info.name}}''' (<code>{{hashedfname_7}}</code>)]
+  {{/pacotes}}
+{{/iso1}}
+{{#iso3}}
+** {{jurisd}}
+{{#doadores}}
+*** {{legalName}}
+**** [{{path_preserv_git}} _pk{{local_serial_formated}}]
+   {{#pacotes}}
+***** [http://dl.digital-guard.org/{{hashedfname}} '''{{info.name}}''' (<code>{{hashedfname_7}}</code>)]
+  {{/pacotes}}
+{{/doadores}}
+{{/iso3}}
+{{/paises}}
