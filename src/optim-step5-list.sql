@@ -77,16 +77,18 @@ COMMENT ON FUNCTION optim.generate_list
 -- SELECT optim.generate_list('/tmp/pg_io/list_jurisd.txt',true);
 
 CREATE or replace FUNCTION optim.generate_list_hash(
-	p_fileref text
+	p_fileref text,
+	p_template text DEFAULT '/var/gits/_dg/preserv/src/list_hash.mustache'
 ) RETURNS text  AS $f$
-    SELECT volat_file_write(p_fileref, jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/list_hash.mustache'), y)) AS output_write
+    SELECT volat_file_write(p_fileref, jsonb_mustache_render(pg_read_file(p_template), y)) AS output_write
     FROM optim.vw03generate_list_hash
     ;
 $f$ language SQL VOLATILE;
 COMMENT ON FUNCTION optim.generate_list_hash
   IS 'Generate list page.'
 ;
--- SELECT optim.generate_list_hash('/tmp/pg_io/list_hash.txt');
+-- SELECT optim.generate_list_hash('/tmp/pg_io/list_hash_markdown.txt');
+-- SELECT optim.generate_list_hash('/tmp/pg_io/list_hash_mediawiki.txt','/var/gits/_dg/preserv/src/list_hash_wiki.mustache');
 
 CREATE or replace FUNCTION api.download_list(
 
