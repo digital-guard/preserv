@@ -19,7 +19,9 @@
 	psql $(pg_uri_db) -c "DROP VIEW vw{{file}}_{{tabname}}"
 {{/isOsm}}
 {{#srid_proj}}
+{{#insertSrid}}
 	@echo "Delete SRID {{srid}} configurado via PROJ.4 string:"
-	@echo "{{.}}"
+	@echo "{{srid_proj}}"
 	psql $(pg_uri_db) -c "DELETE FROM spatial_ref_sys WHERE srid={{srid}};"
+{{/insertSrid}}
 {{/srid_proj}}
