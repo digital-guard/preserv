@@ -1002,7 +1002,7 @@ CREATE or replace FUNCTION ingest.any_load(
       a AS (
         SELECT *
         FROM a0
-        WHERE ST_IsClosed(geom) = TRUE OR GeometryType(geom) IN ('LINESTRING','MULTILINESTRING')
+        WHERE ST_IsClosed(geom) = TRUE OR GeometryType(geom) IN ('LINESTRING','MULTILINESTRING','LINESTRINGM','MULTILINESTRINGM')
       ),
       mask AS (SELECT ingest.buffer_geom(geom,%s) AS geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=(SELECT isolabel_ext FROM ingest.vw01full_packfilevers WHERE id=%s)),
       b AS (
@@ -1046,7 +1046,7 @@ CREATE or replace FUNCTION ingest.any_load(
         (
             SELECT file_id, gid, properties, geom, B'000100000000' AS error
             FROM a0
-            WHERE ST_IsClosed(geom) = FALSE AND GeometryType(geom) NOT IN ('LINESTRING','MULTILINESTRING')
+            WHERE ST_IsClosed(geom) = FALSE AND GeometryType(geom) NOT IN ('LINESTRING','MULTILINESTRING','LINESTRINGM','MULTILINESTRINGM')
         )
         UNION
         (
@@ -1077,7 +1077,7 @@ CREATE or replace FUNCTION ingest.any_load(
         INSERT INTO ingest.feature_asis
         SELECT file_id, gid, properties, geom
         FROM c
-	    WHERE  bit_count(error) = 0
+        WHERE  bit_count(error) = 0
         RETURNING 1
       ),
       ins_asis_discarded AS (
@@ -1117,7 +1117,7 @@ CREATE or replace FUNCTION ingest.any_load(
         (CASE (SELECT (ingest.donated_PackComponent_geomtype(q_file_id))[1]) 
         WHEN 'point' THEN $$('POINT')$$ 
         WHEN 'poly'  THEN $$('POLYGON'   ,'MULTIPOLYGON')$$ 
-        WHEN 'line'  THEN $$('LINESTRING','MULTILINESTRING')$$
+        WHEN 'line'  THEN $$('LINESTRING','MULTILINESTRING','LINESTRINGM','MULTILINESTRINGM')$$
         END),
     q_file_id,
     q_file_id
