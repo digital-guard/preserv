@@ -1065,7 +1065,7 @@ CREATE or replace FUNCTION ingest.any_load(
             (COUNT(*) filter (WHERE get_bit(error, 7) = 1))::bigint, -- small
             (COUNT(*) filter (WHERE get_bit(error, 6) = 1))::bigint, -- null
             (COUNT(*) filter (WHERE get_bit(error, 5) = 1))::bigint, -- invalid_type
-                                                                          -- bit 4 é reservado para duplicados
+                                                                     -- bit 4 é reservado para duplicados
             (COUNT(*) filter (WHERE get_bit(error, 3) = 1))::bigint, -- is_closed
             (COUNT(*) filter (WHERE get_bit(error, 2) = 1))::bigint  -- large
                                                                           -- bit 1 uso futuro
@@ -1148,19 +1148,22 @@ CREATE or replace FUNCTION ingest.any_load(
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text )
   );
 
-  IF (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower(p_ftname))<20 THEN -- feature_type id
+  IF (SELECT ftid::int FROM ingest.fdw_feature_type WHERE ftname=lower(p_ftname)) < 20 THEN
+    -- cadastral layer
     EXECUTE q_query_cad INTO num_items;
+
     stats := ARRAY[num_items,0,0,0,0,0,0,0,0,0,num_items,0,0,0,0,num_items,0];
 
     UPDATE ingest.donated_PackComponent
-    SET --proc_step=2,   -- if insert process occurs after q_query.
+    SET --proc_step=2,
         lineage = lineage || jsonb_build_object('statistics',stats)
     WHERE id=q_file_id;
   ELSE
+    -- feature layer
     EXECUTE q_query INTO stats;
     num_items := stats[11];
 
-    IF num_items>0 THEN
+    -- IF num_items>0 THEN
       q_query := format(
           $$
           WITH dup AS (
@@ -1219,24 +1222,50 @@ CREATE or replace FUNCTION ingest.any_load(
       );
       EXECUTE q_query INTO stats_dup;
 
+      stats := ((stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) || ARRAY[stats[12]+stats_dup[2]])::bigint[];
+
       IF p_check_file_id_exist THEN
           UPDATE ingest.donated_PackComponent
-          SET proc_step=2,   -- if insert process occurs after q_query.
-              lineage = lineage || ingest.feature_asis_assign(q_file_id) ||
-              jsonb_build_object('statistics',(stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) || ARRAY[stats[12]+stats_dup[2]] )
+          SET proc_step=2, lineage = lineage || ingest.feature_asis_assign(q_file_id) || jsonb_build_object('statistics', stats )
+          WHERE id=q_file_id;
+      ELSE
+          UPDATE ingest.donated_PackComponent
+          SET proc_step=2, lineage = lineage ||
+                jsonb_build_object('statistics',(
+                  SELECT array_agg(a + b)::bigint[]
+                  FROM
+                  (
+                    SELECT
+                      unnest(stats) a,
+                      unnest
+                      (
+                        (
+                          SELECT
+                            (
+                              CASE
+                              WHEN lineage ?| ARRAY['statistics']
+                              THEN jsonb_array_to_text_array(lineage->'statistics')::bigint[]
+                              ELSE (ARRAY[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])::bigint[]
+                              END
+                            )
+                          FROM ingest.donated_PackComponent WHERE id=q_file_id
+                        )
+                      ) b
+                  ) xc
+                ))
           WHERE id=q_file_id;
       END IF;
-    END IF;
+    -- END IF;
   END IF;
 
   IF num_items>0 AND p_check_file_id_exist THEN
     UPDATE ingest.donated_PackComponent
-    SET proc_step=3,   -- if insert process occurs after q_query.
-        lineage =  lineage || ingest.feature_asis_assign_signature(q_file_id)
+    SET proc_step=3, lineage =  lineage || ingest.feature_asis_assign_signature(q_file_id)
     WHERE id=q_file_id;
   END IF;
 
   RETURN ingest.any_load_returnmsg(q_file_id);
+
   END;
 $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION ingest.any_load(text,text,text,text,bigint,text,text[],int,int,boolean,text,boolean,text,text)
