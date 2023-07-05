@@ -1064,3 +1064,28 @@ COMMENT ON VIEW optim.vw01fromCutLayer_toVizLayer
 ;
 -- psql postgres://postgres@localhost/dl05s_main -c "COPY ( SELECT jurisdiction_pack_layer, hash_from, url_layer_visualization FROM optim.vw01fromCutLayer_toVizLayer ) TO '/tmp/pg_io/fromCutLayer_toVizLayer.csv' CSV HEADER;"
 -- psql postgres://postgres@localhost/dl05s_main -c "COPY ( SELECT jurisdiction_pack_layer, hash_from, uri_default, uri_preserv, uri_cutgeo FROM optim.vw01fromCutLayer_toVizLayer ORDER BY 1) TO '/tmp/pg_io/layerviz.csv' CSV HEADER;"
+
+CREATE or replace FUNCTION optim.jurisdiction_to_geojson(
+	p_isolabel_ext text, -- e.g. 'BR-MG-BeloHorizonte'
+	p_fileref      text, -- e.g.
+	p_pretty_opt   int DEFAULT 3
+) RETURNS text  AS $f$
+BEGIN
+    PERFORM write_geojsonb_features(
+      format('SELECT * FROM optim.vw01full_jurisdiction_geom WHERE isolabel_ext = ''%s''',p_isolabel_ext),
+      format('%s/%s_jurisd.geojson',p_fileref,lower(replace(p_isolabel_ext,'-','_'))),
+      't1.geom',
+      'osm_id,jurisd_base_id,jurisd_local_id,parent_id,admin_level,name,abbrev,wikidata_id,lexlabel,isolabel_ext,ddd,name_en,isolevel',
+      NULL,NULL,$3,5);
+
+    RETURN (SELECT 'Publicado em ' || p_fileref::text)
+  ;
+END
+$f$ language PLpgSQL;
+/*
+SELECT optim.jurisdiction_to_geojson(isolabel_ext,'/var/gits/_dg/StableGeo-BR/data' || (CASE WHEN isolevel::int > 1 THEN '/' || split_part(isolabel_ext,'-',2) ELSE '' END))
+FROM optim.vw01full_jurisdiction_geom
+WHERE jurisd_base_id = 76;
+*/
+
+-- SELECT optim.jurisdiction_to_geojson('BR-MG-BeloHorizonte','/tmp/pg_io');
