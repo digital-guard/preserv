@@ -1050,7 +1050,9 @@ CREATE or replace VIEW optim.vw01fromCutLayer_toVizLayer AS
            pc.info->>'viz_uri' AS url_layer_visualization,
            'https://dl.digital-guard.org/out/a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || (pf.ftype_info->>'class_ftname' ) || '_' || pc.packvers_id || '.zip' AS uri_default,
            pc.hashedfnameuri   AS cloud_uri,
-           pc.hashedfnametype  AS filetype
+           pc.hashedfnametype  AS filetype,
+           pf.path_preserv_git AS uri_preserv,
+           pf.path_cutgeo_git  AS uri_cutgeo
     FROM optim.vw01full_packfilevers_ftype pf
     INNER JOIN optim.donated_PackComponent_cloudControl pc
     ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
@@ -1061,3 +1063,4 @@ COMMENT ON VIEW optim.vw01fromCutLayer_toVizLayer
   IS 'For fromCutLayer_toVizLayer csv.'
 ;
 -- psql postgres://postgres@localhost/dl05s_main -c "COPY ( SELECT jurisdiction_pack_layer, hash_from, url_layer_visualization FROM optim.vw01fromCutLayer_toVizLayer ) TO '/tmp/pg_io/fromCutLayer_toVizLayer.csv' CSV HEADER;"
+-- psql postgres://postgres@localhost/dl05s_main -c "COPY ( SELECT jurisdiction_pack_layer, hash_from, uri_default, uri_preserv, uri_cutgeo FROM optim.vw01fromCutLayer_toVizLayer ORDER BY 1) TO '/tmp/pg_io/layerviz.csv' CSV HEADER;"

@@ -1879,6 +1879,7 @@ BEGIN
       (
         SELECT array_agg(('properties->>''' || x || ''' AS ' || x))
         FROM jsonb_object_keys(jproperties) t(x)
+        WHERE x NOT IN ('gid')
         -- WHERE x IN ('via','hnum','sup','postcode','nsvia','nsvia2','name','type','ref','nsref','blref','error')
       ),', ')
     || ',',',')
@@ -1920,6 +1921,7 @@ BEGIN
         (
           SELECT array_agg(('properties->>''' || x || ''' AS ' || x))
           FROM jsonb_object_keys(jproperties) t(x)
+          WHERE x NOT IN ('gid')
           -- WHERE
           -- (
           --   CASE
