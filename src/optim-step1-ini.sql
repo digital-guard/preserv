@@ -801,6 +801,24 @@ COMMENT ON FUNCTION optim.insert_codec_type
   IS 'Load codec_type.csv.'
 ;
 
+CREATE or replace FUNCTION optim.insert_jurisdPoint(
+) RETURNS text  AS $f$
+BEGIN
+    INSERT INTO optim.jurisdiction_geom_point (osm_id,jurisd_local_id,wikidata_id,geom)
+      SELECT p.osm_id::bigint, local_id::int, split_part(wikidata,'Q',2)::bigint, geom
+      FROM tmp_orig.jurisdPoints p
+      WHERE osm_id IS NOT NULL
+    ON CONFLICT (osm_id)
+    DO UPDATE
+    SET jurisd_local_id=EXCLUDED.jurisd_local_id, wikidata_id=EXCLUDED.wikidata_id, geom=EXCLUDED.geom
+    ;
+    RETURN 'Upsert jurisdPoint.csv in optim.jurisdiction_geom_point.';
+END;
+$f$ language PLpgSQL;
+COMMENT ON FUNCTION optim.insert_jurisdPoint
+  IS 'Upsert jurisdPoint.csv.'
+;
+
 CREATE or replace FUNCTION optim.replace_file_and_version(file text) RETURNS text AS $f$
 BEGIN
     RETURN (SELECT regexp_replace(regexp_replace( file , '(p: *([0-9]{1,})\n *)file: *[0-9a-f]{64,64}\.[a-z0-9]+ *$', '\1file: {{file\2}}','ng'),'(pkversion:) *[0-9]{1,}','\1 {{version}}'));
