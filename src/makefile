@@ -209,6 +209,7 @@ load_optim_csv:
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	psql $(pg_datalake_uri) -c "SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY['BO','BR','CL','CO','EC','PE','PY','SR','UY','VE']) t;"
 	psql $(pg_datalake_uri) -c "SELECT optim.insert_codec_type();"
+	psql $(pg_datalake_uri) -c "SELECT optim.insert_jurisdPoint();"
 
 build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=name
 	@echo "DROP FOREIGN TABLE IF EXISTS $(fdwName);"
