@@ -303,7 +303,7 @@ FROM
     -- identidade
     SELECT isolabel_ext AS synonym, isolabel_ext AS isolabel_ext
     FROM optim.jurisdiction
-    WHERE isolevel > 1
+    WHERE isolevel > 1 AND osm_id NOT IN (SELECT parent_id FROM optim.jurisdiction WHERE (info->'capital')::int = 1)
   )
   UNION ALL
   (
@@ -352,11 +352,6 @@ FROM
     GROUP BY 1
     HAVING count(*)=1
     ORDER BY 1
-  )
-  UNION ALL
-  (
-    -- co state abbrev.
-    SELECT  'CO-DC', 'CO-DC-Bogota'
   )
   UNION ALL
   (
@@ -422,6 +417,20 @@ FROM
     GROUP BY 1
     HAVING count(*)=1
     ORDER BY 1
+  )
+  UNION ALL
+  (
+    -- br-uf-uf para capitais de isolevel = 2
+    SELECT lower('BR-' || parent_abbrev || '-' || parent_abbrev) AS synonym, isolabel_ext
+    FROM optim.jurisdiction j
+    WHERE (info->'capital')::int > 0 AND isolevel::int = 3 AND isolabel_ext LIKE 'BR-%-%'
+  )
+  UNION ALL
+  (
+    -- br-uf para capitais de isolevel = 1 e que cidade=distrito
+    SELECT lower(split_part(isolabel_ext,'-',1) || '-' || parent_abbrev) AS synonym, isolabel_ext
+    FROM optim.jurisdiction j
+    WHERE (info->'capital')::int = 1 AND isolevel::int = 3
   )
 ) z
 ;
