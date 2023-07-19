@@ -428,7 +428,7 @@ FROM
   UNION ALL
   (
     -- br-uf para capitais de isolevel = 1 e que cidade=distrito
-    SELECT lower(split_part(isolabel_ext,'-',1) || '-' || parent_abbrev) AS synonym, isolabel_ext
+    SELECT lower(split_part(isolabel_ext,'-',1) || '-' || split_part(isolabel_ext,'-',2)) AS synonym, isolabel_ext
     FROM optim.jurisdiction j
     WHERE (info->'capital')::int = 1 AND isolevel::int = 3
   )
