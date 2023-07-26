@@ -55,6 +55,8 @@ COMMENT ON FUNCTION download.insert_dldg_csv
 -- Data VisualiZation
 CREATE TABLE download.redirects_viz (
     jurisdiction_pack_layer text NOT NULL PRIMARY KEY, -- BR-SP-Guarulhos/_pk0081.01/geoaddress
+    user_resp text NOT NULL REFERENCES optim.auth_user(username),
+    status text,
     hashedfname_from        text NOT NULL CHECK( hashedfname_from ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
     url_layer_visualization text,            -- https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=341962cd00c441f8876202f29fc33dcc
     UNIQUE (jurisdiction_pack_layer,hashedfname_from),
@@ -79,12 +81,14 @@ COMMENT ON FUNCTION download.load_viz_csv
 CREATE or replace FUNCTION download.insert_viz_csv(
 ) RETURNS text AS $f$
 BEGIN
-  INSERT INTO download.redirects_viz(jurisdiction_pack_layer,hashedfname_from,url_layer_visualization)
-  SELECT jurisdiction_pack_layer, hash_from, url_layer_visualization
+  INSERT INTO download.redirects_viz(jurisdiction_pack_layer,user_resp,status,hashedfname_from,url_layer_visualization)
+  SELECT jurisdiction_pack_layer, lower(user_resp), status, hash_from, url_layer_visualization
   FROM tmp_orig.redirects_viz
   ON CONFLICT (jurisdiction_pack_layer,hashedfname_from)
   DO UPDATE
-  SET url_layer_visualization=EXCLUDED.url_layer_visualization
+  SET url_layer_visualization=EXCLUDED.url_layer_visualization,
+      user_resp=EXCLUDED.user_resp,
+      status=EXCLUDED.status
   -- RETURNING 'Ok, updated download.redirects_viz.'
   ;
   RETURN 'Ok, updated download.redirects_viz.';

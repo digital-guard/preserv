@@ -186,6 +186,7 @@ INSERT INTO optim.auth_user(username,info) VALUES
 ('enio','{"git_user":""}'::jsonb),
 ('peter','{"git_user":"ppKrauss"}'::jsonb),
 ('claiton','{"git_user":"0e1"}'::jsonb),
+('pamela','{"git_user":""}'::jsonb),
 ('luis','{"git_user":"luisfelipebr"}'::jsonb); -- minimal one Linux's /home/username
 
 CREATE TABLE optim.codec_type (
