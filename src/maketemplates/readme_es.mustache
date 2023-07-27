@@ -3,22 +3,22 @@
 <tr><td>Paquete <a target="_git" title="Enlace canónico a git para este paquete." href="{{data_packtpl.path_preserv_git}}"><big><b>pk{{data_packtpl.pack_number}}</b></big></a> de <small><a target="_osmcodes" title="Jurisdicción" href="https://osm.codes/{{data_packtpl.isolabel_ext}}">{{data_packtpl.isolabel_ext}}</a></small>
 </td></tr>
 <tr><td>
-Donante: <a rel="external" target="_doador" href="{{data_packtpl.url}}">{{data_packtpl.legalname}}</a><br/>
-<small>{{data_packtpl.vat_id}}</small> • Wikidata <a rel="external" target="_doador" title="Enlace del descriptor Wikidata del donante" href="https://www.wikidata.org/wiki/Q{{data_packtpl.wikidata_id}}">Q{{data_packtpl.wikidata_id}}</a></small><br/>
+Donante: <a rel="external" target="_doador" href="{{data_packtpl.url}}">{{data_packtpl.legalname}}</a>
+<br/>&nbsp; <small>{{data_packtpl.vat_id_p1}} {{data_packtpl.vat_id_p2}}</small> • Wikidata <a rel="external" target="_doador" title="Enlace del descriptor Wikidata del donante" href="https://www.wikidata.org/wiki/Q{{data_packtpl.wikidata_id}}">Q{{data_packtpl.wikidata_id}}</a></small><br/>
 {{#license_evidences}}Licencia <a rel="external" target="_doador" href="{{definition.2}}"><b>{{definition.0}}</b></a> ({{definition.1}} {{#license_evidences.file}}<a title="SHA256 {{file}}" href="http://dl.digital-guard.org/{{license_evidences.file}}"><code>{{license_evidences.file_7_ext}}</code></a>{{/license_evidences.file}}{{#license_evidences.uri_evidency}}{{#license_evidences.is_uri_evidency_eml}}<a title="SHA256 {{uri_evidency}}" href="http://dl.digital-guard.org/{{license_evidences.uri_evidency}}"><code>{{license_evidences.uri_evidency_7_ext}}</code></a>{{/license_evidences.is_uri_evidency_eml}}{{^license_evidences.is_uri_evidency_eml}}<a title="SHA256 {{uri_evidency}}" href="{{uri_evidency}}"><code>webarchive</code></a>{{/license_evidences.is_uri_evidency_eml}}{{/license_evidences.uri_evidency}}){{/license_evidences}}{{^license_evidences}}{{#license}}Licencia: <b>{{license}}</b>{{/license}}{{/license_evidences}}
-Obtido via <i>{{data_packcsv.uri_objtype}}</i> em <b>{{data_packcsv.accepted_date}}</b> por:<br/>
- Avaliação técnica: <a rel="external" target="_gitPerson" title="Usuario de Git" href="https://github.com/{{data_packtpl.user_resp_packtpl_info.git_user}}">{{data_packtpl.user_resp_packtpl_info.git_user}}</a><br/>
- Representação institucional: <a rel="external" target="_gitPerson" title="Usuario de" href="https://github.com/ThierryAJean">ThierryAJean</a><br/>
+Obtido via <i>{{data_packcsv.uri_objtype}}</i> em <b>{{data_packcsv.accepted_date}}</b> por:
+<br/>&nbsp; Avaliação técnica: <a rel="external" target="_gitPerson" title="Usuario de Git" href="https://github.com/{{data_packtpl.user_resp_packtpl_info.git_user}}">{{data_packtpl.user_resp_packtpl_info.git_user}}</a>
+<br/>&nbsp; Representação institucional: <a rel="external" target="_gitPerson" title="Usuario de" href="https://github.com/ThierryAJean">ThierryAJean</a><br/>
 </td></tr>
 <tr><td>Camadas: {{#layers_keys}}<a title="{{.}}" href="#-{{.}}"><img src="https://raw.githubusercontent.com/digital-guard/preserv/main/docs/assets/layerIcon-{{.}}.png" alt="{{.}}" width="20"/></a> {{/layers_keys}}</td></tr>
-{{#has_publication_keys}}<tr><td>Datos publicados en <a href="{{data_packtpl.path_cutgeo_git}}">preservCutGeo-CO2021</a></td></tr>{{/has_publication_keys}}
+{{#has_publication_keys}}<tr><td>Datos publicados en <a href="{{data_packtpl.path_cutgeo_git}}">preservCutGeo-CO2021</a><br/><a href="#reproducibilidad">Reproducible</a></td></tr>{{/has_publication_keys}}
 {{#has_viz_keys}}<tr><td>Visualización: {{#viz_keys}}<a title="{{.}}" href="https://viz.addressforall.org/{{data_packtpl.isolabel_ext}}/_pk{{data_packtpl.pack_number}}/{{.}}"><img src="https://raw.githubusercontent.com/digital-guard/preserv/main/docs/assets/layerIcon-{{.}}.png" alt="{{.}}" width="20"/></a>{{/viz_keys}}</td></tr>{{/has_viz_keys}}
 </table>
 </aside>
 
 <section>
 
-Este repositorio de metadatos describe un paquete de archivos donados al dominio público. Está siendo conservado por Digital Guard: para obtener más detalles, consulte la [documentación sobre el proceso de registro y conservación](https://git.digital-guard.org/preserv/tree/main/docs).
+Este repositorio de metadatos describe un paquete de archivos donados al dominio público. Está siendo conservado por Digital Guard: para obtener más detalles, consulte la [documentación sobre el proceso de registro y conservación](https://wiki.addressforall.org/doc/Documentação_Digital-guard).
 
 Nota. Este documento README fue generado por software a partir de la información contenida en el archivo [`make_conf.yaml`](make_conf.yaml) en este paquete, e información adicional de los catálogos de [donantes](https://git.digital-guard.org/preserv-BR/blob/main/data/donor.csv) y [paquetes](https://git.digital-guard.org/preserv-BR/blob/main/data/donatedPack.csv).
 
