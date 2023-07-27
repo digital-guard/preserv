@@ -4,8 +4,6 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
     'isolabel_ext', isolabel_ext,
     'legalname', legalname,
     'vat_id', vat_id,
-    'vat_id_p1', upper(split_part(vat_id,':',1)),
-    'vat_id_p2', split_part(vat_id,':',2),
     'url', url,
     'wikidata_id', wikidata_id,
     'user_resp', user_resp,
