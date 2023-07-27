@@ -26,66 +26,85 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
                 'publication_summary', publication_summary,
                 'url_page', lower(isolabel_ext) || '_pk' || pack_number || '_' ||  class_ftname || '.html',
                 'filtered_name', 'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || class_ftname || '_' || id || '.zip',
-                'viz_name', isolabel_ext || '_pk' || pack_number || '/' || class_ftname
-                ))
+                'viz_summary', viz_summary
+                )),
+    'viz_keys', array_agg((CASE WHEN viz_summary IS NOT NULL THEN class_ftname ELSE NULL END)),
+    'publication_keys', array_agg((CASE WHEN publication_summary IS NOT NULL THEN class_ftname ELSE NULL END))
     ) AS page
-FROM (
-  SELECT pf.packtpl_id, pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.kx_pack_item_version, pf.local_serial, pf.pk_count, pf.pack_number,
-  pf.user_resp_initcap AS user_resp, pf.path_preserv_git, pf.path_cutgeo_git,
-  row_number() OVER (PARTITION BY pf.isolabel_ext, pf.local_serial, pf.pk_count ORDER BY pf.ftype_info->'class_ftname' ASC ) AS row_num,
-  pf.ftype_info->>'class_ftname' as class_ftname,
-  pf.ftype_info->'class_info'->>'shortname_pt' as shortname,
-  pf.ftype_info->'class_info'->>'description_pt' as description,
-  pf.make_conf_tpl->'license_evidences' AS license_evidences,
-  pf.hashedfname, 
-  pf.hashedfname_without_ext,
-  pf.hashedfname_7_ext,
-  pf.id,
-  CASE pf.geomtype
-            WHEN 'poly'  THEN 'pols'
-            WHEN 'line'  THEN 'lns'
-            WHEN 'point' THEN 'pts'
-            END AS geom_type_abbr,
-  jsonb_strip_nulls(jsonb_build_object(
-        'geom_type',CASE pf.geomtype
-            WHEN 'poly'  THEN 'polígonos'
-            WHEN 'line'  THEN 'segmentos'
-            WHEN 'point' THEN 'pontos'
-            END,
-        'geom_unit_abr',CASE pf.geomtype
-            WHEN 'poly'  THEN 'km²'
-            WHEN 'line'  THEN 'km'
-            ELSE  ''
-            END,
-        'geom_unit_ext',CASE pf.geomtype
-            WHEN 'poly'  THEN 'quilômetros quadrados'
-            WHEN 'line'  THEN 'quilômetros'
-            ELSE  ''
-            END,
-            'isGeoaddress', iif(pf.ftype_info->>'class_ftname'='geoaddress','true'::jsonb,'false'::jsonb),
-        'bytes_mb', (pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0,
-        'bytes_mb_round2', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.01),
-        'avg_density_round2', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::float),0.01),
-        'bytes_mb_round4', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.0001),
-        'avg_density_round4', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::float),0.0001),
-        'size_round2',CASE
-            WHEN pc.kx_profile->'publication_summary'->>'size' IS NOT NULL
-            THEN ROUND(((pc.kx_profile->'publication_summary'->'size')::float),0.01)
-            ELSE  NULL
-            END,
-        'size_round4',CASE
-            WHEN pc.kx_profile->'publication_summary'->>'size' IS NOT NULL
-            THEN ROUND(((pc.kx_profile->'publication_summary'->'size')::float),0.0001)
-            ELSE  NULL
-            END
-  )) || (pc.kx_profile->'publication_summary') AS publication_summary
+FROM
+(
+  SELECT g.*,
+         jsonb_strip_nulls(
+          jsonb_build_object(
+          'jurisdiction_pack_layer', dviz.jurisdiction_pack_layer,
+          'user_resp', dviz.user_resp,
+          'status', dviz.status,
+          'hashedfname_from', dviz.hashedfname_from,
+          'url_layer_visualization', dviz.url_layer_visualization
+          )
+         ) AS viz_summary
+  FROM
+  (
+    SELECT pf.packtpl_id, pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.kx_pack_item_version, pf.local_serial, pf.pk_count, pf.pack_number,
+    pf.user_resp_initcap AS user_resp, pf.path_preserv_git, pf.path_cutgeo_git,
+    row_number() OVER (PARTITION BY pf.isolabel_ext, pf.local_serial, pf.pk_count ORDER BY pf.ftype_info->'class_ftname' ASC ) AS row_num,
+    pf.ftype_info->>'class_ftname' as class_ftname,
+    pf.ftype_info->'class_info'->>'shortname_pt' as shortname,
+    pf.ftype_info->'class_info'->>'description_pt' as description,
+    pf.make_conf_tpl->'license_evidences' AS license_evidences,
+    pf.hashedfname,
+    pf.hashedfname_without_ext,
+    pf.hashedfname_7_ext,
+    pf.id,
+    CASE pf.geomtype
+              WHEN 'poly'  THEN 'pols'
+              WHEN 'line'  THEN 'lns'
+              WHEN 'point' THEN 'pts'
+              END AS geom_type_abbr,
+    jsonb_strip_nulls(jsonb_build_object(
+          'geom_type',CASE pf.geomtype
+              WHEN 'poly'  THEN 'polígonos'
+              WHEN 'line'  THEN 'segmentos'
+              WHEN 'point' THEN 'pontos'
+              END,
+          'geom_unit_abr',CASE pf.geomtype
+              WHEN 'poly'  THEN 'km²'
+              WHEN 'line'  THEN 'km'
+              ELSE  ''
+              END,
+          'geom_unit_ext',CASE pf.geomtype
+              WHEN 'poly'  THEN 'quilômetros quadrados'
+              WHEN 'line'  THEN 'quilômetros'
+              ELSE  ''
+              END,
+              'isGeoaddress', iif(pf.ftype_info->>'class_ftname'='geoaddress','true'::jsonb,'false'::jsonb),
+          'bytes_mb', (pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0,
+          'bytes_mb_round2', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.01),
+          'avg_density_round2', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::float),0.01),
+          'bytes_mb_round4', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.0001),
+          'avg_density_round4', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::float),0.0001),
+          'size_round2',CASE
+              WHEN pc.kx_profile->'publication_summary'->>'size' IS NOT NULL
+              THEN ROUND(((pc.kx_profile->'publication_summary'->'size')::float),0.01)
+              ELSE  NULL
+              END,
+          'size_round4',CASE
+              WHEN pc.kx_profile->'publication_summary'->>'size' IS NOT NULL
+              THEN ROUND(((pc.kx_profile->'publication_summary'->'size')::float),0.0001)
+              ELSE  NULL
+              END
+    )) || (pc.kx_profile->'publication_summary') AS publication_summary
 
-  FROM optim.vw01full_packfilevers_ftype pf
-  INNER JOIN optim.donated_PackComponent pc
-  ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
+    FROM optim.vw01full_packfilevers_ftype pf
+    INNER JOIN optim.donated_PackComponent pc
+    ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
 
-  WHERE pf.ftid > 19
-  ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
+    WHERE pf.ftid > 19
+    ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
+  ) g
+  LEFT JOIN download.redirects_viz dviz
+  ON dviz.jurisdiction_pack_layer = isolabel_ext || '/_pk' || pack_number || '/' || class_ftname
+     AND dviz.url_layer_visualization IS NOT NULL
 ) t
 GROUP BY packtpl_id, isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv_git, pack_number, path_cutgeo_git, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences
 ;

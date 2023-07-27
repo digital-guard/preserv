@@ -539,16 +539,17 @@ CREATE or replace FUNCTION optim.generate_readme(
     SELECT commands FROM optim.reproducibility WHERE packtpl_id= (p_yaml->>'packtpl_id')::bigint INTO reproducibility;
 
     SELECT p_yaml || jsonb_build_object('layers',list) || jsonb_build_object('data_packcsv',s.csv[0]) || jsonb_build_object( 'reproducibility', to_jsonb(reproducibility) )
+           || COALESCE( jsonb_build_object('viz_keys',to_jsonb(viz_keys)),'{}'::jsonb) || COALESCE( jsonb_build_object('publication_keys',to_jsonb(publication_keys)),'{}'::jsonb)
     FROM
     (
-      SELECT jsonb_agg(g) AS list
+      SELECT jsonb_agg(value) AS list, MAX(viz_keys) AS viz_keys, MAX(publication_keys) AS publication_keys
       FROM
       (
-        SELECT t.value || jsonb_build_object('publication_data',COALESCE(u.l,'{}'::jsonb)) AS value
+        SELECT t.value || jsonb_build_object('publication_data',COALESCE(u.l,'{}'::jsonb)) AS value, viz_keys, publication_keys
         FROM jsonb_each(p_yaml->'layers') t(key,value)
         LEFT JOIN
         (
-          SELECT jsonb_array_elements(page->'layers') AS l
+          SELECT jsonb_array_elements(page->'layers') AS l, jsonb_array_to_text_array(page->'viz_keys') AS viz_keys, jsonb_array_to_text_array(page->'publication_keys') AS publication_keys
           FROM optim.vw03publication
           WHERE pack_number = ('_pk' || (p_yaml->'data_packtpl'->>'pack_number')::text) AND  isolabel_ext = p_yaml->'data_packtpl'->>'isolabel_ext'
         ) u
