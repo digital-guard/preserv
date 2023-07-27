@@ -540,6 +540,7 @@ CREATE or replace FUNCTION optim.generate_readme(
 
     SELECT p_yaml || jsonb_build_object('layers',list) || jsonb_build_object('data_packcsv',s.csv[0]) || jsonb_build_object( 'reproducibility', to_jsonb(reproducibility) )
            || COALESCE( jsonb_build_object('viz_keys',to_jsonb(viz_keys)),'{}'::jsonb) || COALESCE( jsonb_build_object('publication_keys',to_jsonb(publication_keys)),'{}'::jsonb)
+           || jsonb_build_object('has_publication_keys',(CASE WHEN publication_keys IS NOT NULL THEN true ELSE false END)) || jsonb_build_object('has_viz_keys',(CASE WHEN viz_keys IS NOT NULL THEN true ELSE false END))
     FROM
     (
       SELECT jsonb_agg(jsonb_build_object('value',value)) AS list, MAX(viz_keys) AS viz_keys, MAX(publication_keys) AS publication_keys
