@@ -542,7 +542,7 @@ CREATE or replace FUNCTION optim.generate_readme(
            || COALESCE( jsonb_build_object('viz_keys',to_jsonb(viz_keys)),'{}'::jsonb) || COALESCE( jsonb_build_object('publication_keys',to_jsonb(publication_keys)),'{}'::jsonb)
     FROM
     (
-      SELECT jsonb_agg(value) AS list, MAX(viz_keys) AS viz_keys, MAX(publication_keys) AS publication_keys
+      SELECT jsonb_agg(jsonb_build_object('value',value)) AS list, MAX(viz_keys) AS viz_keys, MAX(publication_keys) AS publication_keys
       FROM
       (
         SELECT t.value || jsonb_build_object('publication_data',COALESCE(u.l,'{}'::jsonb)) AS value, viz_keys, publication_keys

@@ -11,8 +11,8 @@ Obtido via <i>{{data_packcsv.uri_objtype}}</i> em <b>{{data_packcsv.accepted_dat
  Representação institucional: <a rel="external" target="_gitPerson" title="Usuario de" href="https://github.com/ThierryAJean">ThierryAJean</a><br/>
 </td></tr>
 <tr><td>Camadas: {{#layers_keys}}<a title="{{.}}" href="#-{{.}}"><img src="https://raw.githubusercontent.com/digital-guard/preserv/main/docs/assets/layerIcon-{{.}}.png" alt="{{.}}" width="20"/></a> {{/layers_keys}}</td></tr>
-{{#publication_keys}}<tr><td>Datos publicados en <a href="{{.}}">preservCutGeo-BR2021</a></td></tr>{{/publication_keys}}
-{{#viz_keys}}<tr><td>Visualización: <a title="{{.}}" href="https://viz.addressforall.org/{{.}}"><img src="https://raw.githubusercontent.com/digital-guard/preserv/main/docs/assets/layerIcon-{{.}}.png" alt="{{.}}" width="20"/></a></td></tr>{{/viz_keys}}
+{{#publication_keys}}<tr><td>Datos publicados en <a href="{{data_packtpl.path_cutgeo_git}}">preservCutGeo-CO2021</a></td></tr>{{/publication_keys}}
+<tr><td>Visualización: {{#viz_keys}}<a title="{{.}}" href="https://viz.addressforall.org/{{.}}"><img src="https://raw.githubusercontent.com/digital-guard/preserv/main/docs/assets/layerIcon-{{.}}.png" alt="{{.}}" width="20"/></a>{{/viz_keys}}</td></tr>
 
 </table>
 </aside>
@@ -48,7 +48,7 @@ Los archivos contienen "capas de datos" temáticas. Los metadatos también descr
 [{{path_cutgeo_git}}]({{path_cutgeo_git}})<br/>{{bytes}} bytes ({{bytes_mb_round2}} <abbr title="mebibyte">MiB</abbr>)<br/>{{itens}} {{geom_type}}{{^isGeoaddress}} con {{size_round2}} <abbr title="{{geom_unit_ext}}">{{geom_unit_abr}}</abbr><br/>densidad media: {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}{{#isGeoaddress}}<br/>densidad media de {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}{{/value.publication_data.publication_summary}}{{/value.publication_data}}
 
 {{#value.publication_data}}{{#value.publication_data.viz_summary}}{{^isCadLayer}}#### Visualización
-[{{jurisdiction_pack_layer}}](https://viz.addressforall.org/{{jurisdiction_pack_layer}}){{/isCadLayer}}{{/value.publication_data.viz_summary}}{{/value.publication_data}}{{/value}}{{/layers}}
+[https://viz.addressforall.org/{{jurisdiction_pack_layer}}](https://viz.addressforall.org/{{jurisdiction_pack_layer}}){{/isCadLayer}}{{/value.publication_data.viz_summary}}{{/value.publication_data}}{{/value}}{{/layers}}
 
 {{#test_evidence}}
 # Evidencia de prueba
