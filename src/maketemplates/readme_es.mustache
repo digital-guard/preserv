@@ -28,7 +28,7 @@ Los archivos contienen "capas de datos" temáticas. Los metadatos también descr
 
 {{#layers}}{{#value}}## <img src="https://raw.githubusercontent.com/digital-guard/preserv/main/docs/assets/layerIcon-{{layername_root}}.png" alt="{{layername_root}}" width="20"/> {{layername_root}}
 
-{{#file_data}}Nombre del archivo: `{{orig_filename}}`.<br/>*Descarga* e integridad: [{{file_data.file}}](http://dl.digital-guard.org/{{file_data.file}}){{#file_data.name}}<br/>Descripción: {{file_data.name}}{{/file_data.name}}{{#file_data.comments}}<br/>Comentario: {{file_data.comments}}{{/file_data.comments}}{{#file_data.size}}<br/>Tamaño del archivo: {{file_data.size}} bytes{{#file_data.size_mb_round2}} ({{file_data.size_mb_round2}} <abbr title="mebibyte">MiB</abbr>){{/file_data.size_mb_round2}}{{/file_data.size}}{{/file_data}}<br/>Formato: {{#extension}}{{extension}}{{/extension}}{{#srid}}<br/>SRID: {{#srid_proj}}{{#insertSrid}}{{srid_proj}}{{/insertSrid}}{{^insertSrid}}{{srid}}{{/insertSrid}}{{/srid_proj}}{{^srid_proj}}{{srid}}{{/srid_proj}}{{/srid}}
+{{#file_data}}Nombre del archivo: `{{orig_filename}}`<br/>*Descarga* e integridad: [{{file_data.file}}](http://dl.digital-guard.org/{{file_data.file}}){{#file_data.name}}<br/>Descripción: {{file_data.name}}{{/file_data.name}}{{#file_data.comments}}<br/>Comentario: {{file_data.comments}}{{/file_data.comments}}{{#file_data.size}}<br/>Tamaño del archivo: {{file_data.size}} bytes{{#file_data.size_mb_round2}} ({{file_data.size_mb_round2}} <abbr title="mebibyte">MiB</abbr>){{/file_data.size_mb_round2}}{{/file_data.size}}{{/file_data}}<br/>Formato: {{#extension}}{{extension}}{{/extension}}{{#srid}}<br/>SRID: {{#srid_proj}}{{#insertSrid}}{{srid_proj}}{{/insertSrid}}{{^insertSrid}}{{srid}}{{/insertSrid}}{{/srid_proj}}{{^srid_proj}}{{srid}}{{/srid_proj}}{{/srid}}
 
 {{#has_standardized_fields}}#### Datos relevantes{{#standardized_fields}}
 * `{{name}}` ({{standard}}){{#comment}}: {{comment}}{{/comment}}
@@ -43,8 +43,8 @@ Los archivos contienen "capas de datos" temáticas. Los metadatos también descr
 {{#value.comments}}#### Comentarios
 {{value.comments}}{{/value.comments}}
 
-{{#value.publication_data}}{{#value.publication_data.publication_summary}}#### Datos publicados
-[{{path_cutgeo_git}}]({{path_cutgeo_git}})<br/>{{bytes}} bytes ({{bytes_mb_round2}} <abbr title="mebibyte">MiB</abbr>)<br/>{{itens}} {{geom_type}}{{^isGeoaddress}} con {{size_round2}} <abbr title="{{geom_unit_ext}}">{{geom_unit_abr}}</abbr><br/>densidad media: {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}{{#isGeoaddress}}<br/>densidad media de {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}{{/value.publication_data.publication_summary}}{{/value.publication_data}}
+{{#value.publication_data}}{{#value.publication_data.publication_summary}}#### Filtrado de resultados y su publicación
+{{bytes}} bytes ({{bytes_mb_round2}} <abbr title="mebibyte">MiB</abbr>)<br/>{{itens}} {{geom_type}}{{^isGeoaddress}} con {{size_round2}} <abbr title="{{geom_unit_ext}}">{{geom_unit_abr}}</abbr><br/>densidad media: {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}{{#isGeoaddress}}<br/>densidad media: {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}<br/>GeoJSONs publicados em [{{path_cutgeo_git}}]({{path_cutgeo_git}}){{/value.publication_data.publication_summary}}{{/value.publication_data}}
 
 {{#value.publication_data}}{{#value.publication_data.viz_summary}}{{^isCadLayer}}#### Visualización
 [https://viz.addressforall.org/{{jurisdiction_pack_layer}}](https://viz.addressforall.org/{{jurisdiction_pack_layer}}){{/isCadLayer}}{{/value.publication_data.viz_summary}}{{/value.publication_data}}{{/value}}{{/layers}}
@@ -76,7 +76,7 @@ Los archivos contienen "capas de datos" temáticas. Los metadatos también descr
 
 # Reproducibilidad
 
-Consulte los detalles en [reproducibility.sh](reproducibility.sh).
+Consulte los detalles en [reproducibility.sh]({{data_packtpl.path_preserv_git}}/reproducibility.sh).
 
 </section>
 
