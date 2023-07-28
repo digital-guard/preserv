@@ -45,7 +45,7 @@ Os arquivos contêm "camadas de dados" temáticas. Os metadados também descreve
 {{value.comments}}{{/value.comments}}
 
 {{#value.publication_data}}{{#value.publication_data.publication_summary}}#### Resultados da filtragem e sua publicação
-{{bytes}} bytes ({{bytes_mb_round2}} <abbr title="mebibyte">MiB</abbr>)<br/>{{itens}} {{geom_type}}{{^isGeoaddress}} com {{size_round2}} <abbr title="{{geom_unit_ext}}">{{geom_unit_abr}}</abbr><br/>densidade média: {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}{{#isGeoaddress}}<br/>densidade média: {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}<br/>GeoJSONs publicados em [{{path_cutgeo_git}}]({{path_cutgeo_git}}) de preservCutGeo-BR2021{{/value.publication_data.publication_summary}}{{/value.publication_data}}
+{{bytes}} bytes ({{bytes_mb_round2}} <abbr title="mebibyte">MiB</abbr>)<br/>{{itens}} {{geom_type}}{{^isGeoaddress}} com {{size_round2}} <abbr title="{{geom_unit_ext}}">{{geom_unit_abr}}</abbr><br/>densidade média: {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}{{#isGeoaddress}}<br/>densidade média: {{avg_density_round2}} {{geom_type}}/km²{{/isGeoaddress}}<br/>GeoJSONs publicados em [{{path_cutgeo_git}}]({{path_cutgeo_git}}){{/value.publication_data.publication_summary}}{{/value.publication_data}}
 
 {{#value.publication_data}}{{#value.publication_data.viz_summary}}{{^isCadLayer}}#### Visualização
 [https://viz.addressforall.org/{{jurisdiction_pack_layer}}](https://viz.addressforall.org/{{jurisdiction_pack_layer}}){{/isCadLayer}}{{/value.publication_data.viz_summary}}{{/value.publication_data}}{{/value}}{{/layers}}
