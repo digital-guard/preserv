@@ -79,6 +79,54 @@ CREATE INDEX optim_jurisdiction_geom_isolabel_ext_idx1 ON optim.jurisdiction_geo
 
 COMMENT ON TABLE optim.jurisdiction_geom IS 'OpenStreetMap geometries for optim.jurisdiction.';
 
+CREATE TABLE optim.jurisdiction_bbox (
+  id int PRIMARY KEY,
+  jurisd_base_id int,
+  geom Box2D
+);
+COMMENT ON COLUMN optim.jurisdiction_bbox.id             IS 'Gid.';
+COMMENT ON COLUMN optim.jurisdiction_bbox.jurisd_base_id IS 'Numeric official ID.';
+COMMENT ON COLUMN optim.jurisdiction_bbox.geom           IS 'Box2D for id identifier';
+
+COMMENT ON TABLE optim.jurisdiction_bbox IS 'Box2D geometries for optim.jurisdiction.';
+
+INSERT INTO optim.jurisdiction_bbox(id,jurisd_base_id,geom) VALUES
+( 1,  76, ST_MakeBox2D(ST_POINT(-53.0755833,-33.8689056), ST_POINT(-28.6289646,  5.2695808))),
+( 2,  76, ST_MakeBox2D(ST_POINT(-66.8511571,-30.0853962), ST_POINT(-53.0755833,  5.2695808))),
+( 3,  76, ST_MakeBox2D(ST_POINT(-73.9830625,-30.0853962), ST_POINT(-66.8511571, -4.2316872))),
+( 4,null, ST_MakeBox2D(ST_POINT(-70.8479308, -4.2316872), ST_POINT(-66.8511571,  2.23011  ))), -- bbox BR/CO
+( 5,null, ST_MakeBox2D(ST_POINT(-57.6489299,-33.8689056), ST_POINT(-53.0755833,-30.0853962))), -- bbox BR/UY
+
+( 6, 170, ST_MakeBox2D(ST_POINT(-84.8098028,  1.4683015), ST_POINT(-70.8479308, 16.1694444))),
+( 7, 170, ST_MakeBox2D(ST_POINT(-75.192504,  -4.2316872), ST_POINT(-70.8479308,  1.4695853))),
+( 8, 170, ST_MakeBox2D(ST_POINT(-70.8479308,  2.23011  ), ST_POINT(-66.8511571, 16.1694444))),
+( 9, 170, ST_MakeBox2D(ST_POINT(-73.9830625,-30.0853962), ST_POINT(-66.8511571, -4.2316872))),
+(10,null, ST_MakeBox2D(ST_POINT(-79.2430285, -0.1251374), ST_POINT(-75.192504 ,  1.4695853)));  -- bbox CO/EC
+
+CREATE TABLE optim.jurisdiction_bbox_border (
+  id int PRIMARY KEY,
+  bbox_id int NOT NULL REFERENCES optim.jurisdiction_bbox(id),
+  jurisd_base_id int,
+  geom Geometry
+);
+COMMENT ON COLUMN optim.jurisdiction_bbox_border.id             IS 'Gid.';
+COMMENT ON COLUMN optim.jurisdiction_bbox_border.bbox_id        IS 'id of optim.jurisdiction_bbox.';
+COMMENT ON COLUMN optim.jurisdiction_bbox_border.jurisd_base_id IS 'Numeric official ID.';
+COMMENT ON COLUMN optim.jurisdiction_bbox_border.geom           IS 'Geometry of intersection of box with country.';
+
+COMMENT ON TABLE optim.jurisdiction_bbox_border IS 'Polygon for optim.jurisdiction_bbox, where jurisd_base_id is null.';
+
+/*
+-- DELETE FROM optim.jurisdiction_bbox_border;
+INSERT INTO optim.jurisdiction_bbox_border
+SELECT ROW_NUMBER() OVER() as id, b.id AS bbox_id, g.jurisd_base_id AS jurisd_base_id, ST_Intersection(ST_SetSRID(b.geom,4326),g.geom)
+FROM optim.jurisdiction_bbox b
+LEFT JOIN optim.vw01full_jurisdiction_geom g
+ON ST_Intersects(ST_SetSRID(b.geom,4326),g.geom) IS TRUE
+WHERE b.jurisd_base_id IS NULL AND g.isolabel_ext IN ('CO','BR','UY','EC')
+;
+*/
+
 CREATE TABLE optim.jurisdiction_geom_point (
   osm_id bigint PRIMARY KEY,
   isolabel_ext text,
