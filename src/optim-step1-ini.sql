@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   osm_id bigint PRIMARY KEY,    -- official or adapted geometry. AdministrativeArea.
   jurisd_base_id int NOT NULL,  -- ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans)
   jurisd_local_id int   NOT NULL, -- numeric official ID like IBGE_ID of BR jurisdiction.
+  iso_country_id int   NOT NULL, -- numeric official ID like IBGE_ID of BR jurisdiction.
   -- for example BR's ACRE is 12 and its cities are {1200013, 1200054,etc}.
   parent_id bigint REFERENCES optim.jurisdiction(osm_id), -- null for INT.
   admin_level smallint NOT NULL CHECK(admin_level>0 AND admin_level<100), -- 2=country (e.g. BR), at BR: 4=UFs, 8=municipios.
@@ -37,7 +38,8 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
 );
 COMMENT ON COLUMN optim.jurisdiction.osm_id                  IS 'Relation identifier in OpenStreetMap.';
 COMMENT ON COLUMN optim.jurisdiction.jurisd_base_id          IS 'ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans).';
-COMMENT ON COLUMN optim.jurisdiction.jurisd_local_id         IS 'Numeric official ID like IBGE_ID of BR jurisdiction. For example ACRE is 12 and its cities are {1200013, 1200054,etc}.';
+COMMENT ON COLUMN optim.jurisdiction.jurisd_local_id         IS 'NaturalEarthData country gid.';
+COMMENT ON COLUMN optim.jurisdiction.iso_country_id          IS 'Numeric official ID like IBGE_ID of BR jurisdiction. For example ACRE is 12 and its cities are {1200013, 1200054,etc}.';
 COMMENT ON COLUMN optim.jurisdiction.parent_id               IS 'osm_id of top admin_level.';
 COMMENT ON COLUMN optim.jurisdiction.admin_level             IS 'OSM convention for admin_level tag in country.';
 COMMENT ON COLUMN optim.jurisdiction.name                    IS 'Name of jurisdiction';
