@@ -59,7 +59,6 @@ COMMENT ON TABLE optim.jurisdiction IS 'Information about jurisdictions without 
 
 CREATE INDEX jurisdiction_isolabel_ext_idx1 ON optim.jurisdiction USING btree (isolabel_ext);
 
-
 CREATE TABLE optim.jurisdiction_geom (
   osm_id bigint PRIMARY KEY,
   isolabel_ext text NOT NULL,
@@ -822,7 +821,6 @@ $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION optim.load_donor_pack
   IS 'Generates a clone-structure FOREIGN TABLE for donor.csv and donatedPack.csv.'
 ;
-
 --SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv-BR/data/donor.csv','tmp_orig.fdw_donorbr',',')
 
 CREATE or replace FUNCTION optim.load_codec_type(

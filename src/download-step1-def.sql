@@ -20,17 +20,6 @@ COMMENT ON TABLE download.redirects
 ;
 CREATE INDEX redirects_hashedfname_idx1 ON download.redirects USING btree (hashedfname);
 
-CREATE or replace FUNCTION download.load_dldg_csv(
-    p_filename text DEFAULT '/var/gits/_dg/preserv/data/redirs/fromDL_toFileServer.csv'
-) RETURNS text AS $f$
-  SELECT optim.fdw_generate_direct_csv(p_filename,'tmp_orig.redirects_dlguard',',');
-$f$ LANGUAGE SQL;
-COMMENT ON FUNCTION download.load_dldg_csv
-  IS 'Generates a clone-structure FOREIGN TABLE for fromDL_toFileServer.csv.'
-;
--- SELECT download.load_dldg_csv('/var/gits/_dg/preserv/data/redirs/fromDL_toFileServer.csv');
--- SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/redirs/fromDL_toFileServer.csv','tmp_orig.redirects_viz',',');
-
 CREATE or replace FUNCTION download.insert_dldg_csv(
 ) RETURNS text AS $f$
 BEGIN
@@ -66,17 +55,6 @@ COMMENT ON TABLE download.redirects_viz
   IS 'Matching between layer and external view provided by third party.'
 ;
 CREATE INDEX redirects_viz_jurisdiction_pack_layer_idx1 ON download.redirects_viz USING btree (jurisdiction_pack_layer);
-
-CREATE or replace FUNCTION download.load_viz_csv(
-    p_filename text DEFAULT '/var/gits/_dg/preserv/data/redirs/fromCutLayer_toVizLayer.csv'
-) RETURNS text AS $f$
-  SELECT optim.fdw_generate_direct_csv(p_filename,'tmp_orig.redirects_viz',',');
-$f$ LANGUAGE SQL;
-COMMENT ON FUNCTION download.load_viz_csv
-  IS 'Generates a clone-structure FOREIGN TABLE for fromCutLayer_toVizLayer.csv.'
-;
--- SELECT download.load_viz_csv('/var/gits/_dg/preserv/data/redirs/fromCutLayer_toVizLayer.csv');
--- SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/redirs/fromCutLayer_toVizLayer.csv','tmp_orig.redirects_viz',',');
 
 CREATE or replace FUNCTION download.insert_viz_csv(
 ) RETURNS text AS $f$
@@ -121,7 +99,6 @@ COMMENT ON FUNCTION download.update_cloudControl_vizuri
   IS 'Update viz_uri in info of optim.donated_PackComponent_cloudControl'
 ;
 -- SELECT download.update_cloudControl_vizuri();
-
 
 ----------------------
 

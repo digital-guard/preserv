@@ -118,19 +118,7 @@ load_hcode_parameters:
 load_license_tables: pg_datalake=dl05s_main
 load_license_tables: pgio
 	@echo "--- license table load ---"
-# 	wget "https://github.com/digital-guard/licenses/raw/master/data/families.csv" -O "$(pg_io)/families.csv"
-	wget "https://github.com/digital-guard/licenses/raw/master/data/licenses.csv" -O "$(pg_io)/licenses.csv"
-	wget "https://github.com/digital-guard/licenses/raw/master/data/implieds.csv" -O "$(pg_io)/implieds.csv"
-	wget "https://raw.githubusercontent.com/digital-guard/preserv-BR/main/data/donatedPack.csv" -O "$(pg_io)/donatedPack.csv"
-
-	psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.fdw_generate_direct_csv('$(pg_io)/licenses.csv','tmp_orig.tmp_licenses'); SELECT optim.fdw_generate_direct_csv('$(pg_io)/implieds.csv','tmp_orig.tmp_implieds'); SELECT optim.fdw_generate_direct_csv('$(pg_io)/donatedPack.csv','tmp_orig.tmp_donatedPack'); \
-	DROP TABLE IF EXISTS tmp_orig.tmp_pack_licenses; CREATE TABLE tmp_orig.tmp_pack_licenses AS SELECT d.pack_id, l.* FROM tmp_orig.tmp_donatedPack AS d \
-	LEFT JOIN (\
-	SELECT id_label, name, family, url, 'yes' AS license_is_explicit FROM tmp_orig.tmp_licenses \
-	UNION \
-	SELECT id_label, name, family, url_report AS url, 'no' AS license_is_explicit FROM tmp_orig.tmp_implieds) AS l \
-	ON lower(d.license) = l.id_label AND d.license_is_explicit = l.license_is_explicit;\
-	DROP FOREIGN TABLE IF EXISTS tmp_orig.tmp_licenses; DROP FOREIGN TABLE IF EXISTS tmp_orig.tmp_implieds; DROP FOREIGN TABLE IF EXISTS tmp_orig.tmp_donatedPack;"
+	psql $(pg_uri_root)/$(pg_datalake) -c "SELECT license.insert_licenses();"
 
 to_donated_packcomponent:
 	@echo "--- DUMP ingest.donated_packcomponent to $(pg_io)/dump_component_$(pg_db).sql ---"

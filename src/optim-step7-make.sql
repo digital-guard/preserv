@@ -652,7 +652,7 @@ CREATE or replace FUNCTION optim.generate_make_conf_with_license(
            yamlfile_to_jsonb(p_path || '/preserv' || CASE WHEN jurisd ='INT' THEN '' ELSE '-' || upper(jurisd) END || '/src/maketemplates/commomFirst.yaml')
     INTO p_yaml;
 
-    SELECT to_jsonb(ARRAY[name, family, url]), CASE WHEN lower(license_is_explicit)='yes' THEN TRUE ELSE FALSE END FROM tmp_orig.tmp_pack_licenses WHERE tmp_orig.tmp_pack_licenses.pack_id = (to_char(substring(p_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(p_yaml->>'pack_id','([^\.]*)$')::int,'fm00')) INTO definition, license_explicit;
+    SELECT to_jsonb(ARRAY[name, family, url]), CASE WHEN lower(license_is_explicit)='yes' THEN TRUE ELSE FALSE END FROM license.pack_licenses WHERE license.pack_licenses.pack_id = (to_char(substring(p_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(p_yaml->>'pack_id','([^\.]*)$')::int,'fm00')) INTO definition, license_explicit;
 
     IF license_explicit
     THEN
