@@ -3,22 +3,28 @@
 ##
 
 server {
+    listen              80;
+    listen              443 ssl;
     server_name docs.digital-guard.org;
-    root /var/www/docs.digital-guard.org/;
-    index  index.php index.html index.htm;
+    # root /var/www/docs.digital-guard.org/;
+    # index  index.php index.html index.htm;
     access_log /var/log/nginx/docs.digital-guard.org.access_log;
 
     # PAGES:
-    location / {
-      try_files $uri $uri/  /index.php?uri=$uri;
-    }
-    location ~ \.php$ {
-          include snippets/fastcgi-php.conf;
-          fastcgi_pass unix:/run/php/php8.0-fpm.sock;
-    }
+    # location / {
+    #   try_files $uri $uri/  /index.php?uri=$uri;
+    # }
+    # location ~ \.php$ {
+    #       include snippets/fastcgi-php.conf;
+    #       fastcgi_pass unix:/run/php/php8.0-fpm.sock;
+    # }
+
+    return 301 https://wiki.addressforall.org/doc/Documenta%C3%A7%C3%A3o_Digital-guard;
 } # \server
 
 server {
+    listen              80;
+    listen              443 ssl;
     server_name digital-guard.org www.digital-guard.org;
     root /var/www/digital-guard.org/;
     index  index.php index.html index.htm;
@@ -47,6 +53,8 @@ server {
 } # \server
 
 server {
+    listen              80;
+    listen              443 ssl;
         server_name dl.digital-guard.org;
         root /var/www/dl.digital-guard.org/;
         index  index.php index.html index.htm;
@@ -110,6 +118,20 @@ server {
                 rewrite
                   ^/?(.*)$
                   /digital-guard/$1
+                  break;
+                proxy_pass http://github.com;
+        }
+} # \server
+
+server {
+        listen              80;
+        listen              443 ssl;
+        server_name lic.digital-guard.org;
+        # vai redirecionar para site das licensas, por hora fica sendo o git para teste. certo pelo label ou nome.
+        location ~ ^/?.+ {
+                rewrite
+                  ^/?(.*)$
+                  /digital-guard/licenses/$1
                   break;
                 proxy_pass http://github.com;
         }
