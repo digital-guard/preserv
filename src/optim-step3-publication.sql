@@ -1,38 +1,4 @@
-CREATE or replace VIEW optim.vw03publication AS
-SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
-    'packtpl_id', packtpl_id,
-    'isolabel_ext', isolabel_ext,
-    'legalname', legalname,
-    'vat_id', vat_id,
-    'url', url,
-    'wikidata_id', wikidata_id,
-    'user_resp', user_resp,
-    'accepted_date', pack_item_accepted_date,
-    'path_preserv_git', path_preserv_git,
-    'pack_number', pack_number,
-    'path_cutgeo_git', path_cutgeo_git,
-    'license_evidences',license_evidences,
-    'path_cutgeo_notree', replace(replace(path_cutgeo_git,'tree/',''),'http://git.digital-guard.org/',''),
-    'layers',  jsonb_agg(jsonb_build_object(
-                'id', id,
-                'class_ftname', class_ftname,
-                'shortname', shortname,
-                'description', description,
-                'hashedfname', hashedfname,
-                'hashedfname_without_ext', hashedfname_without_ext,
-                'hashedfname_7_ext', hashedfname_7_ext,
-                'isFirst', iif(row_num=1,'true'::jsonb,'false'::jsonb),
-                'geom_type_abbr', geom_type_abbr,
-                'publication_summary', publication_summary,
-                'url_page', lower(isolabel_ext) || '_pk' || pack_number || '_' ||  class_ftname || '.html',
-                'filtered_name', 'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || class_ftname || '_' || id || '.zip',
-                'viz_summary', viz_summary
-                )),
-    'viz_keys', array_agg((CASE WHEN viz_summary IS NOT NULL THEN class_ftname ELSE NULL END)),
-    'publication_keys', array_agg((CASE WHEN publication_summary IS NOT NULL THEN class_ftname ELSE NULL END))
-    ) AS page
-FROM
-(
+CREATE or replace VIEW optim.vw02publication AS
   SELECT g.*,
          jsonb_strip_nulls(
           jsonb_build_object(
@@ -42,7 +8,9 @@ FROM
           'hashedfname_from', dviz.hashedfname_from,
           'url_layer_visualization', dviz.url_layer_visualization
           )
-         ) AS viz_summary
+         ) AS viz_summary,
+         'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || class_ftname || '_' || id || '.zip' AS filtered_name,
+         lower(isolabel_ext) || '_pk' || pack_number || '_' ||  class_ftname || '.html' AS url_page
   FROM
   (
     SELECT pf.packtpl_id, pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.kx_pack_item_version, pf.local_serial, pf.pk_count, pf.pack_number,
@@ -78,34 +46,70 @@ FROM
               ELSE  ''
               END,
               'isGeoaddress', iif(pf.ftype_info->>'class_ftname'='geoaddress','true'::jsonb,'false'::jsonb),
-          'bytes_mb', (pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0,
-          'bytes_mb_round2', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.01),
-          'avg_density_round2', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::float),0.01),
-          'bytes_mb_round4', ROUND(((pc.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.0001),
-          'avg_density_round4', ROUND(((pc.kx_profile->'publication_summary'->'avg_density')::float),0.0001),
+          'bytes_mb', (pf.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0,
+          'bytes_mb_round2', ROUND(((pf.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.01),
+          'avg_density_round2', ROUND(((pf.kx_profile->'publication_summary'->'avg_density')::float),0.01),
+          'bytes_mb_round4', ROUND(((pf.kx_profile->'publication_summary'->'bytes')::bigint / 1048576.0),0.0001),
+          'avg_density_round4', ROUND(((pf.kx_profile->'publication_summary'->'avg_density')::float),0.0001),
           'size_round2',CASE
-              WHEN pc.kx_profile->'publication_summary'->>'size' IS NOT NULL
-              THEN ROUND(((pc.kx_profile->'publication_summary'->'size')::float),0.01)
+              WHEN pf.kx_profile->'publication_summary'->>'size' IS NOT NULL
+              THEN ROUND(((pf.kx_profile->'publication_summary'->'size')::float),0.01)
               ELSE  NULL
               END,
           'size_round4',CASE
-              WHEN pc.kx_profile->'publication_summary'->>'size' IS NOT NULL
-              THEN ROUND(((pc.kx_profile->'publication_summary'->'size')::float),0.0001)
+              WHEN pf.kx_profile->'publication_summary'->>'size' IS NOT NULL
+              THEN ROUND(((pf.kx_profile->'publication_summary'->'size')::float),0.0001)
               ELSE  NULL
               END
-    )) || (pc.kx_profile->'publication_summary') AS publication_summary
+    )) || (pf.kx_profile->'publication_summary') AS publication_summary
 
-    FROM optim.vw01full_packfilevers_ftype pf
-    INNER JOIN optim.donated_PackComponent pc
-    ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
-
+    FROM optim.vw01full_donated_PackComponent pf
     WHERE pf.ftid > 19
+
     ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
   ) g
   LEFT JOIN download.redirects_viz dviz
   ON dviz.jurisdiction_pack_layer = isolabel_ext || '/_pk' || pack_number || '/' || class_ftname
      AND dviz.url_layer_visualization IS NOT NULL
-) t
+;
+COMMENT ON VIEW optim.vw02publication
+  IS 'Join optim.vw01full_packfilevers_ftype with optim.donated_PackComponent, ftid > 19.'
+;
+
+CREATE or replace VIEW optim.vw03publication AS
+SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
+    'packtpl_id', packtpl_id,
+    'isolabel_ext', isolabel_ext,
+    'legalname', legalname,
+    'vat_id', vat_id,
+    'url', url,
+    'wikidata_id', wikidata_id,
+    'user_resp', user_resp,
+    'accepted_date', pack_item_accepted_date,
+    'path_preserv_git', path_preserv_git,
+    'pack_number', pack_number,
+    'path_cutgeo_git', path_cutgeo_git,
+    'license_evidences',license_evidences,
+    'path_cutgeo_notree', replace(replace(path_cutgeo_git,'tree/',''),'http://git.digital-guard.org/',''),
+    'layers',  jsonb_agg(jsonb_build_object(
+                'id', id,
+                'class_ftname', class_ftname,
+                'shortname', shortname,
+                'description', description,
+                'hashedfname', hashedfname,
+                'hashedfname_without_ext', hashedfname_without_ext,
+                'hashedfname_7_ext', hashedfname_7_ext,
+                'isFirst', iif(row_num=1,'true'::jsonb,'false'::jsonb),
+                'geom_type_abbr', geom_type_abbr,
+                'publication_summary', publication_summary,
+                'url_page', url_page,
+                'filtered_name', filtered_name,
+                'viz_summary', viz_summary
+                )),
+    'viz_keys', array_agg((CASE WHEN viz_summary IS NOT NULL THEN class_ftname ELSE NULL END)),
+    'publication_keys', array_agg((CASE WHEN publication_summary IS NOT NULL THEN class_ftname ELSE NULL END))
+    ) AS page
+FROM optim.vw02publication t
 GROUP BY packtpl_id, isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv_git, pack_number, path_cutgeo_git, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences
 ;
 COMMENT ON VIEW optim.vw03publication

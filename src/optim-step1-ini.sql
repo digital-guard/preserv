@@ -589,6 +589,17 @@ COMMENT ON VIEW optim.vw01full_packfilevers_ftype
   IS 'Join vw01full_packfilevers with vw01info_feature_type.'
 ;
 
+CREATE or replace VIEW optim.vw01full_donated_PackComponent AS
+    SELECT pf.*, pc.proc_step, pc.lineage , pc.lineage_md5 , pc.kx_profile
+    FROM optim.vw01full_packfilevers_ftype pf
+    INNER JOIN optim.donated_PackComponent pc
+    ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
+;
+COMMENT ON VIEW optim.vw01full_donated_PackComponent
+  IS 'Join vw01full_packfilevers_ftype with donated_PackComponent.'
+;
+
+
 ------------------------
 
 CREATE or replace VIEW optim.vw01report AS
