@@ -388,10 +388,10 @@ BEGIN
             ));
             dict := jsonb_set( dict, array['layers',key,'join_data'] , jsonb_build_object(
                 'cadLayer',        'address'
-                ,'cadLayerColumn',  dict->'layers'->('cad'||key)->'join_id'
-                ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.cad'|| key ||'.file)')::jsonpath  )->0->>'file'
+                ,'cadLayerColumn',  dict->'layers'->('address')->'join_id'
+                ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.address.file)')::jsonpath  )->0->>'file'
             ));
-            dict := jsonb_set( dict, array['layers','cad'||key,'join_data'] , jsonb_build_object(
+            dict := jsonb_set( dict, array['layers','address','join_data'] , jsonb_build_object(
                 'cadLayer',         key
                 ,'cadLayerColumn',  dict->'layers'->key->'join_id'
                 ,'cadLayerFile',    jsonb_path_query_array(  dict, ('$.files[*] ? (@.p == $.layers.'|| key ||'.file)')::jsonpath  )->0->>'file'
