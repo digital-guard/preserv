@@ -31,10 +31,10 @@ Los archivos contienen "capas de datos" temáticas. Los metadatos también descr
 {{#file_data}}Nombre del archivo: `{{orig_filename}}`<br/>*Descarga* e integridad: [{{file_data.file}}](http://dl.digital-guard.org/{{file_data.file}}){{#file_data.name}}<br/>Descripción: {{file_data.name}}{{/file_data.name}}{{#file_data.comments}}<br/>Comentario: {{file_data.comments}}{{/file_data.comments}}{{#file_data.size}}<br/>Tamaño del archivo: {{file_data.size}} bytes{{#file_data.size_mb_round2}} ({{file_data.size_mb_round2}} <abbr title="mebibyte">MiB</abbr>){{/file_data.size_mb_round2}}{{/file_data.size}}{{/file_data}}<br/>Formato: {{#extension}}{{extension}}{{/extension}}{{#srid}}<br/>SRID: {{#srid_proj}}{{#insertSrid}}{{srid_proj}}{{/insertSrid}}{{^insertSrid}}{{srid}}{{/insertSrid}}{{/srid_proj}}{{^srid_proj}}{{srid}}{{/srid_proj}}{{/srid}}
 
 {{#has_standardized_fields}}#### Datos relevantes{{#standardized_fields}}
-* `{{name}}` ({{standard}}){{#comment}}: {{comment}}{{/comment}}
+* `{{{name}}}` ({{standard}}){{#comment}}: {{{comment}}}{{/comment}}
 {{/standardized_fields}}{{/has_standardized_fields}}
 {{#has_other_fields}}#### Otros datos relevantes{{#other_fields}}
-* `{{name}}`{{#comment}}: {{comment}}{{/comment}}{{/other_fields}}{{/has_other_fields}}
+* `{{{name}}}`{{#comment}}: {{{comment}}}{{/comment}}{{/other_fields}}{{/has_other_fields}}
 
 {{#isCadLayer}}Complementos [{{join_data.cadLayer}}](#-{{join_data.cadLayer}}) a través de `{{join_id}}` y `{{join_data.cadLayerColumn}}`{{/isCadLayer}}{{^isCadLayer}}{{#join_id}}<br/>Complementado por [{{join_data.cadLayer}}](#-{{join_data.cadLayer}}) a través de `{{join_id}}` y `{{join_data.cadLayerColumn}}`{{/join_id}}{{/isCadLayer}}
 {{#value.test_evidence}}#### Evidencia de prueba
