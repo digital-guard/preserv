@@ -1,18 +1,15 @@
--- dl.digital-guard
-SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/redirs/fromDL_toFileServer.csv','tmp_orig.redirects_viz',',');
+-- dl.digital-guard: preserv/data/redirs/fromDL_toFileServer.csv
 SELECT download.insert_dldg_csv();
 
--- Data VisualiZation
-SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/redirs/fromCutLayer_toVizLayer.csv','tmp_orig.redirects_viz',',');
+-- Data VisualiZation: preserv/data/redirs/fromCutLayer_toVizLayer.csv
 SELECT download.insert_viz_csv();
 
--- donor.csv donatedpack.csv
-SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY[     'BO','BR','CL','CO','EC','PE','PY','SR','UY','VE']) t;
+-- licenses
+SELECT license.insert_licenses();
 
--- codecs
+-- preserv/data/codec_type.csv
 SELECT optim.insert_codec_type();
 
--- licenses
-SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/licenses/data/licenses.csv','tmp_orig.licenses',',');
-SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/licenses/data/implieds.csv','tmp_orig.implieds',',');
-SELECT license.insert_licenses();
+-- preserv-[A-Z]{2}/data/donor.csv and preserv-[A-Z]{2}/data/donatedPack.csv
+-- SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY['AR','BO','BR','CL','CO','EC','PE','PY','SR','UY','VE']) t;
+SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY[     'BO','BR','CL','CO','EC','PE','PY','SR','UY','VE']) t;

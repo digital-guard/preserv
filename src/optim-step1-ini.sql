@@ -1,5 +1,7 @@
 CREATE SCHEMA    IF NOT EXISTS optim;
 CREATE SCHEMA    IF NOT EXISTS tmp_orig;
+CREATE SCHEMA    IF NOT EXISTS license;
+CREATE SCHEMA    IF NOT EXISTS download;
 
 CREATE EXTENSION IF NOT EXISTS file_fdw;
 CREATE SERVER    IF NOT EXISTS files FOREIGN DATA WRAPPER file_fdw;
@@ -162,37 +164,6 @@ CREATE INDEX optim_jurisdiction_eez_isolabel_ext_idx1 ON optim.jurisdiction_eez 
 
 COMMENT ON TABLE optim.jurisdiction_eez IS 'OpenStreetMap exclusive economic zone (EEZ) for optim.jurisdiction.';
 
-DROP MATERIALIZED VIEW IF EXISTS optim.mvwjurisdiction_geomeez;
-CREATE MATERIALIZED VIEW optim.mvwjurisdiction_geomeez AS
-  SELECT *
-  FROM optim.jurisdiction_geom
-  WHERE osm_id IN
-    (
-        SELECT osm_id
-        FROM optim.jurisdiction
-        WHERE isolevel=1 AND COALESCE( (info->>'use_jurisdiction_eez')::boolean,false) IS FALSE
-    )
-
-  UNION
-
-  SELECT g.osm_id, g.isolabel_ext, ST_UNION(g.geom,e.geom), ST_UNION(g.geom_svg,e.geom_svg), g.kx_ghs1_intersects, g.kx_ghs2_intersects
-  FROM optim.jurisdiction_geom g
-  LEFT JOIN optim.jurisdiction_eez e
-  ON g.osm_id = e.osm_id
-  WHERE g.osm_id IN
-    (
-        SELECT osm_id
-        FROM optim.jurisdiction
-        WHERE isolevel=1 AND (info->>'use_jurisdiction_eez')::boolean IS TRUE
-    )
-;
-CREATE INDEX optim_mvwjurisdiction_geomeez_idx1              ON optim.mvwjurisdiction_geomeez USING gist (geom);
-CREATE INDEX optim_mvwjurisdiction_geomeez_isolabel_ext_idx1 ON optim.mvwjurisdiction_geomeez USING btree (isolabel_ext);
-
-COMMENT ON MATERIALIZED VIEW optim.mvwjurisdiction_geomeez
- IS 'Merge geom and eez geometries when ''info->use_jurisdiction_eez'' is true'
-;
-
 CREATE TABLE optim.jurisdiction_abbrev_ref (
  abbrevref_id int PRIMARY KEY,
  name text NOT NULL,
@@ -288,11 +259,69 @@ COMMENT ON COLUMN optim.donor.kx_vat_id      IS 'Cache for normalized vat_id.';
 
 COMMENT ON TABLE optim.donor IS 'Data package donor information.';
 
+----------------------
+
+CREATE TABLE license.licenses_implieds (
+ id_label text,
+ id_version text,
+ name text,
+ family text,
+ status text,
+ year text,
+ is_by text,
+ is_sa text,
+ is_noreuse text,
+ od_conformance text,
+ osd_conformance text,
+ maintainer text,
+ title text,
+ url text,
+ license_is_explicit text,
+ info jsonb,
+ UNIQUE (id_label,id_version)
+);
+COMMENT ON TABLE license.licenses_implieds
+  IS ''
+;
+
+CREATE or replace FUNCTION license.insert_licenses(
+) RETURNS text AS $f$
+BEGIN
+  INSERT INTO license.licenses_implieds(id_label,id_version,name,family,status,year,is_by,is_sa,is_noreuse,od_conformance,osd_conformance,maintainer,title,url,license_is_explicit,info)
+
+  SELECT id_label,id_version,name,family,status,year,is_by,is_sa,is_noreuse,od_conformance,osd_conformance,maintainer,title,url,
+  'yes' AS license_is_explicit,
+  jsonb_build_object('is_ref',is_ref,'is_salink',is_salink,'is_nd',is_nd,'is_generic',is_generic,'domain_content',domain_content,'domain_data',domain_data,'domain_software',domain_software,'notes',"NOTES") AS info
+  FROM tmp_orig.licenses
+
+  UNION
+
+  SELECT id_label,id_version,name,family,status,year,is_by,is_sa,is_noreuse,od_conformance,osd_conformance,maintainer,title, url_report AS url,
+  'no' AS license_is_explicit,
+  jsonb_build_object('report_year',report_year,'scope',scope,'url_ref',url_ref) as info
+  FROM tmp_orig.implieds
+
+  ON CONFLICT (id_label,id_version)
+  DO UPDATE
+  SET name=EXCLUDED.name, family=EXCLUDED.family, status=EXCLUDED.status, year=EXCLUDED.year, is_by=EXCLUDED.is_by, is_sa=EXCLUDED.is_sa, is_noreuse=EXCLUDED.is_noreuse, od_conformance=EXCLUDED.od_conformance, osd_conformance=EXCLUDED.osd_conformance, maintainer=EXCLUDED.maintainer, title=EXCLUDED.title, url=EXCLUDED.url, license_is_explicit=EXCLUDED.license_is_explicit, info=EXCLUDED.info
+  -- RETURNING 'Ok, updated license.licenses_implieds.'
+  ;
+  RETURN 'Ok, updated license.licenses_implieds.';
+END;
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION license.insert_licenses
+  IS 'Update license.licenses_implieds from tmp_orig.redirects_dlguard'
+;
+-- SELECT license.insert_licenses();
+
+----------------------
+
 CREATE TABLE optim.donated_PackTpl(
   id bigint NOT NULL PRIMARY KEY CHECK (id = donor_id::bigint*100::bigint + pk_count::bigint),  -- by trigger!
   donor_id int NOT NULL REFERENCES optim.donor(id),
   user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pelo README e teste do makefile
   pk_count int  NOT NULL CHECK(pk_count>0),
+  license text,  -- tirar do info e trazer para REFERENCES licenças.
   original_tpl text NOT NULL, -- cópia de segurança do make_conf.yaml trocando "version" e "file" por placeholder mustache.
   make_conf_tpl JSONb,  -- cache, resultado de parsing do original_tpl (YAML) para JSON
   kx_num_files int, -- cache para  jsonb_array_length(make_conf_tpl->files).
@@ -303,6 +332,7 @@ COMMENT ON COLUMN optim.donated_PackTpl.id            IS 'id = donor_id::bigint*
 COMMENT ON COLUMN optim.donated_PackTpl.donor_id      IS 'Package donor identifier.';
 COMMENT ON COLUMN optim.donated_PackTpl.user_resp     IS 'User responsible for the README and makefile testing.';
 COMMENT ON COLUMN optim.donated_PackTpl.pk_count      IS 'Serial number of the package donated by the donor.';
+COMMENT ON COLUMN optim.donated_PackTpl.license       IS 'License of the package donated by the donor.';
 COMMENT ON COLUMN optim.donated_PackTpl.original_tpl  IS 'make_conf.yaml backup by replacing "version" and "file" with mustache placeholder.';
 COMMENT ON COLUMN optim.donated_PackTpl.make_conf_tpl IS 'Cache, parsing result from original_tpl (YAML) to JSON.';
 COMMENT ON COLUMN optim.donated_PackTpl.kx_num_files  IS 'Cache for jsonb_array_length(make_conf_tpl->files).';
@@ -320,7 +350,6 @@ CREATE TABLE optim.donated_PackFileVers(
   kx_pack_item_version int NOT NULL DEFAULT 1, --  versão (serial) correspondente à pack_item_accepted_date. Trigguer: next value.
   user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pela ingestão do arquivo (testemunho)
   -- scope text NOT NULL, -- bbox or minimum bounding AdministrativeArea
-  -- license?  tirar do info e trazer para REFERENCES licenças.
   --- about text,
   info jsonb  -- livre
   ,UNIQUE(hashedfname)
@@ -965,19 +994,20 @@ BEGIN
 
   q := $$
     -- popula optim.donated_PackTpl a partir de tmp_orig.fdw_donatedPack
-    INSERT INTO optim.donated_PackTpl (donor_id, user_resp, pk_count, original_tpl, make_conf_tpl,info)
+    INSERT INTO optim.donated_PackTpl (donor_id, user_resp, pk_count, original_tpl, make_conf_tpl,info, license)
     SELECT (
         SELECT jurisd_base_id*1000000+donor_id
         FROM optim.jurisdiction
         WHERE lower(isolabel_ext) = lower(scope)
         ) AS donor_id, lower(user_resp) AS user_resp, pack_count, optim.replace_file_and_version(pg_read_file(optim.format_filepath(scope, donor_id, pack_count))) AS original_tpl, yamlfile_to_jsonb(optim.format_filepath(scope, donor_id, pack_count)) AS make_conf_tpl,
-        to_jsonb(t) AS info
+        to_jsonb(t) AS info,
+        license
     FROM tmp_orig.fdw_donatedpack%s t
     WHERE file_exists(optim.format_filepath(scope, donor_id, pack_count)) -- verificar make_conf.yaml ausentes
           AND lst_vers=(select MAX(lst_vers) from tmp_orig.fdw_donatedpack%s where donor_id=t.donor_id )
     ON CONFLICT (donor_id,pk_count)
     DO UPDATE 
-    SET original_tpl=EXCLUDED.original_tpl, make_conf_tpl=EXCLUDED.make_conf_tpl, kx_num_files=EXCLUDED.kx_num_files, info=EXCLUDED.info;
+    SET original_tpl=EXCLUDED.original_tpl, make_conf_tpl=EXCLUDED.make_conf_tpl, kx_num_files=EXCLUDED.kx_num_files, info=EXCLUDED.info, license=EXCLUDED.license;
   $$;
 
   EXECUTE format( q, jurisdiction, jurisdiction) ;
@@ -1172,3 +1202,99 @@ WHERE jurisd_base_id = 76;
 */
 
 -- SELECT optim.jurisdiction_to_geojson('BR-MG-BeloHorizonte','/tmp/pg_io');
+
+----------------------
+
+-- dl.digital-guard
+CREATE TABLE download.redirects (
+    donor_id          text,
+    filename_original text,
+    package_path      text,
+    hashedfname       text NOT NULL PRIMARY KEY CHECK( hashedfname ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
+    hashedfnameuri    text,                      -- para_url
+    UNIQUE (hashedfname,hashedfnameuri)
+);
+COMMENT ON TABLE download.redirects
+  IS ''
+;
+CREATE INDEX redirects_hashedfname_idx1 ON download.redirects USING btree (hashedfname);
+
+CREATE or replace FUNCTION download.insert_dldg_csv(
+) RETURNS text AS $f$
+BEGIN
+  INSERT INTO download.redirects(donor_id,filename_original,package_path,hashedfname,hashedfnameuri)
+  SELECT donor_id,filename_original,package_path,de_sha256,para_url
+  FROM tmp_orig.redirects_dlguard
+  ON CONFLICT (hashedfname,hashedfnameuri)
+  DO UPDATE
+  SET donor_id=EXCLUDED.donor_id, filename_original=EXCLUDED.filename_original, package_path=EXCLUDED.package_path
+  -- RETURNING 'Ok, updated download.redirects.'
+  ;
+  RETURN 'Ok, updated download.redirects.';
+END;
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION download.insert_dldg_csv
+  IS 'Update download.redirects from tmp_orig.redirects_dlguard'
+;
+-- SELECT download.insert_dldg_csv();
+
+----------------------
+
+-- Data VisualiZation
+CREATE TABLE download.redirects_viz (
+    jurisdiction_pack_layer text NOT NULL PRIMARY KEY, -- BR-SP-Guarulhos/_pk0081.01/geoaddress
+    user_resp text NOT NULL REFERENCES optim.auth_user(username),
+    status text,
+    hashedfname_from        text NOT NULL CHECK( hashedfname_from ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
+    url_layer_visualization text,            -- https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=341962cd00c441f8876202f29fc33dcc
+    UNIQUE (jurisdiction_pack_layer,hashedfname_from),
+    UNIQUE (jurisdiction_pack_layer,hashedfname_from,url_layer_visualization)
+);
+COMMENT ON TABLE download.redirects_viz
+  IS 'Matching between layer and external view provided by third party.'
+;
+CREATE INDEX redirects_viz_jurisdiction_pack_layer_idx1 ON download.redirects_viz USING btree (jurisdiction_pack_layer);
+
+CREATE or replace FUNCTION download.insert_viz_csv(
+) RETURNS text AS $f$
+BEGIN
+  INSERT INTO download.redirects_viz(jurisdiction_pack_layer,user_resp,status,hashedfname_from,url_layer_visualization)
+  SELECT jurisdiction_pack_layer, lower(user_resp), status, hash_from, url_layer_visualization
+  FROM tmp_orig.redirects_viz
+  ON CONFLICT (jurisdiction_pack_layer,hashedfname_from)
+  DO UPDATE
+  SET url_layer_visualization=EXCLUDED.url_layer_visualization,
+      user_resp=EXCLUDED.user_resp,
+      status=EXCLUDED.status
+  -- RETURNING 'Ok, updated download.redirects_viz.'
+  ;
+  RETURN 'Ok, updated download.redirects_viz.';
+END;
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION download.insert_viz_csv
+  IS 'Update download.redirects_viz from tmp_orig.redirects_viz'
+;
+-- SELECT download.insert_viz_csv();
+
+CREATE or replace FUNCTION download.update_cloudControl_vizuri(
+) RETURNS text AS $f$
+BEGIN
+  UPDATE optim.donated_PackComponent_cloudControl c
+  SET info = coalesce(info,'{}'::jsonb) || jsonb_build_object('viz_uri', url_layer_visualization)
+  FROM
+  (
+    SELECT pv.id, v.*
+    FROM tmp_orig.redirects_viz v
+    LEFT JOIN optim.donated_packfilevers pv
+    ON v.hash_from = pv.hashedfname
+  ) r
+  WHERE c.packvers_id= r.id
+  -- RETURNING 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.'
+  ;
+  RETURN 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.';
+END;
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION download.update_cloudControl_vizuri
+  IS 'Update viz_uri in info of optim.donated_PackComponent_cloudControl'
+;
+-- SELECT download.update_cloudControl_vizuri();

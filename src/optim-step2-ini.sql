@@ -1,6 +1,33 @@
+-- Create FDW
+
+-- preserv-[A-Z]{2}/data/donor.csv and preserv-[A-Z]{2}/data/donatedPack.csv
 SELECT optim.load_donor_pack(t) FROM unnest(ARRAY['AR','BO','BR','CL','CO','EC','PE','PY','SR','UY','VE']) t;
+
+-- preserv/data/codec_type.csv
 SELECT optim.load_codec_type();
+
+-- preserv/data/jurisdPoint.csv
 SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/jurisdPoint.csv','tmp_orig.jurisdPoints',',');
+
+-- dl.digital-guard: preserv/data/redirs/fromDL_toFileServer.csv
+SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/redirs/fromDL_toFileServer.csv','tmp_orig.redirects_viz',',');
+
+-- Data VisualiZation: preserv/data/redirs/fromCutLayer_toVizLayer.csv
+SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/redirs/fromCutLayer_toVizLayer.csv','tmp_orig.redirects_viz',',');
+
+-- licenses
+SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/licenses/data/licenses.csv','tmp_orig.licenses',',');
+SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/licenses/data/implieds.csv','tmp_orig.implieds',',');
+
+----------------------
+
+CREATE or replace VIEW license.pack_licenses AS
+SELECT d.pack_id, l.*
+FROM tmp_orig.donatedpacks_donor AS d
+LEFT JOIN license.licenses_implieds AS l
+ON lower(d.license) = l.id_label AND d.license_is_explicit = l.license_is_explicit;
+
+----------------------
 
 -- Union de fdw_donor de todas as jurisdições
 CREATE or replace VIEW tmp_orig.donors AS

@@ -560,7 +560,7 @@ CREATE or replace FUNCTION optim.generate_readme(
     LATERAL
     (
       SELECT jsonb_agg(to_jsonb(t.*)) AS csv
-      FROM api.donatedpacks_donor t
+      FROM tmp_orig.donatedpacks_donor t
       WHERE t.pack_id = (p_yaml->'data_packtpl'->>'pack_number_donatedpackcsv')::int
     ) s
     INTO conf_yaml;

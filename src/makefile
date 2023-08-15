@@ -175,12 +175,12 @@ endif
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step2-ini.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step3-publication.sql
-	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step4-api.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step5-list.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step6-metrics.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step7-make.sql
-	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/download-step1-def.sql
 	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-download-ini.sql
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step4-api.sql
+
 	@echo "--- Running API SQL templates ---"
 	@echo "!nao fazendo ainda, futuro"
 	#psql $(pg_datalake_uri) < step00-iniApi.sql

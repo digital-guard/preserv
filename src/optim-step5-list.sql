@@ -1,5 +1,3 @@
-CREATE SCHEMA IF NOT EXISTS api;
-
 CREATE or replace VIEW optim.vw01generate_list AS
 SELECT scope_label, isolevel, pacotes || coalesce(jsonb_build_object('filtered_files',filtered_files),'{}'::jsonb) AS pacotes
 FROM
@@ -91,14 +89,3 @@ COMMENT ON FUNCTION optim.generate_list_hash
 ;
 -- SELECT optim.generate_list_hash('/tmp/pg_io/list_hash_markdown.txt');
 -- SELECT optim.generate_list_hash('/tmp/pg_io/list_hash_mediawiki.txt','/var/gits/_dg/preserv/src/list_hash_wiki.mustache');
-
-CREATE or replace FUNCTION api.download_list(
-
-) RETURNS jsonb  AS $f$
-    SELECT *
-    FROM optim.vw02generate_list
-    ;
-$f$ language SQL VOLATILE;
-COMMENT ON FUNCTION api.download_list
-  IS 'Returns the json for the site''s download list template.'
-;
