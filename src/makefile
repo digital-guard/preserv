@@ -107,57 +107,6 @@ endif
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
 
-load_codec_type:
-	@echo "--- codec_type load ---"
-	psql $(pg_datalake_uri) -c "SELECT optim.insert_codec_type();"
-
-load_hcode_parameters:
-	@echo "--- hcode_parameters load ---"
-	psql $(pg_db_uri) -c "SELECT ingest.load_hcode_parameters('$(gits_basepath)/_dg/preserv/data/hcode_parameters.csv',',');"
-
-load_license_tables: pg_datalake=dl05s_main
-load_license_tables: pgio
-	@echo "--- license table load ---"
-	psql $(pg_uri_root)/$(pg_datalake) -c "SELECT license.insert_licenses();"
-
-to_donated_packcomponent:
-	@echo "--- DUMP ingest.donated_packcomponent to $(pg_io)/dump_component_$(pg_db).sql ---"
-	pg_dump --column-inserts --data-only -t ingest.donated_packcomponent $(pg_db_uri) > $(pg_io)/dump_component_$(pg_db).sql
-	@echo "--- Preparing $(pg_io)/dump_component_$(pg_db).sql ---"
-	bash to_donated_packcomponent.bash $(pg_io)/dump_component_$(pg_db).sql
-	@echo "--- INSERT $(pg_io)/dump_component_$(pg_db).sql INTO $(pg_datalake) optim.donated_PackComponent_not_approved ---"
-	grep "INSERT INTO" $(pg_io)/dump_component_$(pg_db).sql | psql $(pg_datalake_uri)
-	@echo "--- See optim.donated_PackComponent_not_approved in $(pg_datalake) ---"
-
-approved_donated_packcomponent:
-	@echo "Usage: make approved_donated_packcomponent id=<id from optim.donated_PackComponent_not_approved>"
-	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
-	@[ "${id}" ] && psql $(pg_datalake_uri) -c "SELECT optim.approved_packcomponent($(id))" || ( echo "Unknown id.")
-
-cmd_rdap:
-	@echo "Generate list of commands to update or create rdap.json"
-	@echo "for donor and donatedPack"
-	@echo "Usage: make cmd_rdap iso=<ISO 3166 country code> pg_datalake=<database>"
-	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
-	@[ "${iso}" ] && psql $(pg_datalake_uri) -c "SELECT commandline_rdap FROM optim.vw01donorEvidenceCMD WHERE iso=upper('$(iso)')" || ( echo "Unknown iso code.")
-
-report:
-	@echo "Relatorios"
-	@echo "Uso make report pg_datalake=dl05s_main "
-	@echo "Doc: https://github.com/digital-guard/preserv/blob/main/docs/pt/man-diversos.md#relat%C3%B3rios"
-# 	@echo "View optim.vw01report:"
-# 	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw01report;"
-# 	@echo "View optim.vw02report_simple:"
-# 	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw02report_simple;"
-	@echo "View vw01report_median:"
-	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw01report_median;"
-
-get_wikidata_points:
-	@echo "Get points wikidata: BR and CO."
-	curl -o /tmp/wikidata_coord.csv -G 'https://query.wikidata.org/sparql' \
-	--header "Accept: text/csv"  \
-	--data-urlencode query='PREFIX schema: <http://schema.org/> SELECT ?wikidata ?local_id ?osm_id ?geom ?wikidataLabel WHERE {{?wikidata wdt:P31 wd:Q3184121.} UNION {?wikidata wdt:P31 wd:Q2555896.} OPTIONAL { ?wikidata wdt:P402 ?osm_id. } OPTIONAL { ?wikidata wdt:P1585 ?local_id. } OPTIONAL { ?wikidata wdt:P7325 ?local_id. } OPTIONAL { ?wikidata wdt:P625 ?geom. } SERVICE wikibase:label { bd:serviceParam wikibase:language "es,pt-br". } } ORDER BY ?local_id'
-
 ini_datalake: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
 ifeq ($(DL_TEST),$(pg_datalake))
 	@echo "... DROP old database $(pg_datalake)?"
@@ -191,21 +140,6 @@ endif
 	#/var/gits/WS/src? psql $(pg_datalake_uri) < eclusa/step2b-ins.sql
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
-
-load_optim_csv:
-	@echo "Load tables donor.csv, donatedPack.csv and codec_type into $(pg_datalake_uri), for all jurisdictions."
-	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
-	psql $(pg_datalake_uri) -c "SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY['BO','BR','CL','CO','EC','PE','PY','SR','UY','VE']) t;"
-	psql $(pg_datalake_uri) -c "SELECT optim.insert_codec_type();"
-	psql $(pg_datalake_uri) -c "SELECT optim.insert_jurisdPoint();"
-
-build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=name
-	@echo "DROP FOREIGN TABLE IF EXISTS $(fdwName);"
-	@echo "CREATE FOREIGN TABLE $(fdwName) ("
-	@psql $(pg_uri_root)/$(fdwOrigBase) -c "\d $(fdwOrigSchema).$(fdwOrigName)" |  awk '/^ [a-z]/ {print $$1,$$3 ",";}'
-	@echo ") SERVER foreign_server"
-	@echo "  OPTIONS (schema_name '$(fdwOrigSchema)', table_name '$(fdwOrigName)');"
-	@echo
 
 generate_pages:
 	@echo "--- Save html pages in $(folder) ---"
@@ -245,12 +179,46 @@ insert_size:
 	@echo "-- Inserting size in files of make_conf --"
 	@psql $(pg_uri_root)/$(pg_datalake) -c "SELECT optim.generate_make_conf_with_size('$(country)','$(pack_id)','$(output)','$(baseSrcPack)','$(baseSrc)','$(orig)');"
 
+load_codec_type:
+	@echo "--- codec_type load ---"
+	psql $(pg_datalake_uri) -c "SELECT optim.insert_codec_type();"
+
+load_hcode_parameters:
+	@echo "--- hcode_parameters load ---"
+	psql $(pg_db_uri) -c "SELECT ingest.load_hcode_parameters('$(gits_basepath)/_dg/preserv/data/hcode_parameters.csv',',');"
+
+load_license_tables: pg_datalake=dl05s_main
+load_license_tables: pgio
+	@echo "--- license table load ---"
+	psql $(pg_uri_root)/$(pg_datalake) -c "SELECT license.insert_licenses();"
+
+load_optim_csv:
+	@echo "Load tables donor.csv, donatedPack.csv and codec_type into $(pg_datalake_uri), for all jurisdictions."
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+	psql $(pg_datalake_uri) -c "SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY['BO','BR','CL','CO','EC','PE','PY','SR','UY','VE']) t;"
+	psql $(pg_datalake_uri) -c "SELECT optim.insert_codec_type();"
+	psql $(pg_datalake_uri) -c "SELECT optim.insert_jurisdPoint();"
+
 first_makefile:
 	@echo "--- Copying initial makefile in 'data/_pk*' directories   ---"
 	# retorna todos os diretórios com o padrão '*_pk*' e copia o arquivo commomLast.mustache.mk para cada um deles, renomeando o arquivo para makefile.
 	sed "s/^country *.*/country=INT/" maketemplates/commomLast.mustache.mk > maketemplates/commomLast.mustache.mk.tmp
 	find ../data -type d -name '*_pk*' -exec cp maketemplates/commomLast.mustache.mk.tmp \{\}/makefile \;
 	rm maketemplates/commomLast.mustache.mk.tmp
+
+to_donated_packcomponent:
+	@echo "--- DUMP ingest.donated_packcomponent to $(pg_io)/dump_component_$(pg_db).sql ---"
+	pg_dump --column-inserts --data-only -t ingest.donated_packcomponent $(pg_db_uri) > $(pg_io)/dump_component_$(pg_db).sql
+	@echo "--- Preparing $(pg_io)/dump_component_$(pg_db).sql ---"
+	bash to_donated_packcomponent.bash $(pg_io)/dump_component_$(pg_db).sql
+	@echo "--- INSERT $(pg_io)/dump_component_$(pg_db).sql INTO $(pg_datalake) optim.donated_PackComponent_not_approved ---"
+	grep "INSERT INTO" $(pg_io)/dump_component_$(pg_db).sql | psql $(pg_datalake_uri)
+	@echo "--- See optim.donated_PackComponent_not_approved in $(pg_datalake) ---"
+
+approved_donated_packcomponent:
+	@echo "Usage: make approved_donated_packcomponent id=<id from optim.donated_PackComponent_not_approved>"
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+	@[ "${id}" ] && psql $(pg_datalake_uri) -c "SELECT optim.approved_packcomponent($(id))" || ( echo "Unknown id.")
 
 redirects_update: pgio
 	@echo "-- Atualização de redirecionamentos --"
@@ -268,6 +236,38 @@ sha256_update:
 	@echo "Usage: make sha256_update pg_datalake=<datalake with optim schema> id=<id from optim.donated_packfilevers> oldsha256=<sha256 that will be changed> newsha256=<sha256 that will replace oldsha256>"
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	psql $(pg_datalake_uri) -c "UPDATE optim.donated_packfilevers SET hashedfname = '$(newsha256)' WHERE id = $(id) AND hashedfname = '$(oldsha256)';"
+
+cmd_rdap:
+	@echo "Generate list of commands to update or create rdap.json"
+	@echo "for donor and donatedPack"
+	@echo "Usage: make cmd_rdap iso=<ISO 3166 country code> pg_datalake=<database>"
+	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
+	@[ "${iso}" ] && psql $(pg_datalake_uri) -c "SELECT commandline_rdap FROM optim.vw01donorEvidenceCMD WHERE iso=upper('$(iso)')" || ( echo "Unknown iso code.")
+
+report:
+	@echo "Relatorios"
+	@echo "Uso make report pg_datalake=dl05s_main "
+	@echo "Doc: https://github.com/digital-guard/preserv/blob/main/docs/pt/man-diversos.md#relat%C3%B3rios"
+# 	@echo "View optim.vw01report:"
+# 	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw01report;"
+# 	@echo "View optim.vw02report_simple:"
+# 	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw02report_simple;"
+	@echo "View vw01report_median:"
+	psql $(pg_datalake_uri) -c "SELECT * FROM optim.vw01report_median;"
+
+build_fdwtable: # fdwOrigBase=name fdwOrigSchema=name fdwOrigName=name fdwName=name
+	@echo "DROP FOREIGN TABLE IF EXISTS $(fdwName);"
+	@echo "CREATE FOREIGN TABLE $(fdwName) ("
+	@psql $(pg_uri_root)/$(fdwOrigBase) -c "\d $(fdwOrigSchema).$(fdwOrigName)" |  awk '/^ [a-z]/ {print $$1,$$3 ",";}'
+	@echo ") SERVER foreign_server"
+	@echo "  OPTIONS (schema_name '$(fdwOrigSchema)', table_name '$(fdwOrigName)');"
+	@echo
+
+get_wikidata_points:
+	@echo "Get points wikidata: BR and CO."
+	curl -o /tmp/wikidata_coord.csv -G 'https://query.wikidata.org/sparql' \
+	--header "Accept: text/csv"  \
+	--data-urlencode query='PREFIX schema: <http://schema.org/> SELECT ?wikidata ?local_id ?osm_id ?geom ?wikidataLabel WHERE {{?wikidata wdt:P31 wd:Q3184121.} UNION {?wikidata wdt:P31 wd:Q2555896.} OPTIONAL { ?wikidata wdt:P402 ?osm_id. } OPTIONAL { ?wikidata wdt:P1585 ?local_id. } OPTIONAL { ?wikidata wdt:P7325 ?local_id. } OPTIONAL { ?wikidata wdt:P625 ?geom. } SERVICE wikibase:label { bd:serviceParam wikibase:language "es,pt-br". } } ORDER BY ?local_id'
 
 ## ## ## ##
 ## -- REPORT tools --
