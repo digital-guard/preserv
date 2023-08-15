@@ -283,6 +283,7 @@ CREATE TABLE license.licenses_implieds (
 COMMENT ON TABLE license.licenses_implieds
   IS ''
 ;
+CREATE UNIQUE INDEX upsert_licenses_implieds_idx ON license.licenses_implieds (id_label, COALESCE(id_version, ''));
 
 CREATE or replace FUNCTION license.insert_licenses(
 ) RETURNS text AS $f$
@@ -301,10 +302,9 @@ BEGIN
   jsonb_build_object('report_year',report_year,'scope',scope,'url_ref',url_ref) as info
   FROM tmp_orig.implieds
 
-  ON CONFLICT (id_label,id_version)
+  ON CONFLICT (id_label,COALESCE(id_version, ''))
   DO UPDATE
   SET name=EXCLUDED.name, family=EXCLUDED.family, status=EXCLUDED.status, year=EXCLUDED.year, is_by=EXCLUDED.is_by, is_sa=EXCLUDED.is_sa, is_noreuse=EXCLUDED.is_noreuse, od_conformance=EXCLUDED.od_conformance, osd_conformance=EXCLUDED.osd_conformance, maintainer=EXCLUDED.maintainer, title=EXCLUDED.title, url=EXCLUDED.url, license_is_explicit=EXCLUDED.license_is_explicit, info=EXCLUDED.info
-  -- RETURNING 'Ok, updated license.licenses_implieds.'
   ;
   RETURN 'Ok, updated license.licenses_implieds.';
 END;
@@ -321,22 +321,22 @@ CREATE TABLE optim.donated_PackTpl(
   donor_id int NOT NULL REFERENCES optim.donor(id),
   user_resp text NOT NULL REFERENCES optim.auth_user(username), -- responsável pelo README e teste do makefile
   pk_count int  NOT NULL CHECK(pk_count>0),
-  license text,  -- tirar do info e trazer para REFERENCES licenças.
   original_tpl text NOT NULL, -- cópia de segurança do make_conf.yaml trocando "version" e "file" por placeholder mustache.
   make_conf_tpl JSONb,  -- cache, resultado de parsing do original_tpl (YAML) para JSON
   kx_num_files int, -- cache para  jsonb_array_length(make_conf_tpl->files).
   info JSONb, -- uso futuro caso necessário.
+  license text,  -- tirar do info e trazer para REFERENCES licenças.
   UNIQUE(donor_id,pk_count)
 );  -- cada file de  make_conf_tpl->files  resulta em um registro optim.donated_PackFileVers
 COMMENT ON COLUMN optim.donated_PackTpl.id            IS 'id = donor_id::bigint*100::bigint + pk_count::bigint';
 COMMENT ON COLUMN optim.donated_PackTpl.donor_id      IS 'Package donor identifier.';
 COMMENT ON COLUMN optim.donated_PackTpl.user_resp     IS 'User responsible for the README and makefile testing.';
 COMMENT ON COLUMN optim.donated_PackTpl.pk_count      IS 'Serial number of the package donated by the donor.';
-COMMENT ON COLUMN optim.donated_PackTpl.license       IS 'License of the package donated by the donor.';
 COMMENT ON COLUMN optim.donated_PackTpl.original_tpl  IS 'make_conf.yaml backup by replacing "version" and "file" with mustache placeholder.';
 COMMENT ON COLUMN optim.donated_PackTpl.make_conf_tpl IS 'Cache, parsing result from original_tpl (YAML) to JSON.';
 COMMENT ON COLUMN optim.donated_PackTpl.kx_num_files  IS 'Cache for jsonb_array_length(make_conf_tpl->files).';
 COMMENT ON COLUMN optim.donated_PackTpl.info          IS 'Others information.';
+COMMENT ON COLUMN optim.donated_PackTpl.license       IS 'License of the package donated by the donor.';
 
 COMMENT ON TABLE optim.donated_PackTpl IS 'Donated pack template, unversioned package, only pack_id control and input logging. Only metadata common to versions.';
 
@@ -562,7 +562,8 @@ CREATE or replace VIEW optim.vw01full_donated_PackTpl AS
          to_char(dn.local_serial,'fm000') || to_char(pt.pk_count,'fm00') AS pack_number_donatedpackcsv, -- e.g.: 04201
          INITCAP(pt.user_resp) AS user_resp_packtpl_initcap,
          upper(split_part(dn.vat_id,':',1)) AS vat_id_p1,
-         split_part(dn.vat_id,':',2) AS vat_id_p2
+         split_part(dn.vat_id,':',2) AS vat_id_p2,
+         to_jsonb(l.*) AS license_data
   FROM optim.donated_PackTpl pt
   LEFT JOIN optim.donor dn
     ON pt.donor_id=dn.id
@@ -570,6 +571,8 @@ CREATE or replace VIEW optim.vw01full_donated_PackTpl AS
     ON dn.scope_osm_id=j.osm_id
   LEFT JOIN optim.auth_user au
     ON pt.user_resp=au.username
+  LEFT JOIN license.licenses_implieds l
+    ON pt.license = lower(replace(l.name,' ','-'))
 ;
 COMMENT ON VIEW optim.vw01full_donated_PackTpl
   IS 'Add geom to optim.jurisdiction.'

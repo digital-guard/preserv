@@ -20,6 +20,7 @@ CREATE or replace VIEW optim.vw02publication AS
     pf.ftype_info->'class_info'->>'shortname_pt' as shortname,
     pf.ftype_info->'class_info'->>'description_pt' as description,
     pf.make_conf_tpl->'license_evidences' AS license_evidences,
+    pf.license_data,
     pf.hashedfname,
     pf.hashedfname_without_ext,
     pf.hashedfname_7_ext,
@@ -76,17 +77,6 @@ COMMENT ON VIEW optim.vw02publication
   IS 'Join optim.vw01full_packfilevers_ftype with optim.donated_PackComponent, ftid > 19.'
 ;
 
-SELECT
-  viz_id, viz_id2, isolabel_ext,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache'), conf) AS title,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf) AS snippet,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf) AS description,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf) AS licenseinfo,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf) AS accessinformation
-
-FROM optim.vw03publication_viz
-;
-
 CREATE or replace VIEW optim.vw03publication_viz AS
 SELECT isolabel_ext, '_pk' || pack_number AS pack_number,
     split_part(viz_summary->>'url_layer_visualization','=',2) AS viz_id,
@@ -104,6 +94,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number,
     'pack_number', pack_number,
     'path_cutgeo_git', path_cutgeo_git,
     'license_evidences',license_evidences,
+    'license_data',license_data,
     'path_cutgeo_notree', replace(replace(path_cutgeo_git,'tree/',''),'http://git.digital-guard.org/',''),
       'id', id,
       'class_ftname', class_ftname,
@@ -145,6 +136,21 @@ FROM optim.vw02publication t
 ;
 COMMENT ON VIEW optim.vw03publication_viz
   IS 'Generate json for mustache template for Viz.'
+;
+
+CREATE or replace VIEW optim.vw03_metadata_viz AS
+SELECT
+  viz_id, viz_id2, isolabel_ext,
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache'), conf)             AS title,
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf)           AS snippet,
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf)       AS description,
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf)       AS licenseinfo,
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf) AS accessinformation
+
+FROM optim.vw03publication_viz
+;
+COMMENT ON VIEW optim.vw03_metadata_viz
+  IS 'Metadata for viz.'
 ;
 
 CREATE or replace VIEW optim.vw03publication AS
