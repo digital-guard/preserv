@@ -583,3 +583,11 @@ CREATE INDEX optim_mvwjurisdiction_geomeez_isolabel_ext_idx1 ON optim.mvwjurisdi
 COMMENT ON MATERIALIZED VIEW optim.mvwjurisdiction_geomeez
  IS 'Merge geom and eez geometries when ''info->use_jurisdiction_eez'' is true'
 ;
+----------------------
+
+CREATE or replace VIEW api.metadata_viz AS
+SELECT *
+FROM optim.vw03_metadata_viz
+;
+
+----------------------
