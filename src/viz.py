@@ -47,8 +47,7 @@ if len(sys.argv) > 1:
 
                 matadata = data[0]
 
-                # get_result.update(item_properties = {"tags" : "Brazil, Brasil, AddressForAll", "accessInformation" : "AddressForAll"}, metadata="https://git.digital-guard.org/preserv-BR/tree/main/data/AC/RioBranco/_pk0042.01")
-                get_result.update(item_properties = {"title" : matadata['title'], "snippet" : matadata['snippet'], "description" : matadata['description'], "licenseInfo" : matadata['licenseinfo'], "accessInformation" : matadata['accessinformation']})
+                get_result.update(item_properties = {"title" : matadata['title'], "snippet" : matadata['snippet'], "description" : matadata['description'], "licenseInfo" : matadata['licenseinfo'], "accessInformation" : matadata['accessinformation'], "tags" : matadata['tags']})
                 # gis.content.categories.assign_to_items(items = [{layerid : {"categories" : ["/Categories/Country/Brazil","/Categories/Feature type/Block"]}}])
 
             except Exception as error:

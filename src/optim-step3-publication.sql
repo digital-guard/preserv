@@ -10,21 +10,21 @@ CREATE or replace VIEW optim.vw02publication AS
           )
          ) AS viz_summary,
          'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || class_ftname || '_' || id || '.zip' AS filtered_name,
-         lower(isolabel_ext) || '_pk' || pack_number || '_' ||  class_ftname || '.html' AS url_page
+         lower(isolabel_ext) || '_pk' || pack_number || '_' ||  class_ftname || '.html' AS url_page,
+
+         (SELECT to_jsonb(j.*) FROM optim.jurisdiction j WHERE j.isolevel = 2 AND j.jurisd_base_id = g.jurisd_base_id AND j.isolabel_ext = (split_part(g.isolabel_ext,'-',1) || '-' || split_part(g.isolabel_ext,'-',2)) ) AS jurisd2,
+         (SELECT to_jsonb(j.*) FROM optim.jurisdiction j WHERE j.isolevel = 1 AND j.jurisd_base_id = g.jurisd_base_id AND j.isolabel_ext =  split_part(g.isolabel_ext,'-',1) ) AS jurisd1
+
+
   FROM
   (
-    SELECT pf.packtpl_id, pf.isolabel_ext, pf.legalname, pf.vat_id, pf.url, pf.wikidata_id, pf.pack_item_accepted_date, pf.kx_pack_item_version, pf.local_serial, pf.pk_count, pf.pack_number,
-    pf.user_resp_initcap AS user_resp, pf.path_preserv_git, pf.path_cutgeo_git,
-    row_number() OVER (PARTITION BY pf.isolabel_ext, pf.local_serial, pf.pk_count ORDER BY pf.ftype_info->'class_ftname' ASC ) AS row_num,
+    SELECT pf.*, row_number() OVER (PARTITION BY pf.isolabel_ext, pf.local_serial, pf.pk_count ORDER BY pf.ftype_info->'class_ftname' ASC ) AS row_num,
     pf.ftype_info->>'class_ftname' as class_ftname,
-    pf.ftype_info->'class_info'->>'shortname_pt' as shortname,
-    pf.ftype_info->'class_info'->>'description_pt' as description,
+    pf.ftype_info->'class_info'->>'shortname_pt' as shortnameftname,
+    pf.ftype_info->'class_info'->>'description_pt' as descriptionftname,
     pf.make_conf_tpl->'license_evidences' AS license_evidences,
-    pf.license_data,
-    pf.hashedfname,
-    pf.hashedfname_without_ext,
-    pf.hashedfname_7_ext,
-    pf.id,
+
+
     CASE pf.geomtype
               WHEN 'poly'  THEN 'pols'
               WHEN 'line'  THEN 'lns'
@@ -95,11 +95,14 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number,
     'path_cutgeo_git', path_cutgeo_git,
     'license_evidences',license_evidences,
     'license_data',license_data,
+    'jurisd1',jurisd1,
+    'jurisd2',jurisd2,
+    'name', name,
     'path_cutgeo_notree', replace(replace(path_cutgeo_git,'tree/',''),'http://git.digital-guard.org/',''),
       'id', id,
       'class_ftname', class_ftname,
-      'shortname', shortname,
-      'description', description,
+      'shortnameftname', shortnameftname,
+      'description', descriptionftname,
       'hashedfname', hashedfname,
       'hashedfname_without_ext', hashedfname_without_ext,
       'hashedfname_7_ext', hashedfname_7_ext,
@@ -130,7 +133,19 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number,
         WHEN 'via'        THEN 'road network'
         WHEN 'geoaddress' THEN 'address points'
         END
-      )
+      ),
+    'with_address', ( CASE WHEN ftid IN (21,22,51,52,61,62) THEN TRUE ELSE FALSE END),
+    'isblock', ( CASE class_ftname WHEN 'block' THEN TRUE ELSE FALSE END),
+    'isbuilding', ( CASE class_ftname WHEN 'building' THEN TRUE ELSE FALSE END),
+    'isnsvia', ( CASE class_ftname WHEN 'nsvia' THEN TRUE ELSE FALSE END),
+    'isparcel', ( CASE class_ftname WHEN 'parcel' THEN TRUE ELSE FALSE END),
+    'isvia', ( CASE class_ftname WHEN 'via' THEN TRUE ELSE FALSE END),
+    'isgeoaddress', ( CASE class_ftname WHEN 'geoaddress' THEN TRUE ELSE FALSE END),
+
+    'isisolevel1', ( CASE isolevel WHEN 1 THEN TRUE ELSE FALSE END),
+    'isisolevel2', ( CASE isolevel WHEN 2 THEN TRUE ELSE FALSE END),
+    'isisolevel3', ( CASE isolevel WHEN 3 THEN TRUE ELSE FALSE END)
+
     ) AS conf
 FROM optim.vw02publication t
 ;
@@ -145,7 +160,8 @@ SELECT
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf)           AS snippet,
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf)       AS description,
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf)       AS licenseinfo,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf) AS accessinformation
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf) AS accessinformation,
+  conf->>'ftnameviz' || (CASE WHEN (conf->>'with_address')::BOOLEAN IS TRUE THEN ', address' ELSE '' END) AS tags
 
 FROM optim.vw03publication_viz
 ;
