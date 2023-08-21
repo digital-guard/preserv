@@ -4,6 +4,20 @@
 
 server {
     listen 80;
+    # listen [::]:80;
+    server_name digital-guard.org www.digital-guard.org;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 80;
+    # listen [::]:80;
+    server_name git.digital-guard.org www.git.digital-guard.org lic.digital-guard.org www.lic.digital-guard.org docs.digital-guard.org www.docs.digital-guard.org;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    # listen 80;
     listen 443 ssl;
     server_name digital-guard.org www.digital-guard.org;
     root /var/www/digital-guard.org/;
@@ -28,55 +42,59 @@ server {
     index index.php index.html index.htm;
     access_log /var/log/nginx/digital-guard.org.access_log;
 
-    location ~ "^/(?<hash>[a-fA-F0-9]{6,64}(\.[a-z0-9]+)?)$" {
+    location ~* "^/(?<hash>[a-f0-9]{6,64}(\.[a-z0-9]+)?)$" {
         try_files /dl.php?$uri /dl.php;
     }
 
-    location ~ "^/out/([a-zA-Z0-9\_]+\.zip)$" {
+    location ~* "^/out/([a-z0-9\_]+\.zip)$" {
         try_files /dl.php?$uri /dl.php;
     }
 
-    location ~ dl\.php$ {
+    location ~* dl\.php$ {
         internal;
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/run/php/php-fpm.sock;
     }
 
-    location ~ "^/download/[a-fA-F0-9]{64}(\.[a-z0-9]+)$" {
+    location ~* "^/download/[a-f0-9]{64}(\.[a-z0-9]+)$" {
         root /var/www/dl.digital-guard.org;
         try_files $uri $uri;
     }
 } # \server
 
 server {
-    listen 80;
     listen 443 ssl;
     server_name git.digital-guard.org www.git.digital-guard.org;
 
+    location ~* ^/digital-guard(/.+)?$ {
+        proxy_pass https://github.com;
+    }
+
     location ~ ^/?.+ {
-        rewrite ^/?licenses(/.*$|$) /ppKrauss/licenses/$1 break;
-        rewrite ^/?(.*)$            /digital-guard/$1     break;
-        proxy_pass http://github.com;
+        rewrite ^/?(.*)$ /digital-guard/$1 break;
+        proxy_pass https://github.com;
     }
 } # \server
 
 server {
-    listen 80;
     listen 443 ssl;
     server_name lic.digital-guard.org www.lic.digital-guard.org;
+
+    location ~* ^/digital-guard(/.+)?$ {
+        proxy_pass https://github.com;
+    }
 
     # vai redirecionar para site das licensas, por hora fica sendo o git para teste. certo pelo label ou nome.
     location ~ ^/?.+ {
         rewrite ^/?(.*)$ /digital-guard/licenses/$1 break;
-        proxy_pass http://github.com;
+        proxy_pass https://github.com;
     }
 } # \server
 
 server {
-    listen              80;
-    listen              443 ssl;
+    listen 443 ssl;
     server_name docs.digital-guard.org www.docs.digital-guard.org;
     access_log /var/log/nginx/docs.digital-guard.org.access_log;
 
-    return 301 https://wiki.addressforall.org/doc/Documenta%C3%A7%C3%A3o_Digital-guard;
+    return 302 https://wiki.addressforall.org/doc/Documenta%C3%A7%C3%A3o_Digital-guard;
 } # \server
