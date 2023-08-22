@@ -39,7 +39,7 @@ if len(sys.argv) > 1:
         data = get_data(session,url_api,query,headers)
 
         if data:
-            print(f"API metadata: {data}")
+            # print(f"API metadata: {data}")
 
             try:
                 gis = GIS(url_argis,username,password)
@@ -53,7 +53,7 @@ if len(sys.argv) > 1:
             except Exception as error:
                 print('Error.', error)
             else:
-                print('Arcgis metadata:', get_result)
+                print('Update metadata of ', layerid)
 
         else:
             print(f"Error. No API data for id: {layerid}")
