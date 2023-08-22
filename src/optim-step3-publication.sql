@@ -161,7 +161,15 @@ SELECT
   viz_id, viz_id2, isolabel_ext,
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache'), conf)                   AS title,
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf)                 AS snippet,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf)             AS description,
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf)
+  ||
+  (
+    CASE (conf->'jurisd1'->'jurisd_base_id')::int
+    WHEN 76 THEN jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-pt-br.mustache'), conf)
+    ELSE jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-es.mustache'), conf)
+    END
+  )
+  AS description,
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf)             AS licenseinfo,
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf)       AS accessinformation,
   replace(conf->>'ftnameviz',' ', '_') || (CASE WHEN (conf->>'with_address')::BOOLEAN IS TRUE THEN ', address' ELSE '' END) AS tags,
