@@ -98,6 +98,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number,
     'jurisd1',jurisd1,
     'jurisd2',jurisd2,
     'name', name,
+    'jurisdiction_info', jurisdiction_info || jsonb_build_object('population',(jsonb_build_object('date_year',EXTRACT('Year' FROM (jurisdiction_info->'population'->>'date')::date)) || (jurisdiction_info->'population'))),
     'path_cutgeo_notree', replace(replace(path_cutgeo_git,'tree/',''),'http://git.digital-guard.org/',''),
       'id', id,
       'class_ftname', class_ftname,
@@ -144,7 +145,9 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number,
 
     'isisolevel1', ( CASE isolevel WHEN 1 THEN TRUE ELSE FALSE END),
     'isisolevel2', ( CASE isolevel WHEN 2 THEN TRUE ELSE FALSE END),
-    'isisolevel3', ( CASE isolevel WHEN 3 THEN TRUE ELSE FALSE END)
+    'isisolevel3', ( CASE isolevel WHEN 3 THEN TRUE ELSE FALSE END),
+
+    'iscapital1', ( CASE (jurisdiction_info->'is_capital_isolevel')::int WHEN 1 THEN TRUE ELSE FALSE END)
 
     ) AS conf
 FROM optim.vw02publication t
