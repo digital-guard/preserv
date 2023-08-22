@@ -156,13 +156,13 @@ COMMENT ON VIEW optim.vw03publication_viz
 CREATE or replace VIEW optim.vw03_metadata_viz AS
 SELECT
   viz_id, viz_id2, isolabel_ext,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache'), conf)             AS title,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf)           AS snippet,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf)       AS description,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf)       AS licenseinfo,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf) AS accessinformation,
-  conf->>'ftnameviz' || (CASE WHEN (conf->>'with_address')::BOOLEAN IS TRUE THEN ', address' ELSE '' END) AS tags
-
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache'), conf)                   AS title,
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf)                 AS snippet,
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf)             AS description,
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf)             AS licenseinfo,
+  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf)       AS accessinformation,
+  replace(conf->>'ftnameviz',' ', '_') || (CASE WHEN (conf->>'with_address')::BOOLEAN IS TRUE THEN ', address' ELSE '' END) AS tags,
+  ARRAY['/Categories/Country/' || (conf->'jurisd1'->>'name_en')::text , '/Categories/Feature type/' || (conf->>'initcap_ftnameviz')::text] AS categories
 FROM optim.vw03publication_viz
 ;
 COMMENT ON VIEW optim.vw03_metadata_viz
