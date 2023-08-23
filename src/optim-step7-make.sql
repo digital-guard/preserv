@@ -538,7 +538,7 @@ CREATE or replace FUNCTION optim.generate_readme(
 
     SELECT commands FROM optim.reproducibility WHERE packtpl_id= (p_yaml->>'packtpl_id')::bigint INTO reproducibility;
 
-    SELECT p_yaml || jsonb_build_object('layers',list) || jsonb_build_object('data_packcsv',s.csv[0]) || jsonb_build_object( 'reproducibility', to_jsonb(reproducibility) )
+    SELECT p_yaml || jsonb_build_object('layers',list) || jsonb_build_object( 'reproducibility', to_jsonb(reproducibility) )
            || COALESCE( jsonb_build_object('viz_keys',to_jsonb(viz_keys)),'{}'::jsonb) || COALESCE( jsonb_build_object('publication_keys',to_jsonb(publication_keys)),'{}'::jsonb)
            || jsonb_build_object('has_publication_keys',(CASE WHEN publication_keys IS NOT NULL THEN true ELSE false END)) || jsonb_build_object('has_viz_keys',(CASE WHEN viz_keys IS NOT NULL THEN true ELSE false END))
     FROM
@@ -556,13 +556,7 @@ CREATE or replace FUNCTION optim.generate_readme(
         ) u
         ON u.l->'class_ftname' = t.value->'layername_root'
       ) g
-    ) r,
-    LATERAL
-    (
-      SELECT jsonb_agg(to_jsonb(t.*)) AS csv
-      FROM tmp_orig.donatedpacks_donor t
-      WHERE t.pack_id = (p_yaml->'data_packtpl'->>'pack_number_donatedpackcsv')::int
-    ) s
+    ) r
     INTO conf_yaml;
 
     RAISE NOTICE 'conf: %', conf_yaml;
