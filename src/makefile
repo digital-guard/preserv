@@ -199,6 +199,13 @@ load_optim_csv:
 	psql $(pg_datalake_uri) -c "SELECT optim.insert_codec_type();"
 	psql $(pg_datalake_uri) -c "SELECT optim.insert_jurisdPoint();"
 
+redirects_update: pgio
+	@echo "-- Atualização de redirecionamentos --"
+	@echo "--- dl.digital-guard.org ---"
+	psql $(pg_datalake_uri) -c "SELECT download.insert_dldg_csv();"
+	@echo "--- Data VisualiZation ---"
+	psql $(pg_datalake_uri) -c "SELECT download.insert_viz_csv(); SELECT download.update_cloudControl_vizuri();"
+
 first_makefile:
 	@echo "--- Copying initial makefile in 'data/_pk*' directories   ---"
 	# retorna todos os diretórios com o padrão '*_pk*' e copia o arquivo commomLast.mustache.mk para cada um deles, renomeando o arquivo para makefile.
@@ -219,13 +226,6 @@ approved_donated_packcomponent:
 	@echo "Usage: make approved_donated_packcomponent id=<id from optim.donated_PackComponent_not_approved>"
 	@read -p "[Press ENTER to continue or Ctrl+C to quit]" _press_enter_
 	@[ "${id}" ] && psql $(pg_datalake_uri) -c "SELECT optim.approved_packcomponent($(id))" || ( echo "Unknown id.")
-
-redirects_update: pgio
-	@echo "-- Atualização de redirecionamentos --"
-	@echo "--- dl.digital-guard.org ---"
-	psql $(pg_datalake_uri) -c "SELECT download.insert_dldg_csv();"
-	@echo "--- Data VisualiZation ---"
-	psql $(pg_datalake_uri) -c "SELECT download.insert_viz_csv(); SELECT download.update_cloudControl_vizuri();"
 
 sha256_update:
 	@echo "Update sha256 in optim.donated_packfilevers"
