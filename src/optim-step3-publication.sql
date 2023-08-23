@@ -13,12 +13,7 @@ CREATE or replace VIEW optim.vw02publication AS
          lower(isolabel_ext) || '_pk' || pack_number || '_' ||  class_ftname || '.html' AS url_page,
 
          (SELECT to_jsonb(j.*) FROM optim.jurisdiction j WHERE j.isolevel = 2 AND j.jurisd_base_id = g.jurisd_base_id AND j.isolabel_ext = (split_part(g.isolabel_ext,'-',1) || '-' || split_part(g.isolabel_ext,'-',2)) ) AS jurisd2,
-         (SELECT to_jsonb(j.*) FROM optim.jurisdiction j WHERE j.isolevel = 1 AND j.jurisd_base_id = g.jurisd_base_id AND j.isolabel_ext =  split_part(g.isolabel_ext,'-',1) ) AS jurisd1,
-
-        to_char(pack_item_accepted_date,'DD/MM/YYYY') AS accepted_date_ptbr,
-        to_char(pack_item_accepted_date,'MM/DD/YYYY') AS accepted_date_en,
-        to_char(pack_item_accepted_date,'DD/MM/YYYY') AS accepted_date_es
-
+         (SELECT to_jsonb(j.*) FROM optim.jurisdiction j WHERE j.isolevel = 1 AND j.jurisd_base_id = g.jurisd_base_id AND j.isolabel_ext =  split_part(g.isolabel_ext,'-',1) ) AS jurisd1
   FROM
   (
     SELECT pf.*, row_number() OVER (PARTITION BY pf.isolabel_ext, pf.local_serial, pf.pk_count ORDER BY pf.ftype_info->'class_ftname' ASC ) AS row_num,
@@ -93,10 +88,10 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number,
     'wikidata_id', wikidata_id,
     'user_resp', user_resp,
     'accepted_date', pack_item_accepted_date,
-    'accepted_date_ptbr', accepted_date_ptbr,
-    'accepted_date_en', accepted_date_en,
-    'accepted_date_es', accepted_date_es,
-    'path_preserv_git', path_preserv_git,
+    'accepted_date_ptbr', packtpl_info->>'accepted_date_ptbr',
+    'accepted_date_en', packtpl_info->>'accepted_date_en',
+    'accepted_date_es', packtpl_info->>'accepted_date_es',
+    'path_preserv_git', 'path_preserv_git',
     'pack_number', pack_number,
     'path_cutgeo_git', path_cutgeo_git,
     'license_evidences',license_evidences,
@@ -196,9 +191,9 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
     'wikidata_id', wikidata_id,
     'user_resp', user_resp,
     'accepted_date', pack_item_accepted_date,
-    'accepted_date_ptbr', accepted_date_ptbr,
-    'accepted_date_en', accepted_date_en,
-    'accepted_date_es', accepted_date_es,
+    'accepted_date_ptbr', packtpl_info->>'accepted_date_ptbr',
+    'accepted_date_en', packtpl_info->>'accepted_date_en',
+    'accepted_date_es', packtpl_info->>'accepted_date_es',
     'path_preserv_git', path_preserv_git,
     'pack_number', pack_number,
     'path_cutgeo_git', path_cutgeo_git,
@@ -223,7 +218,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
     'publication_keys', array_agg((CASE WHEN publication_summary IS NOT NULL THEN class_ftname ELSE NULL END))
     ) AS page
 FROM optim.vw02publication t
-GROUP BY packtpl_id, isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv_git, pack_number, path_cutgeo_git, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences,accepted_date_ptbr,accepted_date_es,accepted_date_en
+GROUP BY packtpl_id, isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv_git, pack_number, path_cutgeo_git, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences,packtpl_info->>'accepted_date_ptbr',packtpl_info->>'accepted_date_es',packtpl_info->>'accepted_date_en'
 ;
 COMMENT ON VIEW optim.vw03publication
   IS 'Generate json for mustache template for preservDataViz pages.'

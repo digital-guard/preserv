@@ -550,7 +550,13 @@ COMMENT ON VIEW optim.vw01full_jurisdiction_geom_point
 ;
 
 CREATE or replace VIEW optim.vw01full_donated_PackTpl AS
-  SELECT pt.id AS packtpl_id, pt.donor_id, pt.user_resp AS user_resp_packtpl, au.info AS user_resp_packtpl_info, pt.pk_count, pt.original_tpl, pt.make_conf_tpl, pt.kx_num_files, pt.info AS packtpl_info,
+  SELECT pt.id AS packtpl_id, pt.donor_id, pt.user_resp AS user_resp_packtpl, au.info AS user_resp_packtpl_info, pt.pk_count, pt.original_tpl, pt.make_conf_tpl, pt.kx_num_files,
+         pt.info ||
+         jsonb_build_object(
+        'accepted_date_ptbr', to_char((pt.info->>'accepted_date')::date,'DD/MM/YYYY'),
+        'accepted_date_en', to_char((pt.info->>'accepted_date')::date,'MM/DD/YYYY'),
+        'accepted_date_es', to_char((pt.info->>'accepted_date')::date,'DD/MM/YYYY')
+        ) AS packtpl_info,
          dn.country_id, dn.local_serial, dn.scope_osm_id, dn.scope_label, dn.shortname, dn.vat_id, dn.legalName, dn.wikidata_id, dn.url, dn.info AS donor_info, dn.kx_vat_id,
          j.osm_id, j.jurisd_base_id, j.jurisd_local_id, j.parent_id, j.admin_level, j.name, j.parent_abbrev, j.abbrev, j.wikidata_id AS jurisdiction_wikidata_id, j.lexlabel, j.isolabel_ext, j.ddd, j.housenumber_system_type, j.lex_urn, j.info AS jurisdiction_info, j.isolevel,
          to_char(dn.local_serial,'fm0000') AS local_serial_formated, -- e.g.: 0042
