@@ -654,18 +654,23 @@ CREATE or replace FUNCTION optim.generate_make_conf_with_license(
 
     SELECT to_jsonb(ARRAY[name, family, url]), CASE WHEN lower(license_is_explicit)='yes' THEN TRUE ELSE FALSE END FROM license.pack_licenses WHERE license.pack_licenses.pack_id = (to_char(substring(p_yaml->>'pack_id','^([^\.]*)')::int,'fm000') || to_char(substring(p_yaml->>'pack_id','([^\.]*)$')::int,'fm00'))::int INTO definition, license_explicit;
 
-    IF p_yaml?'license_evidences'
+    IF definition <> '[null,null,null]'::jsonb
     THEN
-        license_evidences := p_yaml->'license_evidences' || jsonb_build_object('definition',null);
+        IF p_yaml?'license_evidences' AND definition <> '[null,null,null]'::jsonb
+        THEN
+            license_evidences := p_yaml->'license_evidences' || jsonb_build_object('definition',null);
 
-        SELECT regexp_replace( p_yaml_t , '\n*license_evidences: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || regexp_replace(jsonb_to_yaml(jsonb_build_object('license_evidences',license_evidences)::text)::text,'definition: null\n', 'definition: ' || jsonb_to_yaml(definition::text,True)::text) || E'\n', 'n') INTO q_query;
+            SELECT regexp_replace( p_yaml_t , '\n*license_evidences: *(\n *[(definition)|(file)][^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || regexp_replace(jsonb_to_yaml(jsonb_build_object('license_evidences',license_evidences)::text)::text,'definition: null\n', 'definition: ' || jsonb_to_yaml(definition::text,True)::text) || E'\n', 'n') INTO q_query;
+        ELSE
+            license_evidences := jsonb_build_object('definition',null);
+
+            SELECT regexp_replace( p_yaml_t , '\n*files: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || jsonb_to_yaml((jsonb_build_object('files',(p_yaml->'files')))::text)::text || E'\n' || regexp_replace(jsonb_to_yaml(jsonb_build_object('license_evidences',license_evidences)::text)::text,'definition: null', 'definition: ' || jsonb_to_yaml(definition::text,True)::text) /*|| E'\n'*/, 'n') INTO q_query;
+        END IF;
+
+        SELECT volat_file_write(p_output,q_query) INTO q_query;
     ELSE
-        license_evidences := jsonb_build_object('license_evidences',jsonb_build_object('definition',null));
-
-        SELECT regexp_replace( p_yaml_t , '\n*files: *(\n *\-[^\n]*|\n[\t ]+[^\n]+)+\n*', E'\n\n' || jsonb_to_yaml((p_yaml->'files')::text)::text || E'\n' || regexp_replace(jsonb_to_yaml(jsonb_build_object('license_evidences',license_evidences)::text)::text,'definition: null', 'definition: ' || jsonb_to_yaml(definition::text,True)::text) || E'\n', 'n') INTO q_query;
+        q_query := 'Error, license not found. Check license value in donatedPack.csv.';
     END IF;
-
-    SELECT volat_file_write(p_output,q_query) INTO q_query;
 
     RETURN q_query;
     END;
