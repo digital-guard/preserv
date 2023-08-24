@@ -1,7 +1,7 @@
 -- Create FDW
 
 -- preserv-[A-Z]{2}/data/donor.csv and preserv-[A-Z]{2}/data/donatedPack.csv
-SELECT optim.load_donor_pack(t) FROM unnest(ARRAY['AR','BO','BR','CL','CO','EC','PE','PY','SR','UY','VE']) t;
+SELECT optim.load_donor_pack(t) FROM unnest(ARRAY['AR','BO','BR','CL','CO','EC','MX','PE','PY','SR','UY','VE']) t;
 
 -- preserv/data/codec_type.csv
 SELECT optim.load_codec_type();
@@ -59,6 +59,11 @@ CREATE or replace VIEW tmp_orig.donors AS
     (
         SELECT 'ec' AS jurisdiction, r.*, null, null
         FROM tmp_orig.fdw_donorec r
+    )
+    UNION ALL
+    (
+        SELECT 'mx' AS jurisdiction, r.*, null, null
+        FROM tmp_orig.fdw_donormx r
     )
     UNION ALL
     (
@@ -128,6 +133,13 @@ CREATE or replace VIEW tmp_orig.donatedpacks_donor AS
         SELECT 'ec' AS jurisdiction, r.*, s.*, null, null
         FROM tmp_orig.fdw_donatedpackec r
         LEFT JOIN tmp_orig.fdw_donorec s
+        ON s.local_id::int = r.donor_id
+    )
+    UNION ALL
+    (
+        SELECT 'mx' AS jurisdiction, r.*, s.*, null, null
+        FROM tmp_orig.fdw_donatedpackmx r
+        LEFT JOIN tmp_orig.fdw_donormx s
         ON s.local_id::int = r.donor_id
     )
     UNION ALL

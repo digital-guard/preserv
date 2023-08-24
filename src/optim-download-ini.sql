@@ -11,5 +11,5 @@ SELECT license.insert_licenses();
 SELECT optim.insert_codec_type();
 
 -- preserv-[A-Z]{2}/data/donor.csv and preserv-[A-Z]{2}/data/donatedPack.csv
--- SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY['AR','BO','BR','CL','CO','EC','PE','PY','SR','UY','VE']) t;
-SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY['BO','BR','CL','CO','EC','PE','PY','SR','UY','VE']) t;
+-- SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY['AR','BO','BR','CL','CO','EC','MX','PE','PY','SR','UY','VE']) t;
+SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY['BO','BR','CL','CO','EC','MX','PE','PY','SR','UY','VE']) t;
