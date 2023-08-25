@@ -190,6 +190,8 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
     'url', url,
     'wikidata_id', wikidata_id,
     'user_resp', user_resp,
+    'uri_objtype', packtpl_info->>'uri_objtype',
+    'user_resp_packtpl_info', packtpl_info->>'user_resp_packtpl_info',
     'accepted_date', pack_item_accepted_date,
     'accepted_date_ptbr', packtpl_info->>'accepted_date_ptbr',
     'accepted_date_en', packtpl_info->>'accepted_date_en',
@@ -218,7 +220,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
     'publication_keys', array_agg((CASE WHEN publication_summary IS NOT NULL THEN class_ftname ELSE NULL END))
     ) AS page
 FROM optim.vw02publication t
-GROUP BY packtpl_id, isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv_git, pack_number, path_cutgeo_git, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences,packtpl_info->>'accepted_date_ptbr',packtpl_info->>'accepted_date_es',packtpl_info->>'accepted_date_en'
+GROUP BY packtpl_id, isolabel_ext, legalname, vat_id, url, wikidata_id, user_resp, path_preserv_git, pack_number, path_cutgeo_git, pack_item_accepted_date, kx_pack_item_version, local_serial, pk_count,license_evidences,packtpl_info->>'accepted_date_ptbr',packtpl_info->>'accepted_date_es',packtpl_info->>'accepted_date_en',packtpl_info->>'uri_objtype', packtpl_info->>'user_resp_packtpl_info'
 ;
 COMMENT ON VIEW optim.vw03publication
   IS 'Generate json for mustache template for preservDataViz pages.'
