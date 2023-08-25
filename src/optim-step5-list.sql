@@ -2,7 +2,8 @@ CREATE or replace VIEW optim.vw01generate_list AS
 SELECT scope_label, isolevel, pacotes || coalesce(jsonb_build_object('filtered_files',filtered_files),'{}'::jsonb) AS pacotes
 FROM
 (
-  SELECT pack_id, scope_label, isolevel, jsonb_build_object('legalName',legalName,'pack_number', MAX(pack_number), 'path_preserv_git', MAX(path_preserv_git), 'local_serial_formated', MAX(local_serial_formated), 'pacotes',jsonb_agg(pf2.*)) AS pacotes
+  SELECT pack_id, scope_label, isolevel, jsonb_build_object('legalName',legalName,'isunpublished',(CASE WHEN lower(MAX(packtpl_info->>'uri_objtype')) = 'email' THEN TRUE ELSE FALSE END),
+  'pack_number', MAX(pack_number), 'path_preserv_git', MAX(path_preserv_git), 'local_serial_formated', MAX(local_serial_formated), 'pacotes',jsonb_agg(pf2.*)) AS pacotes
   FROM
   (
     SELECT pf.*
