@@ -8,6 +8,7 @@ FROM
   (
     SELECT pf.*
     FROM optim.vw01full_packfilevers pf
+    ORDER BY scope_label, legalName,pack_id,pack_item
   ) pf2
   GROUP BY country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalName, wikidata_id, url, donor_info, kx_vat_id, isolevel, pack_id
   ORDER BY scope_label, legalName
