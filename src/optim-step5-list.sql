@@ -2,7 +2,7 @@ CREATE or replace VIEW optim.vw01generate_list AS
 SELECT scope_label, isolevel, pacotes || coalesce(jsonb_build_object('filtered_files',filtered_files),'{}'::jsonb) AS pacotes
 FROM
 (
-  SELECT pack_id, scope_label, isolevel, jsonb_build_object('legalName',legalName,'isunpublished',(CASE WHEN lower(MAX(packtpl_info->>'uri_objtype')) = 'email' THEN TRUE ELSE FALSE END),
+  SELECT pack_id, scope_label, isolevel, jsonb_build_object('legalName',legalName,'isunpublished',(CASE WHEN lower(MAX(regexp_replace(packtpl_info->>'uri_objtype', '[\s+]|\-', '', 'g'))) = 'email' THEN TRUE ELSE FALSE END),
   'pack_number', MAX(pack_number), 'path_preserv_git', MAX(path_preserv_git), 'local_serial_formated', MAX(local_serial_formated), 'pacotes',jsonb_agg(pf2.*)) AS pacotes
   FROM
   (
@@ -15,6 +15,7 @@ FROM
 LEFT JOIN optim.vw01filtered_files s
 ON r.pack_id = s.pack_id
 ;
+
 
 CREATE or replace VIEW optim.vw02generate_list AS
 SELECT jsonb_build_object('paises',jsonb_agg(jsonb_build_object('scope_label', scope_label, 'iso1', iso1, 'iso3', iso3, 'jurisd', jurisd))) AS y 
