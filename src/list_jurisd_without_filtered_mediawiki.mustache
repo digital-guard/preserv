@@ -1,19 +1,19 @@
 {{#paises}}
-* **{{jurisd.name_en}} ({{scope_label}})**
+* <b>{{jurisd.name_en}} ({{scope_label}})</b>
 {{#iso1}}
 ** {{legalName}}
 *** [{{path_preserv_git}} _pk{{local_serial_formated}}]:{{#isunpublished}} <small>[unprecedented]</small>{{/isunpublished}}
    {{#pacotes}}
-**** [http://dl.digital-guard.org/{{hashedfname}} Origial parte {{pack_item}} (<code>{{hashedfname_7}}</code>)] - {{info.name}}
+**** [http://dl.digital-guard.org/{{hashedfname}} Original parte {{pack_item}} (<code>{{hashedfname_7}}</code>)] - {{info.name}}
   {{/pacotes}}
 {{/iso1}}
 {{#iso3}}
-** **{{jurisd}}**
+** <b>{{jurisd}}</b>
 {{#doadores}}
 *** {{legalName}}
 **** [{{path_preserv_git}} _pk{{local_serial_formated}}]:{{#isunpublished}} <small>[unprecedented]</small>{{/isunpublished}}
    {{#pacotes}}
-***** [http://dl.digital-guard.org/{{hashedfname}} Origial parte {{pack_item}} (<code>{{hashedfname_7}}</code>)] - {{info.name}}
+***** [http://dl.digital-guard.org/{{hashedfname}} Original parte {{pack_item}} (<code>{{hashedfname_7}}</code>)] - {{info.name}}
   {{/pacotes}}
 {{/doadores}}
 {{/iso3}}
