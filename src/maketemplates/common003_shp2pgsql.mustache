@@ -36,8 +36,8 @@ endif
 {{#isShpParalell}}
 	@echo Executando shp2pgsql with GNU paralell ...
 	psql $(pg_uri_db) -c 'DROP TABLE IF EXISTS {{tabname}}'
-	cd $(sandbox); shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} $$(find $(sandbox) -path "*{{orig_filename}}*.shp" | head -n 1) {{tabname}} | psql -q $(pg_uri_db)
-	cd $(sandbox); find $(sandbox) -path "*{{orig_filename}}*.shp" | parallel -j8 "shp2pgsql -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' {{tabname}} | psql -q $(pg_uri_db)" \;
+	cd $(sandbox); shp2pgsql -p -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} $$(find $(sandbox) -path "*{{orig_filename}}*.shp" | head -n 1) {{tabname}} | psql -q $(pg_uri_db)
+	cd $(sandbox); find $(sandbox) -path "*{{orig_filename}}*.shp" | parallel -j8 "shp2pgsql -a -D {{#charset}}-W {{charset}}{{/charset}} {{{method_opts}}} -s {{srid}} '{}' {{tabname}} | psql -q $(pg_uri_db)" \;
 	cd $(sandbox); {{#sql_view}}psql $(pg_uri_db) -c \"CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}\" | psql $(pg_uri_db) -c \"SELECT ingest.any_load('{{method}}','$$(find $(sandbox) -path "*{{orig_filename}}*.shp" | head -n 1)','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}},true)\" | psql $(pg_uri_db) -c \"DROP VIEW vw{{file}}_{{tabname}}\"{{/sql_view}}{{^sql_view}}psql $(pg_uri_db) -c \"SELECT ingest.any_load('{{method}}','$$(find $(sandbox) -path "*{{orig_filename}}*.shp" | head -n 1)','{{layername}}','{{tabname}}','{{packvers_id}}','{{file_data.file}}',array{{{sql_select}}},{{id_profile_params}},{{buffer_type}},true)\"{{/sql_view}}
 	@echo "Confira os resultados nas tabelas ingest.donated_packcomponent e ingest.feature_asis".
 {{/isShpParalell}}
