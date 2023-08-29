@@ -1,5 +1,6 @@
 {{^isOsm}}
 {{^multiple_files}}
+{{^isShpParalell}}
 {{#isGdb}}dd if=/dev/random of='{{sandbox}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{/orig_filename_with_extension}}/random_data_file' bs=1M count=1{{/isGdb}}
 {{#sql_view}}
 psql {{pg_uri}}/{{pg_db}} -c "CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}"
@@ -10,6 +11,7 @@ psql {{pg_uri}}/{{pg_db}} -c "DROP VIEW vw{{file}}_{{tabname}}"
 psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load('{{method}}','{{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{#isGdb}}/timestamps{{/isGdb}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.{{extension}}{{#isGdb}}/timestamps{{/isGdb}}{{/orig_filename_with_extension}}','{{layername}}','{{tabname}}','{{packvers_id}}','{{file_data.file}}',array{{{sql_select}}},{{id_profile_params}},{{buffer_type}})"
 {{/sql_view}}
 @echo "Confira os resultados nas tabelas ingest.donated_packcomponent e {{#isCadLayer}}ingest.cadastral_asis{{/isCadLayer}}{{^isCadLayer}}ingest.feature_asis{{/isCadLayer}}".
+{{/isShpParalell}}
 {{/multiple_files}}
 psql {{pg_uri}}/{{pg_db}} -c "DROP {{#isCsv}}FOREIGN{{/isCsv}} TABLE IF EXISTS {{tabname}} CASCADE"
 {{/isOsm}}

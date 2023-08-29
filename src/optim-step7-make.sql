@@ -127,6 +127,9 @@ BEGIN
         dict := jsonb_set( dict, array['layers',key,'isTxt2sql'],    IIF(method='txt2sql',bt,bf) );
         dict := jsonb_set( dict, array['layers',key,'isGeoaddress'], IIF(key='geoaddress',bt,bf) );
 
+        dict := jsonb_set( dict, array['layers',key,'isShpParalell'],IIF(method='shp2sqlparalell',bt,bf) );
+        dict := jsonb_set( dict, array['layers',key,'multiple_files'],IIF(method='shp2sqlparalell',bt,bf) );
+
         IF dict->'layers'->key?'standardized_fields'
         THEN
             dict := jsonb_set( dict, array['layers',key,'has_standardized_fields'], bt);
@@ -424,6 +427,7 @@ $f$ language PLpgSQL;
 -- SELECT optim.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-PE/data/CUS/Cusco/_pk0001.01/make_conf.yaml') ); 
 -- SELECT optim.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/SP/SaoPaulo/_pk0033.01/make_conf.yaml') );
 -- SELECT optim.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-BR/data/DF/Brasilia/_pk0068.01/make_conf.yaml') );
+-- SELECT optim.jsonb_mustache_prepare( yamlfile_to_jsonb('/var/gits/_dg/preserv-MX/data/_pk0002.01/make_conf.yaml') );
 
 CREATE or replace FUNCTION optim.generate_commands(
     jurisd  text,
