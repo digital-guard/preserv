@@ -437,6 +437,38 @@ SELECT api.jurisdiction_autocomplete('CO-ANT');
 
 ----------------------
 
+CREATE or replace VIEW api.quarter AS
+SELECT country, quarter, SUM(n) AS n
+FROM
+(
+  SELECT split_part(isolabel_ext,'-',1) AS country, n,CASE WHEN date < '2020-01-01' THEN 'Q1 2020' ELSE quarter END AS quarter
+  FROM
+  (
+    SELECT *, 'Q' || (extract(quarter from date)::text) || ' ' || (extract(year from date))::text as quarter
+    FROM
+    (
+      SELECT isolabel_ext, packtpl_id, MAX(date) AS date, MAX(n) AS n
+      FROM
+      (
+        SELECT *
+        FROM (
+          SELECT pf.isolabel_ext,packtpl_id,ftype_info->>'class_ftname' AS class_ftname, (packtpl_info->>'accepted_date')::date, (jsonb_array_to_text_array((lineage->'statistics'))::int[])[16] AS n
+          FROM optim.vw01full_donated_PackComponent pf
+          ORDER BY pf.isolabel_ext
+        ) AS g
+        WHERE class_ftname IN ('geoaddress','parcel')
+        ORDER BY isolabel_ext, packtpl_id, n
+      ) h
+      GROUP BY isolabel_ext, packtpl_id
+    ) i
+  ) j
+) d
+GROUP BY country, quarter
+ORDER BY country, split_part(quarter,' ',2), split_part(quarter,' ',1)
+;
+
+----------------------
+
 CREATE or replace VIEW api.licenses AS
 SELECT *
 FROM license.licenses_implieds
