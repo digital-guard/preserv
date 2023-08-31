@@ -6,6 +6,12 @@
    {{#pacotes}}
              - [Original parte {{pack_item}} (`{{hashedfname_7}}`)](http://dl.digital-guard.org/{{hashedfname}}) - {{info.name}}
   {{/pacotes}}
+  {{#filtered_files}}
+             - Filtrados:
+  {{#layers}}
+                  - {{class_ftname}}: {{#files}}[**{{hashedfnametype}}**](http://dl.digital-guard.org/out/{{hashedfname}}) {{/files}}
+  {{/layers}}
+  {{/filtered_files}}
 {{/iso1}}
 {{#iso3}}
      - **<span id="{{jurisd}}">{{jurisd}}</span>**
