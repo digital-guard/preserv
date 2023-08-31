@@ -483,15 +483,25 @@ FROM
         UNION
 
         SELECT country, quarter, 0::bigint
-        FROM (SELECT country FROM api.quarter) r, (SELECT quarter FROM api.quarter) s
+        FROM
+          (
+            SELECT DISTINCT country FROM api.quarter
+          ) r,
+          (
+            SELECT 'Q' || (extract(quarter from date)::text) || ' ' || (extract(year from date))::text as quarter
+            FROM generate_series('2020-01-01 00:00'::timestamp, NOW()- interval '3 months', '3 months') t(date)
+          ) s
         WHERE (country, quarter) NOT IN (SELECT country, quarter FROM api.quarter)
       ) r
     $$,
-    $$SELECT quarter FROM (SELECT DISTINCT quarter FROM api.quarter) m ORDER BY split_part(quarter,' ',2), split_part(quarter,' ',1)$$
-  ) AS t ("country" text, "Q1 2020" bigint, "Q2 2020" bigint,"Q3 2020" bigint,"Q4 2020" bigint,"Q1 2021" bigint,"Q2 2021" bigint,"Q3 2021" bigint,"Q4 2021" bigint,"Q1 2022" bigint,"Q2 2022" bigint,"Q3 2022" bigint,"Q4 2022" bigint);
+    $$
+    SELECT 'Q' || (extract(quarter from date)::text) || ' ' || (extract(year from date))::text as quarter
+    FROM generate_series('2020-01-01 00:00'::timestamp, NOW()- interval '3 months', '3 months') t(date)
+    ORDER BY date
+    $$
+  ) AS t ("country" text, "Q1 2020" bigint, "Q2 2020" bigint,"Q3 2020" bigint,"Q4 2020" bigint,"Q1 2021" bigint,"Q2 2021" bigint,"Q3 2021" bigint,"Q4 2021" bigint,"Q1 2022" bigint,"Q2 2022" bigint,"Q3 2022" bigint,"Q4 2022" bigint,"Q1 2023" bigint,"Q2 2023" bigint)
+;
 
--- SELECT country, quarter, n, sum(n) OVER (PARTITION BY country ORDER BY split_part(quarter,' ',2), split_part(quarter,' ',1)) AS cum_amt
--- FROM   api.quarter
 ----------------------
 
 CREATE or replace VIEW api.licenses AS
