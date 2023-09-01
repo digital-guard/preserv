@@ -565,7 +565,7 @@ CREATE or replace VIEW optim.vw01full_donated_PackTpl AS
          '/var/gits/_dg/preserv-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv_server, -- e.g.:
          'https://git.digital-guard.org/preserv-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\1/blob/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_preserv_git, -- e.g.:
          'https://git.digital-guard.org/preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021/tree/main/data/'),'-','/'),'\/$','') || '/_pk' || to_char(dn.local_serial,'fm0000') || '.' || to_char(pt.pk_count,'fm00') AS path_cutgeo_git, -- e.g.:
-         'preservCutGeo-' || regexp_replace(replace(regexp_replace(j.isolabel_ext, '^([^-]*)-?', '\12021'),'-','/'),'\/$','') AS repo_cutgeo_name, -- e.g.: preservCutGeo-BR2021
+         'preservCutGeo-' || split_part(j.isolabel_ext,'-',1) || '2021' AS repo_cutgeo_name, -- e.g.: preservCutGeo-BR2021
          to_char(dn.local_serial,'fm000') || to_char(pt.pk_count,'fm00') AS pack_number_donatedpackcsv, -- e.g.: 04201
          INITCAP(pt.user_resp) AS user_resp_packtpl_initcap,
          upper(split_part(dn.vat_id,':',1)) AS vat_id_p1,
