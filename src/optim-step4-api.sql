@@ -32,7 +32,7 @@ CREATE or replace VIEW api.donatedpacks_donor AS
 --tabelão
 CREATE or replace VIEW api.stats_donated_packcomponent AS
 SELECT a.*,
-    jurisdiction, pack_id, donor_id, pack_count, lst_vers, donor_label, user_resp, accepted_date, scope, about, author, contentreferencetime, license_is_explicit, license, uri_objtype, uri, isat_urbigis, status, statusupdatedate, local_id, scope_label, "shortName", vat_id, "legalName", wikidata_id, url, donor_date, donor_status,
+    jurisdiction, pack_id, donor_id, pack_count, lst_vers, user_resp, accepted_date, scope, about, author, contentreferencetime, license_is_explicit, license, uri_objtype, uri, isat_urbigis, status, statusupdatedate, local_id, scope_label, vat_id, "legalName", wikidata_id, url, donor_date, donor_status,
     CASE
     WHEN license_is_explicit = 'yes' THEN 'explicit'
     WHEN license_is_explicit = 'no'  THEN 'implicit'

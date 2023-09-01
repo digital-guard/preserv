@@ -778,7 +778,7 @@ CREATE TRIGGER check_kx_num_files
     FOR EACH ROW EXECUTE PROCEDURE optim.mkdonated_PackTpl()
 ;
 
-CREATE FUNCTION optim.fdw_generate_direct_csv(
+CREATE or replace FUNCTION optim.fdw_generate_direct_csv(
   p_file text,  -- path+filename+ext
   p_fdwname text, -- nome da tabela fwd
   p_delimiter text DEFAULT ',',
@@ -865,7 +865,7 @@ CREATE or replace FUNCTION optim.load_donor_pack(
     jurisdiction text
 ) RETURNS text AS $f$
 BEGIN
-  RETURN (SELECT optim.fdw_generate_direct_csv(concat('/var/gits/_dg/preserv', iIF(jurisdiction='INT', '', '-' || UPPER(jurisdiction)), '/data/donor.csv'),'tmp_orig.fdw_donor'|| lower(jurisdiction),',')) || (SELECT optim.fdw_generate('donatedPack', jurisdiction, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'donor_label text', 'user_resp text', 'accepted_date date', 'scope text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,null));
+  RETURN (SELECT optim.fdw_generate_direct_csv(concat('/var/gits/_dg/preserv', iIF(jurisdiction='INT', '', '-' || UPPER(jurisdiction)), '/data/donor.csv'),'tmp_orig.fdw_donor'|| lower(jurisdiction),',')) || (SELECT optim.fdw_generate('donatedPack', jurisdiction, 'optim', array['pack_id int', 'donor_id int', 'pack_count int', 'lst_vers int', 'user_resp text', 'accepted_date date', 'scope text', 'about text', 'author text', 'contentReferenceTime text', 'license_is_explicit text', 'license text', 'uri_objType text', 'uri text', 'isAt_UrbiGIS text','status text','statusUpdateDate text'],false,null));
 END;
 $f$ LANGUAGE PLpgSQL;
 COMMENT ON FUNCTION optim.load_donor_pack
@@ -964,7 +964,7 @@ DECLARE
 BEGIN
   q := $$
     -- popula optim.donor a partir de tmp_orig.fdw_donor
-    INSERT INTO optim.donor (country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalname, wikidata_id, url, info)
+    INSERT INTO optim.donor (country_id, local_serial, scope_osm_id, scope_label, vat_id, legalname, wikidata_id, url, info)
     SELECT
         (
             SELECT jurisd_base_id
@@ -978,7 +978,6 @@ BEGIN
             WHERE lower(isolabel_ext) = lower(scope_label)
         ) AS scope_osm_id,
         t.scope_label,
-        t."shortName" AS shortname,
         t.vat_id,
         t."legalName" AS legalname,
         t.wikidata_id::bigint,
@@ -992,12 +991,12 @@ BEGIN
       AND lower(t.wikidata_id) <> 'na'
     ON CONFLICT (country_id,local_serial)
     DO UPDATE 
-    SET scope_osm_id=EXCLUDED.scope_osm_id, scope_label=EXCLUDED.scope_label, shortName=EXCLUDED.shortName, vat_id=EXCLUDED.vat_id, legalName=EXCLUDED.legalName, wikidata_id=EXCLUDED.wikidata_id, url=EXCLUDED.url, info=EXCLUDED.info;
+    SET scope_osm_id=EXCLUDED.scope_osm_id, scope_label=EXCLUDED.scope_label, vat_id=EXCLUDED.vat_id, legalName=EXCLUDED.legalName, wikidata_id=EXCLUDED.wikidata_id, url=EXCLUDED.url, info=EXCLUDED.info;
   $$;
 
   EXECUTE format( $$ SELECT array_to_string((SELECT array_agg(x)
   FROM (SELECT split_part(unnest(pg_tablestruct_dump_totext('tmp_orig.fdw_donor%s')),' ',1) ) t(x)
-  WHERE x NOT IN ('local_id','scope_label','shortName','vat_id','legalName','wikidata_id','url')),',')
+  WHERE x NOT IN ('local_id','scope_label','vat_id','legalName','wikidata_id','url')),',')
   FROM tmp_orig.fdw_donor%s $$, jurisdiction, jurisdiction ) INTO a;
 
   EXECUTE format( q, jurisdiction, a ) ;

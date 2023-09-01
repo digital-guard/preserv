@@ -21,14 +21,6 @@ SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/licenses/data/implieds.csv',
 
 ----------------------
 
-CREATE or replace VIEW license.pack_licenses AS
-SELECT d.pack_id, l.*
-FROM tmp_orig.donatedpacks_donor AS d
-LEFT JOIN license.licenses_implieds AS l
-ON lower(d.license) = lower(l.id_label || '-' || id_version) AND d.license_is_explicit = l.license_is_explicit;
-
-----------------------
-
 -- Union de fdw_donor de todas as jurisdições
 CREATE or replace VIEW tmp_orig.donors AS
     (
@@ -178,3 +170,11 @@ CREATE or replace VIEW tmp_orig.donatedpacks_donor AS
         ON s.local_id::int = r.donor_id
     )
 ;
+
+----------------------
+
+CREATE or replace VIEW license.pack_licenses AS
+SELECT d.pack_id, l.*
+FROM tmp_orig.donatedpacks_donor AS d
+LEFT JOIN license.licenses_implieds AS l
+ON lower(d.license) = lower(l.id_label || '-' || id_version) AND d.license_is_explicit = l.license_is_explicit;
