@@ -312,14 +312,14 @@ SELECT scope_label, isolevel, pacotes || coalesce(jsonb_build_object('filtered_f
 FROM
 (
   SELECT pack_id, scope_label, isolevel, jsonb_build_object('legalName',legalName,'isunpublished',(CASE WHEN lower(MAX(regexp_replace(packtpl_info->>'uri_objtype', '[\s+]|\-', '', 'g'))) = 'email' THEN TRUE ELSE FALSE END),
-  'pack_number', MAX(pack_number), 'path_preserv_git', MAX(path_preserv_git), 'local_serial_formated', MAX(local_serial_formated), 'pacotes',jsonb_agg(pf2.*)) AS pacotes
+  'pack_number', MAX(pack_number), 'path_preserv_git', MAX(path_preserv_git), 'local_serial_formated', MAX(local_serial_formated), 'pacotes',jsonb_agg(pf2.*), 'license_data',license_data) AS pacotes
   FROM
   (
     SELECT pf.*
     FROM optim.vw01full_packfilevers pf
     ORDER BY scope_label, legalName,pack_id,pack_item
   ) pf2
-  GROUP BY country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalName, wikidata_id, url, donor_info, kx_vat_id, isolevel, pack_id
+  GROUP BY country_id, local_serial, scope_osm_id, scope_label, shortname, vat_id, legalName, wikidata_id, url, donor_info, kx_vat_id, isolevel, pack_id, license_data
   ORDER BY scope_label, legalName
 ) r
 LEFT JOIN optim.vw01filtered_files s
