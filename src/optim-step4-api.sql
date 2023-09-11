@@ -661,16 +661,21 @@ FROM optim.vw03_metadata_viz
 
 -- https://github.com/AddressForAll/site-v2/issues/59
 CREATE or replace VIEW api.pkindown AS
+  SELECT *
+  FROM
+  (
     SELECT
       isolabel_ext,
       legalname,
       pack_number,
       packtpl_info->>'about' AS description,
       license_data->>'id_label' || CASE WHEN license_data->>'id_label' = '' THEN  '' ELSE '-' || (license_data->>'id_version')::text END AS license,
-      path_preserv_git
+      path_preserv_git AS url
     FROM optim.vw01full_donated_PackComponent pf
     WHERE pf.ftid > 19
-    ORDER BY 1, 2, 3
+  ) a
+  GROUP BY isolabel_ext, legalname, pack_number, description, license, url
+  ORDER BY 1, 2, 3
 ;
 COMMENT ON VIEW api.pkindown
   IS 'Returns some information about packages listed on the https://addressforall.org/downloads website.'
