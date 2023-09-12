@@ -504,13 +504,6 @@ FROM
 
 ----------------------
 
-CREATE or replace VIEW api.licenses AS
-SELECT *
-FROM license.licenses_implieds
-;
-
-----------------------
-
 CREATE or replace FUNCTION api.redirects_viz(
    p_uri text
 ) RETURNS jsonb AS $f$
@@ -680,3 +673,43 @@ CREATE or replace VIEW api.pkindown AS
 COMMENT ON VIEW api.pkindown
   IS 'Returns some information about packages listed on the https://addressforall.org/downloads website.'
 ;
+
+
+
+----------------------
+
+CREATE or replace VIEW api.licenses AS
+SELECT *
+FROM license.licenses_implieds
+;
+
+CREATE or replace FUNCTION api.plicenses(
+   p_string text DEFAULT NULL
+) RETURNS jsonb AS $f$
+  SELECT
+    CASE
+    WHEN count(*) = 1 THEN jsonb_build_object('error', null, 'results', (jsonb_agg(to_jsonb(r.*)))                                )
+    WHEN count(*) > 1 THEN jsonb_build_object('error', null, 'results', (jsonb_agg(to_jsonb(r.*))), 'warning', 'Multiple results.')
+    WHEN count(*) = 0 THEN jsonb_build_object('error', 'No results.')
+    ELSE jsonb_build_object('error', 'Unknown.')
+    END
+  FROM
+  (
+    SELECT *
+    FROM license.licenses_implieds
+    WHERE
+      id_label = lower(p_string) OR
+      (regexp_split_to_array (lower(p_string),'~') = ARRAY[id_label,id_version]) OR
+      lower(name) = lower(lower(p_string))
+      -- tr - ~
+    ORDER BY id_label, id_version
+  ) r
+$f$ LANGUAGE SQL IMMUTABLE;
+COMMENT ON FUNCTION api.plicenses(text)
+  IS '.'
+;
+/*
+SELECT api.plicenses();
+SELECT api.plicenses('cc0');
+SELECT api.plicenses('ecl');
+*/
