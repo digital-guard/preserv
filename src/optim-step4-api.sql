@@ -688,8 +688,8 @@ CREATE or replace FUNCTION api.plicenses(
 ) RETURNS jsonb AS $f$
   SELECT
     CASE
-    WHEN count(*) = 1 THEN jsonb_build_object('error', null, 'results', (jsonb_agg(to_jsonb(r.*)))                                )
-    WHEN count(*) > 1 THEN jsonb_build_object('error', null, 'results', (jsonb_agg(to_jsonb(r.*))), 'warning', 'Multiple results.')
+    WHEN count(*) = 1 THEN jsonb_build_object('error', null, 'result', (jsonb_agg(to_jsonb(r.*)))                                )
+    WHEN count(*) > 1 THEN jsonb_build_object('error', null, 'result', (jsonb_agg(to_jsonb(r.*))), 'warning', 'Multiple results.')
     WHEN count(*) = 0 THEN jsonb_build_object('error', 'No results.')
     ELSE jsonb_build_object('error', 'Unknown.')
     END
@@ -698,10 +698,17 @@ CREATE or replace FUNCTION api.plicenses(
     SELECT *
     FROM license.licenses_implieds
     WHERE
-      id_label = lower(p_string) OR
-      (regexp_split_to_array (lower(p_string),'~') = ARRAY[id_label,id_version]) OR
-      lower(name) = lower(lower(p_string))
-      -- tr - ~
+      ( id_label = lower(p_string) ) OR
+      ( regexp_split_to_array (lower(p_string),'~') = ARRAY[id_label,id_version] ) OR
+      ( lower(name) = lower(lower(p_string)) ) OR
+      ( id_label =
+        substring
+          (
+            lower(p_string)
+            FROM 1
+            FOR (CASE WHEN length(split_part(lower(p_string), '-', -1)) = length(p_string) THEN 0 ELSE length(p_string) - 1 - length(split_part(lower(p_string), '-', -1)) END)
+          )
+          AND id_version = split_part(lower(p_string), '-', -1) )
     ORDER BY id_label, id_version
   ) r
 $f$ LANGUAGE SQL IMMUTABLE;
@@ -712,4 +719,6 @@ COMMENT ON FUNCTION api.plicenses(text)
 SELECT api.plicenses();
 SELECT api.plicenses('cc0');
 SELECT api.plicenses('ecl');
+SELECT api.plicenses('cc0~1.0');
+SELECT api.plicenses('cc0-1.0');
 */

@@ -7,15 +7,26 @@ $json_url = "http://127.0.0.1:3105/rpc/plicenses?p_string=".preg_replace($patter
 $json     = file_get_contents($json_url);
 $data     = json_decode($json,TRUE);
 
-if (empty($data['error'])) {
-    if (!empty($data['url'])) {
-        header("Location: ".$data['url']);
+if (empty($data['error']))
+{
+    if (!empty($data['result']))
+    {
+        if (!empty($data['result'][0]['url']))
+        {
+            header("Location: ".$data['result'][0]['url']);
+        }
+        else
+        {
+            http_response_code(404);
+        }
     }
-    else {
+    else
+    {
         http_response_code(404);
     }
 }
-else {
+else
+{
     http_response_code(404);
 }
 ?>
