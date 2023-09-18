@@ -55,10 +55,6 @@ server {
     listen 443 ssl;
     include /etc/nginx/ssl.conf;
 
-    location ~* ^/digital-guard(/.+)?$ {
-        proxy_pass https://github.com;
-    }
-
     location ~ ^/?.+ {
         rewrite ^/?(.*)$ /digital-guard/$1 break;
         proxy_pass https://github.com;
