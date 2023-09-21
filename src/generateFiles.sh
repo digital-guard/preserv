@@ -137,3 +137,110 @@ gen_all(){
 
     echo "End all filtred."
 }
+
+######
+
+# shp2arcgis 271
+shp2arcgis(){
+    filtered_id=$1
+
+    viz=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT jurisdiction_pack_layer, uri_default FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
+
+    viz_id2=$(cut -d'|' -f1 <<< ${viz})
+    viz_uri_default=$(cut -d'|' -f2 <<< ${viz})
+
+    echo "Upload shapefile to Arcgis..."
+    source /home/claiton/pgarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; upload_file('${viz_uri_default}','filtered','$viz_id2')") && deactivate
+
+    if [ "${id_shapefile}" = "1" ]
+    then
+        echo "Error. Not loaded."
+    else
+        echo "Set shp_id=${id_shapefile} in donated_PackComponent_cloudControl..."
+        psql postgres://postgres@localhost/dl05s_main -c"SELECT optim.update_shp_id_cloudControl('${filtered_id}','${id_shapefile}');"
+        echo "End. Loaded."
+    fi
+}
+
+# shp2arcgis_fromingest ingest33 4
+shp2arcgis_fromingest(){
+    database=$1
+    file_id=$2
+
+    id_pack=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT packvers_id, ftid, lineage_md5 FROM ingest.donated_packcomponent WHERE id=${file_id}")
+
+    packvers_id=$(cut -d'|' -f1 <<< ${id_pack})
+    ftid=$(cut -d'|' -f2 <<< ${id_pack})
+    lineage_md5=$(cut -d'|' -f3 <<< ${id_pack})
+
+    viz=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT id, jurisdiction_pack_layer, uri_default FROM optim.vw01fromCutLayer_toVizLayer WHERE packvers_id='${packvers_id}' AND ftid='${ftid}' AND lineage_md5='${lineage_md5}' AND hashedfnametype='shp'")
+
+    viz_id=$(cut -d'|' -f1 <<< ${viz})
+
+    shp2arcgis ${viz_id}
+}
+
+# up_esri_all ingest62 15200000201101
+shp2arcgis_all(){
+    database=$1
+    packtpl_id=$2
+
+    echo "Begin upload all filtred to ESRI."
+
+    ids=$(psql postgres://postgres@localhost/${database} -qtAX -c "SELECT id FROM ingest.vw03full_layer_file WHERE pack_id=${packtpl_id} AND ftid > 19 ")
+
+    for id in ${ids}
+    do
+        shp2arcgis_fromingest ${database} ${id}
+    done
+
+    echo "End upload."
+}
+
+# publish_esri_files 271
+publish_esri_files(){
+    filtered_id=$1
+
+    viz_id2=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT info->'shp_id' FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
+
+    echo "Publish shapefile $viz_id2..."
+    source /home/claiton/pgarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; publish_file(${viz_id2})") && deactivate
+
+    if [ "${id_shapefile}" = "1" ]
+    then
+        echo "Error. Not published."
+    else
+        echo "Set pub_id=${id_shapefile} in donated_PackComponent_cloudControl..."
+        psql postgres://postgres@localhost/dl05s_main -c"SELECT optim.update_pub_id_cloudControl('${filtered_id}','${id_shapefile}');"
+        echo "End. Published."
+    fi
+}
+
+# create_view 271
+create_view(){
+    filtered_id=$1
+
+    viz_id2=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT info->'pub_id' FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
+
+    echo "Create view of feature layer $viz_id2..."
+    source /home/claiton/pgarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; create_view(${viz_id2})") && deactivate
+
+    if [ "${id_shapefile}" = "1" ]
+    then
+        echo "Error. Not created."
+    else
+        echo "Set pub_id=${id_shapefile} in donated_PackComponent_cloudControl..."
+        psql postgres://postgres@localhost/dl05s_main -c"SELECT optim.update_view_id_cloudControl('${filtered_id}','${id_shapefile}');"
+        echo "End. Created."
+    fi
+}
+
+# tr_esri_files 271
+tr_esri_files(){
+    filtered_id=$1
+
+    viz_id2=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT info->'view_id' FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
+
+    echo "Translate fields names from A4A to OpenStreetMap... $viz_id2"
+    source /home/claiton/pgarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; tr_featurelayer('${viz_id2}')") && deactivate
+}

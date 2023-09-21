@@ -1,16 +1,8 @@
 CREATE or replace VIEW optim.vw02publication AS
   SELECT g.*,
-         jsonb_strip_nulls(
-          jsonb_build_object(
-          'jurisdiction_pack_layer', dviz.jurisdiction_pack_layer,
-          'user_resp', dviz.user_resp,
-          'status', dviz.status,
-          'hashedfname_from', dviz.hashedfname_from,
-          'url_layer_visualization', dviz.url_layer_visualization
-          )
-         ) AS viz_summary,
-         'a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || class_ftname || '_' || id || '.zip' AS filtered_name,
-         lower(isolabel_ext) || '_pk' || pack_number || '_' ||  class_ftname || '.html' AS url_page,
+         jsonb_strip_nulls( to_jsonb(dviz.*) ) AS viz_summary,
+         'a4a_' || replace(lower(g.isolabel_ext),'-','_') || '_' || g.class_ftname || '_' || g.id || '.zip' AS filtered_name,
+         lower(g.isolabel_ext) || '_pk' || g.pack_number || '_' ||  g.class_ftname || '.html' AS url_page,
 
          (SELECT to_jsonb(j.*) FROM optim.jurisdiction j WHERE j.isolevel = 2 AND j.jurisd_base_id = g.jurisd_base_id AND j.isolabel_ext = (split_part(g.isolabel_ext,'-',1) || '-' || split_part(g.isolabel_ext,'-',2)) ) AS jurisd2,
          (SELECT to_jsonb(j.*) FROM optim.jurisdiction j WHERE j.isolevel = 1 AND j.jurisd_base_id = g.jurisd_base_id AND j.isolabel_ext =  split_part(g.isolabel_ext,'-',1) ) AS jurisd1
@@ -67,9 +59,9 @@ CREATE or replace VIEW optim.vw02publication AS
 
     ORDER BY pf.isolabel_ext, pf.local_serial, pf.pk_count, pf.ftype_info->>'class_ftname'
   ) g
-  LEFT JOIN download.redirects_viz dviz
+  LEFT JOIN optim.vw01fromCutLayer_toVizLayer dviz
   ON dviz.jurisdiction_pack_layer = isolabel_ext || '/_pk' || pack_number || '/' || class_ftname
-     AND dviz.url_layer_visualization IS NOT NULL
+     -- AND dviz.url_layer_visualization IS NOT NULL
 ;
 COMMENT ON VIEW optim.vw02publication
   IS 'Join optim.vw01full_packfilevers_ftype with optim.donated_PackComponent, ftid > 19.'
@@ -91,7 +83,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number,
     'accepted_date_ptbr', packtpl_info->>'accepted_date_ptbr',
     'accepted_date_en', packtpl_info->>'accepted_date_en',
     'accepted_date_es', packtpl_info->>'accepted_date_es',
-    'path_preserv_git', 'path_preserv_git',
+    'path_preserv_git', path_preserv_git,
     'pack_number', pack_number,
     'path_cutgeo_git', path_cutgeo_git,
     'license_evidences',license_evidences,
@@ -159,7 +151,8 @@ COMMENT ON VIEW optim.vw03publication_viz
 
 CREATE or replace VIEW optim.vw03_metadata_viz AS
 SELECT
-  viz_id, viz_id2, isolabel_ext,
+  viz_id, viz_id2, isolabel_ext, conf->'viz_summary'->'info'->>'shp_id' AS shp_id, conf->'viz_summary'->'info'->>'pub_id' AS pub_id, conf->'viz_summary'->'info'->>'view_id' AS view_id, conf->>'class_ftname' AS class_ftname,
+
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache'), conf)                   AS title,
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf)                 AS snippet,
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf)
@@ -173,8 +166,59 @@ SELECT
   AS description,
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf)             AS licenseinfo,
   jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf)       AS accessinformation,
-  replace(conf->>'ftnameviz',' ', '_') || (CASE WHEN (conf->>'with_address')::BOOLEAN IS TRUE THEN ', address' ELSE '' END) AS tags,
-  ARRAY['/Categories/Country/' || (conf->'jurisd1'->>'name_en')::text , '/Categories/Feature type/' || (conf->>'initcap_ftnameviz')::text] AS categories
+  replace(conf->>'ftnameviz',' ', '_') || (CASE WHEN (conf->>'with_address')::BOOLEAN IS TRUE THEN ', address' ELSE '' END) || ', ' || isolabel_ext || ', ' || (conf->'jurisd1'->>'name_en')::text AS tags,
+
+  ARRAY['/Categories/Country/' || (conf->'jurisd1'->>'name_en')::text , '/Categories/Feature type/' || (conf->>'initcap_ftnameviz')::text] AS categories,
+
+  jsonb_build_object(
+  'title',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache'), conf),
+  'snippet',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf),
+  'description',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf)
+  ||
+  (
+    CASE (conf->'jurisd1'->'jurisd_base_id')::int
+    WHEN 76 THEN jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-pt-br.mustache'), conf)
+    ELSE jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-es.mustache'), conf)
+    END
+  ),
+  'licenseinfo',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf),
+  'accessinformation',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf),
+  'tags',replace(conf->>'ftnameviz',' ', '_') || (CASE WHEN (conf->>'with_address')::BOOLEAN IS TRUE THEN ', address' ELSE '' END) || ', ' || isolabel_ext || ', ' || (conf->'jurisd1'->>'name_en')::text
+  ) AS properties_fl,
+
+  jsonb_build_object(
+  'title',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache'), conf || jsonb_build_object('foropenstreetmap', true)),
+  'snippet',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf || jsonb_build_object('foropenstreetmap', true)),
+  'description',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf || jsonb_build_object('foropenstreetmap', true))
+  ||
+  (
+    CASE (conf->'jurisd1'->'jurisd_base_id')::int
+    WHEN 76 THEN jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-pt-br.mustache'), conf || jsonb_build_object('foropenstreetmap', true))
+    ELSE jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-es.mustache'), conf || jsonb_build_object('foropenstreetmap', true))
+    END
+  ),
+  'licenseinfo',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf || jsonb_build_object('foropenstreetmap', true)),
+  'accessinformation',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf || jsonb_build_object('foropenstreetmap', true)),
+  'tags',replace(conf->>'ftnameviz',' ', '_') || (CASE WHEN (conf->>'with_address')::BOOLEAN IS TRUE THEN ', address' ELSE '' END) || ', OpenStreetMap' || ', ' || isolabel_ext || ', ' || (conf->'jurisd1'->>'name_en')::text
+  ) AS properties_flw,
+
+  jsonb_build_object(
+  'displayField', '',
+  'name',replace(conf->>'ftnameviz',' ', '_'),
+  'description',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf),
+  'copyrightText',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf)
+  ) AS properties_l,
+
+  CASE conf->>'class_ftname'
+    WHEN 'genericvia' THEN jsonb_build_object('via', 'name')
+    WHEN 'block'      THEN jsonb_build_object('name', 'name')
+    WHEN 'nsvia'      THEN jsonb_build_object('nsvia', 'name')
+    WHEN 'via'        THEN jsonb_build_object('via','name','highway','highway','lanes','lanes','lit','lit','sidewalk','sidewalk','surface','surface','oneway','oneway')
+    WHEN 'parcel'     THEN      jsonb_build_object('address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district')
+    WHEN 'geoaddress' THEN      jsonb_build_object('address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district')
+    WHEN 'building' THEN      jsonb_build_object('address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district',   'class','building','use','building:use','amenity','amenity','levels','building:levels','material','building:material','min_level','building:min_level','part','building:part','height','height')
+  END AS tr_dict
+
 FROM optim.vw03publication_viz
 ;
 COMMENT ON VIEW optim.vw03_metadata_viz

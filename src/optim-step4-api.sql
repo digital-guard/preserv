@@ -509,7 +509,7 @@ CREATE or replace FUNCTION api.redirects_viz(
 ) RETURNS jsonb AS $f$
     WITH results AS (
         SELECT *
-        FROM download.redirects_viz
+        FROM optim.vw01fromCutLayer_toVizLayer
         WHERE
         ( -- 'BR-SP-Jacarei/_pk0145.01/parcel'
           p_uri ~*  '^/?[A-Z]{2}-[A-Z]{1,3}-[A-Z]+\/\_pk[0-9]{4}\.[0-9]{2}\/[A-Z]+$' AND
@@ -537,13 +537,13 @@ CREATE or replace FUNCTION api.redirects_viz(
         OR
         ( -- c26c149b/geoaddress
           p_uri ~*  '^/?([a-f0-9]{1,64})(\.[a-z0-9]+)?\/([A-Z]+)$' AND
-          hashedfname_from ILIKE regexp_replace(p_uri,'/?([a-f0-9]{6,64})(\.[a-z0-9]+)?\/([A-Z]+)','\1%','i') AND
+          hash_from ILIKE regexp_replace(p_uri,'/?([a-f0-9]{6,64})(\.[a-z0-9]+)?\/([A-Z]+)','\1%','i') AND
           jurisdiction_pack_layer ILIKE regexp_replace(p_uri,'/?([a-f0-9]{1,64})(\.[a-z0-9]+)?\/([A-Z]+)','%\3%','i')
         )
         OR
         ( -- c26c149b
           p_uri ~*  '^/?([a-f0-9]{1,64})(\.[a-z0-9]+)?$' AND
-          hashedfname_from ILIKE regexp_replace(p_uri,'/?([a-f0-9]{1,64})(\.[a-z0-9]+)?','\1%','i')
+          hash_from ILIKE regexp_replace(p_uri,'/?([a-f0-9]{1,64})(\.[a-z0-9]+)?','\1%','i')
         )
     )
     SELECT
@@ -553,7 +553,7 @@ CREATE or replace FUNCTION api.redirects_viz(
         SELECT jsonb_build_object(
         'jurisdiction_pack_layer',jurisdiction_pack_layer,
         'url_layer_visualization',url_layer_visualization,
-        'hashedfname_from',hashedfname_from,
+        'hashedfname_from',hash_from,
         'error',
 
           CASE
@@ -673,8 +673,6 @@ CREATE or replace VIEW api.pkindown AS
 COMMENT ON VIEW api.pkindown
   IS 'Returns some information about packages listed on the https://addressforall.org/downloads website.'
 ;
-
-
 
 ----------------------
 

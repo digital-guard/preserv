@@ -1092,6 +1092,7 @@ CREATE TABLE optim.donated_PackComponent_cloudControl(
   hashedfnameuri  text      NOT NULL,
   hashedfnametype text      NOT NULL,
   info            jsonb, -- viz_uri: url_layer_visualization
+                         -- viz_uri: url_layer_visualization
   UNIQUE(packvers_id,ftid,lineage_md5,hashedfnametype),
   UNIQUE(hashedfname,hashedfnameuri)
 );
@@ -1105,6 +1106,54 @@ COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.hashedfnametype IS 't
 COMMENT ON COLUMN optim.donated_PackComponent_cloudControl.info            IS 'Others information.';
 
 COMMENT ON TABLE optim.donated_PackComponent_cloudControl IS 'Stores filtered file hyperlinks for each publication feature type.';
+
+CREATE or replace FUNCTION optim.update_shp_id_cloudControl(
+  p_id   bigint,
+  p_info text
+) RETURNS text AS $f$
+BEGIN
+  UPDATE optim.donated_PackComponent_cloudControl c
+  SET info = coalesce(info,'{}'::jsonb) || jsonb_build_object('shp_id', p_info)
+  WHERE c.id= p_id
+  ;
+  RETURN 'Ok, update info of optim.donated_PackComponent_cloudControl.';
+END;
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION optim.update_shp_id_cloudControl
+  IS 'Update info of optim.donated_PackComponent_cloudControl'
+;
+
+CREATE or replace FUNCTION optim.update_pub_id_cloudControl(
+  p_id   bigint,
+  p_info text
+) RETURNS text AS $f$
+BEGIN
+  UPDATE optim.donated_PackComponent_cloudControl c
+  SET info = coalesce(info,'{}'::jsonb) || jsonb_build_object('pub_id', p_info)
+  WHERE c.id= p_id
+  ;
+  RETURN 'Ok, update info of optim.donated_PackComponent_cloudControl.';
+END;
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION optim.update_pub_id_cloudControl
+  IS 'Update info of optim.donated_PackComponent_cloudControl'
+;
+
+CREATE or replace FUNCTION optim.update_view_id_cloudControl(
+  p_id   bigint,
+  p_info text
+) RETURNS text AS $f$
+BEGIN
+  UPDATE optim.donated_PackComponent_cloudControl c
+  SET info = coalesce(info,'{}'::jsonb) || jsonb_build_object('view_id', p_info)
+  WHERE c.id= p_id
+  ;
+  RETURN 'Ok, update info of optim.donated_PackComponent_cloudControl.';
+END;
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION optim.update_view_id_cloudControl
+  IS 'Update info of optim.donated_PackComponent_cloudControl'
+;
 
 CREATE or replace FUNCTION optim.insert_cloudControl(
   p_packvers_id     bigint,
@@ -1167,16 +1216,17 @@ COMMENT ON VIEW optim.vw01filtered_files
 ;
 
 CREATE or replace VIEW optim.vw01fromCutLayer_toVizLayer AS
-    SELECT isolabel_ext || '/_pk' || pack_number || '/' || (pf.ftype_info->>'class_ftname' ) AS jurisdiction_pack_layer,
+    SELECT pc.*, isolabel_ext || '/_pk' || pack_number || '/' || (pf.ftype_info->>'class_ftname' ) AS jurisdiction_pack_layer,
            pf.hashedfname AS hash_from,
            pc.info->>'viz_uri' AS url_layer_visualization,
+
            'https://dl.digital-guard.org/out/a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || (pf.ftype_info->>'class_ftname' ) || '_' || pc.packvers_id || '.zip' AS uri_default,
            pc.hashedfnameuri   AS cloud_uri,
            pc.hashedfnametype  AS filetype,
            pf.path_preserv_git AS uri_preserv,
            pf.path_cutgeo_git  AS uri_cutgeo
-    FROM optim.vw01full_packfilevers_ftype pf
-    INNER JOIN optim.donated_PackComponent_cloudControl pc
+    FROM optim.donated_PackComponent_cloudControl pc
+    INNER JOIN optim.vw01full_packfilevers_ftype pf
     ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid
     WHERE pc.hashedfnametype ='shp'
     ORDER BY pf.pack_id, pf.ftype_info->>'class_ftname', pc.hashedfnametype, pc.hashedfname
@@ -1186,6 +1236,33 @@ COMMENT ON VIEW optim.vw01fromCutLayer_toVizLayer
 ;
 -- psql postgres://postgres@localhost/dl05s_main -c "COPY ( SELECT jurisdiction_pack_layer, hash_from, url_layer_visualization FROM optim.vw01fromCutLayer_toVizLayer ) TO '/tmp/pg_io/fromCutLayer_toVizLayer.csv' CSV HEADER;"
 -- psql postgres://postgres@localhost/dl05s_main -c "COPY ( SELECT jurisdiction_pack_layer, hash_from, uri_default, uri_preserv, uri_cutgeo FROM optim.vw01fromCutLayer_toVizLayer ORDER BY 1) TO '/tmp/pg_io/layerviz.csv' CSV HEADER;"
+
+-- Data VisualiZation
+
+CREATE or replace FUNCTION download.update_cloudControl_vizuri(
+) RETURNS text AS $f$
+BEGIN
+  UPDATE optim.donated_PackComponent_cloudControl c
+  SET info = coalesce(info,'{}'::jsonb) || jsonb_build_object('viz_uri', url_layer_visualization)
+  FROM
+  (
+    SELECT pf.id, v.*
+    FROM tmp_orig.redirects_viz v
+    LEFT JOIN optim.vw01full_packfilevers_ftype pf
+    ON v.hash_from = pf.hashedfname
+  ) r
+  WHERE c.packvers_id= r.id AND hashedfnametype ='shp' AND lower(split_part(r.jurisdiction_pack_layer,'/',3)) = (SELECT split_part(ftname,'_',1) FROM optim.feature_type WHERE ftid = c.ftid )
+  -- RETURNING 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.'
+  ; "class_ftname"
+  RETURN 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.';
+END;
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION download.update_cloudControl_vizuri
+  IS 'Update viz_uri in info of optim.donated_PackComponent_cloudControl'
+;
+-- SELECT download.update_cloudControl_vizuri();
+
+----------------------
 
 CREATE or replace FUNCTION optim.jurisdiction_to_geojson(
 	p_isolabel_ext text, -- e.g. 'BR-MG-BeloHorizonte'
@@ -1248,62 +1325,3 @@ COMMENT ON FUNCTION download.insert_dldg_csv
 -- SELECT download.insert_dldg_csv();
 
 ----------------------
-
--- Data VisualiZation
-CREATE TABLE download.redirects_viz (
-    jurisdiction_pack_layer text NOT NULL PRIMARY KEY, -- BR-SP-Guarulhos/_pk0081.01/geoaddress
-    user_resp text NOT NULL REFERENCES optim.auth_user(username),
-    status text,
-    hashedfname_from        text NOT NULL CHECK( hashedfname_from ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
-    url_layer_visualization text,            -- https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=341962cd00c441f8876202f29fc33dcc
-    UNIQUE (jurisdiction_pack_layer,hashedfname_from),
-    UNIQUE (jurisdiction_pack_layer,hashedfname_from,url_layer_visualization)
-);
-COMMENT ON TABLE download.redirects_viz
-  IS 'Matching between layer and external view provided by third party.'
-;
-CREATE INDEX redirects_viz_jurisdiction_pack_layer_idx1 ON download.redirects_viz USING btree (jurisdiction_pack_layer);
-
-CREATE or replace FUNCTION download.insert_viz_csv(
-) RETURNS text AS $f$
-BEGIN
-  INSERT INTO download.redirects_viz(jurisdiction_pack_layer,user_resp,status,hashedfname_from,url_layer_visualization)
-  SELECT jurisdiction_pack_layer, lower(user_resp), status, hash_from, url_layer_visualization
-  FROM tmp_orig.redirects_viz
-  ON CONFLICT (jurisdiction_pack_layer,hashedfname_from)
-  DO UPDATE
-  SET url_layer_visualization=EXCLUDED.url_layer_visualization,
-      user_resp=EXCLUDED.user_resp,
-      status=EXCLUDED.status
-  -- RETURNING 'Ok, updated download.redirects_viz.'
-  ;
-  RETURN 'Ok, updated download.redirects_viz.';
-END;
-$f$ LANGUAGE PLpgSQL;
-COMMENT ON FUNCTION download.insert_viz_csv
-  IS 'Update download.redirects_viz from tmp_orig.redirects_viz'
-;
--- SELECT download.insert_viz_csv();
-
-CREATE or replace FUNCTION download.update_cloudControl_vizuri(
-) RETURNS text AS $f$
-BEGIN
-  UPDATE optim.donated_PackComponent_cloudControl c
-  SET info = coalesce(info,'{}'::jsonb) || jsonb_build_object('viz_uri', url_layer_visualization)
-  FROM
-  (
-    SELECT pv.id, v.*
-    FROM tmp_orig.redirects_viz v
-    LEFT JOIN optim.donated_packfilevers pv
-    ON v.hash_from = pv.hashedfname
-  ) r
-  WHERE c.packvers_id= r.id
-  -- RETURNING 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.'
-  ;
-  RETURN 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.';
-END;
-$f$ LANGUAGE PLpgSQL;
-COMMENT ON FUNCTION download.update_cloudControl_vizuri
-  IS 'Update viz_uri in info of optim.donated_PackComponent_cloudControl'
-;
--- SELECT download.update_cloudControl_vizuri();

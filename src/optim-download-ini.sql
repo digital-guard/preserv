@@ -6,7 +6,7 @@ SELECT optim.insert_donor_pack(t) FROM unnest(ARRAY['BO','BR','CL','CO','EC','MX
 SELECT download.insert_dldg_csv();
 
 -- Data VisualiZation: preserv/data/redirs/fromCutLayer_toVizLayer.csv
-SELECT download.insert_viz_csv();
+SELECT download.update_cloudControl_vizuri();
 
 -- licenses
 SELECT license.insert_licenses();

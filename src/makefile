@@ -203,7 +203,7 @@ redirects_update: pgio
 	@echo "--- dl.digital-guard.org ---"
 	psql $(pg_datalake_uri) -c "SELECT download.insert_dldg_csv();"
 	@echo "--- Data VisualiZation ---"
-	psql $(pg_datalake_uri) -c "SELECT download.insert_viz_csv(); SELECT download.update_cloudControl_vizuri();"
+	psql $(pg_datalake_uri) -c "SELECT download.update_cloudControl_vizuri();"
 
 first_makefile:
 	@echo "--- Copying initial makefile in 'data/_pk*' directories   ---"
