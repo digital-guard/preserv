@@ -223,7 +223,7 @@ create_view(){
     viz_id2=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT info->'pub_id' FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
 
     echo "Create view of feature layer $viz_id2..."
-    source /home/claiton/pgarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; create_view(${viz_id2})") && deactivate
+    source /home/claiton/pgarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; create_view(${viz_id2},'filtered2osm')") && deactivate
 
     if [ "${id_shapefile}" = "1" ]
     then

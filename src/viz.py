@@ -20,9 +20,9 @@ def get_session():
     session = requests.session()
     return session
 
-def get_data(session,url_api,query,headers=None):
+def get_data(session,url,query,headers=None):
     try:
-        response = (session.get(url_api+query,headers=headers)).json()
+        response = (session.get(url+query,headers=headers)).json()
     except Exception as error:
         response = []
         print ('Error.', error)
@@ -40,11 +40,11 @@ def create_folder(folder,gis):
     else:
         print(f"Folder {folder} created.")
 
-def upload_file(url_file,folder_up,viz_id2,gis=get_gis(),session = get_session(),headers=None):
+def upload_file(url_file,folder_up,viz_id2,url=url_api,gis=get_gis(),session=get_session(),headers=None):
     try:
         # Get metadata from api
         query = '?viz_id2=eq."' + viz_id2 + '"'
-        data = get_data(session,url_api,query,headers)
+        data = get_data(session,url,query,headers)
         metadata = data[0]
 
         # Set type
@@ -68,11 +68,11 @@ def upload_file(url_file,folder_up,viz_id2,gis=get_gis(),session = get_session()
     else:
         print(f"{shp_item_id}")
 
-def publish_file(id,gis=get_gis(),session = get_session()):
+def publish_file(id,url=url_api,gis=get_gis(),session=get_session()):
     try:
         # Get metadata from api
         query = '?shp_id=eq.' + id
-        data = get_data(session,url_api,query,headers)
+        data = get_data(session,url,query,headers)
         metadata = data[0]
 
         # Categoriza o shapefile
@@ -99,11 +99,11 @@ def publish_file(id,gis=get_gis(),session = get_session()):
     else:
         print(f"{item_publish_id}")
 
-def create_view(id,folder="filtered2osm",gis=get_gis(),session = get_session()):
+def create_view(id,folder,url=url_api,gis=get_gis(),session=get_session()):
     try:
         # Get metadata from api
         query = '?pub_id=eq.' + id
-        data = get_data(session,url_api,query,headers)
+        data = get_data(session,url,query,headers)
         metadata = data[0]
 
         # Get item/layer
@@ -114,8 +114,6 @@ def create_view(id,folder="filtered2osm",gis=get_gis(),session = get_session()):
         new_view = source_flc.manager.create_view(name='WrOnRnYpNWBRfhErxvQF')
 
         new_view.move(folder)
-
-        new_view.share(org = True, everyone = True)
 
         new_view_id = new_view.id
 
@@ -129,75 +127,120 @@ def create_view(id,folder="filtered2osm",gis=get_gis(),session = get_session()):
 
         ## Atualiza metadata do layer
         # update_dict = {"viewDefinitionQuery" : "error = ''"}
-        #
         # service_layer.manager.update_definition(update_dict)
         service_layer.manager.update_definition(metadata['properties_l'])
 
         ## Categoriza o feature service
         gis.content.categories.assign_to_items(items = [{new_view_id : {"categories" : metadata['categories']}}])
 
+        new_view.share(org = True, everyone = True)
     except Exception as error:
         print('1')
     else:
         print(f"{new_view_id}")
 
-def tr_fields(id,idvw=None,gis=get_gis(),session = get_session()):
+def tr_fields(id,idvw=None,url=url_api,gis=get_gis(),session=get_session()):
     try:
         # Get metadata from api
         # query = '?pub_id=eq.' + id
         query = '?or=(pub_id.eq.' + id + ',view_id.eq.' + id + ')'
 
-        data = get_data(session,url_api,query,headers)
+        data = get_data(session,url,query,headers)
         metadata = data[0]
 
         # Get item/layer
         feature_item = gis.content.get(id)
         feature_layer = feature_item.layers[0]
 
+        # Add building=yes se não existir class ou building
+        if metadata['class_ftname'] == 'building' and 'class' not in [field["name"] for field in feature_layer.properties.fields] and 'building' not in [field["name"] for field in feature_layer.properties.fields]:
+            print('Add building=yes.')
+            add_field = [
+            {
+            "name": "building",
+            "type": "esriFieldTypeString",
+            "actualType": "nvarchar",
+            "alias": "building",
+            "sqlType": "sqlTypeNVarchar",
+            "length": 3,
+            "nullable": True,
+            "editable": True,
+            "defaultValue": 'yes'
+            }]
+            feature_layer.manager.add_to_definition({"fields": add_field})
+
+            ## building=yes
+            expressions = []
+            expressions.append({"field": "building","value": "yes",})
+            feature_layer.calculate(where="1=1", calc_expression=expressions)
+        else:
+            print(f"Not added building=yes.")
+
+        #  Drop fields
+        delete_fields = [{"name": field["name"]} for field in feature_layer.properties.fields if (field["type"] not in ('esriFieldTypeOID','esriFieldTypeGlobalID') and field["name"] not in ('Shape__Area','Shape__Length') and  field["name"] not in (metadata['nodel_fields']) )]
+
+        if delete_fields:
+            print(f"Delete fields: {delete_fields}")
+            feature_layer.manager.delete_from_definition({"fields": delete_fields })
+            feature_layer._refresh()
+        else:
+            print(f"No fields to delete.")
+
         # Inicializa listas/dict auxiliares
-        old_fields = [dict(field) for field in feature_layer.properties.fields if field["name"] in (metadata['tr_dict']).keys()]
+        old_fields = [dict(field) for field in feature_layer.properties.fields if (field["name"] in (metadata['tr_dict']).keys() and field["alias"] != metadata['tr_dict'][field["name"]]) ]
         new_fields = []
 
-        # Append listas/dict
-        for idx, old_field in enumerate(old_fields):
-            new_field = deepcopy(old_field)
-            new_field['alias'] = metadata['tr_dict'][old_field["name"]]
-            new_fields.append(new_field)
+        if old_fields:
+            # Append listas/dict
+            for idx, old_field in enumerate(old_fields):
+                print(f"Update alias: {old_field['alias']} -> {metadata['tr_dict'][old_field['name']]}")
+                new_field = deepcopy(old_field)
+                new_field['alias'] = metadata['tr_dict'][old_field["name"]]
+                new_fields.append(new_field)
 
-        # Update campos
-        new_fields_add = feature_layer.manager.update_definition({"fields": new_fields})
+            # Update campos
+            new_fields_add = feature_layer.manager.update_definition({"fields": new_fields})
+        else:
+            print(f"No aliases to update.")
+
+        update_metadata(id,url,gis,session,headers)
+
+        feature_item.share(org = True, everyone = True)
     except Exception as error:
         print('1 ', error)
     else:
         print('0')
 
-def update_metadata(session,url_api,headers=None):
-        print(f"Id: {layerid}")
-        query = '?viz_id=eq.' + layerid
-        data = get_data(session,url_api,query,headers)
+def update_metadata(id,url=url_api,gis=get_gis(),session=get_session(),headers=None):
+    try:
+        query = '?or=(shp_id.eq.' + id + ',pub_id.eq.' + id + ')'
+        data = get_data(session,url,query,headers)
+        metadata = data[0]
+        feature_item = gis.content.get(id)
 
-        if data:
-            try:
-                gis = GIS(url_argis,username,password)
-                get_result = gis.content.get(layerid)
+        if metadata['shp_id'] == id:
+            print(f"Update metadata Shapefile: {id}")
+            feature_item.update(item_properties = metadata['properties_fl'])
 
-                matadata = data[0]
+        if metadata['pub_id'] == id:
+            print(f"Update metadata hosted Feature layer: {id}")
+            feature_item.update(item_properties = metadata['properties_flw'])
 
-                get_result.update(item_properties = {"title" : matadata['title'], "snippet" : matadata['snippet'], "description" : matadata['description'], "licenseInfo" : matadata['licenseinfo'], "accessInformation" : matadata['accessinformation'], "tags" : matadata['tags']})
-                gis.content.categories.assign_to_items(items = [{layerid : {"categories" : matadata['categories']}}])
+            print(f"Update metadata hosted Feature layer sublayer")
+            # Atualiza metadata do layer
+            feature_layer = feature_item.layers[0]
+            feature_layer.manager.update_definition(metadata['properties_l'])
 
-            except Exception as error:
-                print('Error.', error)
-            else:
-                print(f"Updated metadata. See https://addressforall.maps.arcgis.com/home/item.html?id={layerid}")
+        print(f"Update categories.")
+        # Categoriza o feature service
+        gis.content.categories.assign_to_items(items = [{id : {"categories" : metadata['categories']}}])
+    except Exception as error:
+        print('Error.', error)
+    else:
+        print(f"Update completed. See https://addressforall.maps.arcgis.com/home/item.html?id={id}")
 
-        else:
-            print('Not updated. Api without metadata.')
-
-for layerid in sys.argv[1:]:
-    update_metadata(session,url_api,headers)
 # try:
-#     session = get_session()
+#     session=get_session()
 # except Exception as error:
 #     print('Error. No ssession.', error)
 #

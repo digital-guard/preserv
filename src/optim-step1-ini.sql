@@ -1218,8 +1218,9 @@ COMMENT ON VIEW optim.vw01filtered_files
 CREATE or replace VIEW optim.vw01fromCutLayer_toVizLayer AS
     SELECT pc.*, isolabel_ext || '/_pk' || pack_number || '/' || (pf.ftype_info->>'class_ftname' ) AS jurisdiction_pack_layer,
            pf.hashedfname AS hash_from,
-           pc.info->>'viz_uri' AS url_layer_visualization,
-
+           pc.info->>'viz_uri' AS url_layer_visualization, --CORRIGIR para pub_id
+           -- 'https://addressforall.maps.arcgis.com/apps/mapviewer/index.html?layers=' || (pc.info->>'pub_id') AS url_layer_visualization,
+           isolabel_ext,
            'https://dl.digital-guard.org/out/a4a_' || replace(lower(isolabel_ext),'-','_') || '_' || (pf.ftype_info->>'class_ftname' ) || '_' || pc.packvers_id || '.zip' AS uri_default,
            pc.hashedfnameuri   AS cloud_uri,
            pc.hashedfnametype  AS filetype,
