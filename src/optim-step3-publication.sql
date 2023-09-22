@@ -224,9 +224,9 @@ SELECT
     WHEN 'block'      THEN ARRAY['name']
     WHEN 'nsvia'      THEN ARRAY['nsvia','name']
     WHEN 'via'        THEN ARRAY['via','name','highway','lanes','lit','surface','oneway']
-    WHEN 'parcel'     THEN ARRAY['address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district']
-    WHEN 'geoaddress' THEN ARRAY['address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district']
-    WHEN 'building'   THEN ARRAY['address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district', 'class','building','use','building:use','amenity','levels','building:levels','material','building:material','min_level','building:min_level','part','building:part','height']
+    WHEN 'parcel'     THEN ARRAY['sup','address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district']
+    WHEN 'geoaddress' THEN ARRAY['sup','address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district']
+    WHEN 'building'   THEN ARRAY['sup','address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district', 'class','building','use','building:use','amenity','levels','building:levels','material','building:material','min_level','building:min_level','part','building:part','height']
   END AS nodel_fields
 
 FROM optim.vw03publication_viz
