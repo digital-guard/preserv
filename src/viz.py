@@ -144,9 +144,14 @@ def tr_fields(id,idvw=None,url=url_api,gis=get_gis(),session=get_session()):
         # Get metadata from api
         # query = '?pub_id=eq.' + id
         query = '?or=(pub_id.eq.' + id + ',view_id.eq.' + id + ')'
-
         data = get_data(session,url,query,headers)
         metadata = data[0]
+
+        if metadata['pub_id'] == id:
+            print(f"Update fields Feature layer hosted: {id}")
+
+        if metadata['view_id'] == id:
+            print(f"Update fields Feature layer hosted view: {id}")
 
         # Get item/layer
         feature_item = gis.content.get(id)
@@ -209,7 +214,7 @@ def tr_fields(id,idvw=None,url=url_api,gis=get_gis(),session=get_session()):
     except Exception as error:
         print('1 ', error)
     else:
-        print('0')
+        print(f"Update completed.")
 
 def update_metadata(id,url=url_api,gis=get_gis(),session=get_session(),headers=None):
     try:
@@ -239,13 +244,11 @@ def update_metadata(id,url=url_api,gis=get_gis(),session=get_session(),headers=N
     else:
         print(f"Update completed. See https://addressforall.maps.arcgis.com/home/item.html?id={id}")
 
-# try:
-#     session=get_session()
-# except Exception as error:
-#     print('Error. No ssession.', error)
-#
-# if len(sys.argv) > 1:
-#     for layerid in sys.argv[1:]:
-#         update_metadata(session,url_api,headers)
-# else:
-#     print("Error. No id!")
+def update_share(id,org = True, everyone = False, groups = ["82b5c771d36f47a6939b95f1a8ae8f81"],gis=get_gis()):
+    try:
+        feature_item = gis.content.get(id)
+        feature_item.share(org = org, everyone = everyone, groups = groups)
+    except Exception as error:
+        print('Error.', error)
+    else:
+        print(f"Update completed. See https://addressforall.maps.arcgis.com/home/item.html?id={id}")

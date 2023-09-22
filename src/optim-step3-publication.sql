@@ -211,9 +211,9 @@ SELECT
 
   CASE conf->>'class_ftname'
     WHEN 'genericvia' THEN jsonb_build_object('via', 'name')
-    WHEN 'block'      THEN jsonb_build_object('name', 'name')
-    WHEN 'nsvia'      THEN jsonb_build_object('nsvia', 'name')
-    WHEN 'via'        THEN jsonb_build_object('via','name','highway','highway','lanes','lanes','lit','lit','sidewalk','sidewalk','surface','surface','oneway','oneway')
+    WHEN 'block'      THEN jsonb_build_object('name', 'name','postcode','postal_code')
+    WHEN 'nsvia'      THEN jsonb_build_object('nsvia', 'name','postcode','postal_code')
+    WHEN 'via'        THEN jsonb_build_object('via','name','highway','highway','lanes','lanes','lit','lit','sidewalk','sidewalk','surface','surface','oneway','oneway','postcode','postal_code')
     WHEN 'parcel'     THEN      jsonb_build_object('address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district')
     WHEN 'geoaddress' THEN      jsonb_build_object('address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district')
     WHEN 'building' THEN      jsonb_build_object('address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district',   'class','building','use','building:use','amenity','amenity','levels','building:levels','material','building:material','min_level','building:min_level','part','building:part','height','height')
@@ -221,9 +221,9 @@ SELECT
 
   CASE conf->>'class_ftname'
     WHEN 'genericvia' THEN ARRAY['via','name']
-    WHEN 'block'      THEN ARRAY['name']
-    WHEN 'nsvia'      THEN ARRAY['nsvia','name']
-    WHEN 'via'        THEN ARRAY['via','name','highway','lanes','lit','surface','oneway']
+    WHEN 'block'      THEN ARRAY['name','postcode','postal_code']
+    WHEN 'nsvia'      THEN ARRAY['nsvia','name','postcode','postal_code']
+    WHEN 'via'        THEN ARRAY['via','name','highway','lanes','lit','surface','oneway','postcode','postal_code']
     WHEN 'parcel'     THEN ARRAY['sup','address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district']
     WHEN 'geoaddress' THEN ARRAY['sup','address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district']
     WHEN 'building'   THEN ARRAY['sup','address','addr:full','via','addr:street','hnum','addr:housenumber','postcode','addr:postcode','nsvia','addr:suburb','name','place','addr:place','city','addr:city','country','addr:country','block','addr:block','district','addr:district', 'class','building','use','building:use','amenity','levels','building:levels','material','building:material','min_level','building:min_level','part','building:part','height']
