@@ -174,7 +174,8 @@ CREATE or replace VIEW tmp_orig.donatedpacks_donor AS
 ----------------------
 
 CREATE or replace VIEW license.pack_licenses AS
-SELECT d.pack_id, l.*
+SELECT d.pack_id, d.jurisdiction, l.*
 FROM tmp_orig.donatedpacks_donor AS d
 LEFT JOIN license.licenses_implieds AS l
-ON lower(d.license) = lower(l.id_label || '-' || id_version) AND d.license_is_explicit = l.license_is_explicit;
+ON lower(d.license) = lower(l.id_label || '-' || id_version) AND d.license_is_explicit = l.license_is_explicit
+;
