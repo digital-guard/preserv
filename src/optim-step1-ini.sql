@@ -570,7 +570,7 @@ CREATE or replace VIEW optim.vw01full_donated_PackTpl AS
          INITCAP(pt.user_resp) AS user_resp_packtpl_initcap,
          upper(split_part(dn.vat_id,':',1)) AS vat_id_p1,
          split_part(dn.vat_id,':',2) AS vat_id_p2,
-         to_jsonb(l.*) AS license_data
+         to_jsonb(l.*) ||  (jsonb_build_object('isimplicit',(CASE lower(l.license_is_explicit) WHEN 'no' THEN TRUE ELSE FALSE END)))  AS license_data
   FROM optim.donated_PackTpl pt
   LEFT JOIN optim.donor dn
     ON pt.donor_id=dn.id
