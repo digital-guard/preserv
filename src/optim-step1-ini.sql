@@ -579,7 +579,7 @@ CREATE or replace VIEW optim.vw01full_donated_PackTpl AS
   LEFT JOIN optim.auth_user au
     ON pt.user_resp=au.username
   LEFT JOIN license.licenses_implieds l
-    ON pt.license = lower(replace(l.name,' ','-'))
+    ON lower(pt.license) = lower(replace(l.name,' ','-'))
 ;
 COMMENT ON VIEW optim.vw01full_donated_PackTpl
   IS 'Add geom to optim.jurisdiction.'

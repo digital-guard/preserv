@@ -696,10 +696,10 @@ CREATE or replace FUNCTION api.plicenses(
     SELECT *
     FROM license.licenses_implieds
     WHERE
-      ( id_label = lower(p_string) ) OR
-      ( regexp_split_to_array (lower(p_string),'~') = ARRAY[id_label,id_version] ) OR
+      ( lower(id_label) = lower(p_string) ) OR
+      ( regexp_split_to_array (lower(p_string),'~') = ARRAY[lower(id_label),id_version] ) OR
       ( lower(name) = lower(lower(p_string)) ) OR
-      ( id_label =
+      ( lower(id_label) =
         substring
           (
             lower(p_string)
