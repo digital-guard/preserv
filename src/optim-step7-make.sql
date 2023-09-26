@@ -77,7 +77,7 @@ BEGIN
 
       IF dict->'license_evidences'?'uri_evidency'
       THEN
-        IF EXISTS (SELECT 1 FROM regexp_matches(dict->'layers'->key->>'codec','^.+\.eml$'))
+        IF EXISTS (SELECT 1 FROM regexp_matches(dict->'license_evidences'->>'uri_evidency','^.+\.eml$'))
         THEN
           dict := jsonb_set( dict, array['license_evidences','is_uri_evidency_eml'], bt );
           dict := jsonb_set( dict, array['license_evidences','uri_evidency_7'], to_jsonb( substring(dict->'license_evidences'->>'uri_evidency', '^([0-9a-f]{7}).+$') ) );
