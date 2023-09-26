@@ -148,38 +148,14 @@ def tr_fields(id,idvw=None,url=url_api,gis=get_gis(),session=get_session()):
         metadata = data[0]
 
         if metadata['pub_id'] == id:
-            print(f"Update fields Feature layer hosted: {id}")
+            print(f"Update fields Feature layer hosted: {id} {metadata['class_ftname']}")
 
         if metadata['view_id'] == id:
-            print(f"Update fields Feature layer hosted view: {id}")
+            print(f"Update fields Feature layer hosted view: {id} {metadata['class_ftname']}")
 
         # Get item/layer
         feature_item = gis.content.get(id)
         feature_layer = feature_item.layers[0]
-
-        # Add building=yes se não existir class ou building
-        if metadata['class_ftname'] == 'building' and 'class' not in [field["name"] for field in feature_layer.properties.fields] and 'building' not in [field["name"] for field in feature_layer.properties.fields]:
-            print('Add building=yes.')
-            add_field = [
-            {
-            "name": "building",
-            "type": "esriFieldTypeString",
-            "actualType": "nvarchar",
-            "alias": "building",
-            "sqlType": "sqlTypeNVarchar",
-            "length": 3,
-            "nullable": True,
-            "editable": True,
-            "defaultValue": 'yes'
-            }]
-            feature_layer.manager.add_to_definition({"fields": add_field})
-
-            ## building=yes
-            expressions = []
-            expressions.append({"field": "building","value": "yes",})
-            feature_layer.calculate(where="1=1", calc_expression=expressions)
-        else:
-            print(f"Not added building=yes.")
 
         #  Drop fields
         delete_fields = [{"name": field["name"]} for field in feature_layer.properties.fields if (field["type"] not in ('esriFieldTypeOID','esriFieldTypeGlobalID') and field["name"] not in ('Shape__Area','Shape__Length') and  field["name"] not in (metadata['nodel_fields']) )]
@@ -210,7 +186,32 @@ def tr_fields(id,idvw=None,url=url_api,gis=get_gis(),session=get_session()):
 
         update_metadata(id,url,gis,session,headers)
 
-        feature_item.share(org = True, everyone = True)
+        feature_item.share(org = True, everyone = True, groups = ["82b5c771d36f47a6939b95f1a8ae8f81"])
+
+        # Add building=yes se não existir class ou building
+        if metadata['class_ftname'] == 'building' and 'class' not in [field["name"] for field in feature_layer.properties.fields] and 'building' not in [field["name"] for field in feature_layer.properties.fields]:
+            print('Add building=yes.')
+            add_field = [
+            {
+            "name": "building",
+            "type": "esriFieldTypeString",
+            "actualType": "nvarchar",
+            "alias": "building",
+            "sqlType": "sqlTypeNVarchar",
+            "length": 3,
+            "nullable": True,
+            "editable": True,
+            "defaultValue": 'yes'
+            }]
+            feature_layer.manager.add_to_definition({"fields": add_field})
+
+            ## building=yes
+            expressions = []
+            expressions.append({"field": "building","value": "yes",})
+            feature_layer.calculate(where="1=1", calc_expression=expressions)
+        else:
+            print(f"Not added building=yes.")
+
     except Exception as error:
         print('1 ', error)
     else:
@@ -252,3 +253,62 @@ def update_share(id,org = True, everyone = False, groups = ["82b5c771d36f47a6939
         print('Error.', error)
     else:
         print(f"Update completed. See https://addressforall.maps.arcgis.com/home/item.html?id={id}")
+
+def add_value_building(id,chunk=1000,addfield=False,url=url_api,gis=get_gis(),session=get_session()):
+    try:
+        # Get metadata from api
+        query = '?pub_id=eq.' + id
+        data = get_data(session,url,query,headers)
+        metadata = data[0]
+        # Get item/layer
+        feature_item = gis.content.get(id)
+        feature_layer = feature_item.layers[0]
+        features = feature_layer.query()
+
+
+        # Add building=yes se não existir class ou building
+        if addfield and metadata['class_ftname'] == 'building' and 'class' not in [field["name"] for field in feature_layer.properties.fields] and 'building' not in [field["name"] for field in feature_layer.properties.fields]:
+            print('Add building=yes.')
+            add_field = [
+            {
+            "name": "building",
+            "type": "esriFieldTypeString",
+            "actualType": "nvarchar",
+            "alias": "building",
+            "sqlType": "sqlTypeNVarchar",
+            "length": 3,
+            "nullable": True,
+            "editable": True,
+            "defaultValue": 'yes'
+            }]
+            feature_layer.manager.add_to_definition({"fields": add_field})
+
+            ## building=yes
+            # expressions = []
+            # expressions.append({"field": "building","value": "yes",})
+            # feature_layer.calculate(where="1=1", calc_expression=expressions)
+        else:
+            print(f"Not added building=yes.")
+
+        # Add building=yes se não existir class ou building
+        if metadata['class_ftname'] == 'building':
+            print(f'Add building=yes in {len(features)}')
+            fs = features.to_dict()
+            fss = fs["features"]
+            edits = []
+            for f in fss:
+                f["attributes"].update({"building" : "yes"})
+                edits.append(f)
+            chunked_list = list()
+            chunk_size = chunk
+            for i in range(0, len(edits), chunk_size):
+                chunked_list.append(edits[i:i+chunk_size])
+            for i in range(0, len(chunked_list)):
+                print(f'Update chunk {i} of {len(chunked_list)}.')
+                feature_layer.edit_features(updates=chunked_list[i])
+        else:
+            print(f"Not building layer.")
+    except Exception as error:
+        print('1 ', error)
+    else:
+        print(f"Completed.")

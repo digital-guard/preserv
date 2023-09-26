@@ -239,8 +239,8 @@ create_view(){
 tr_esri_files(){
     filtered_id=$1
 
-    viz_id2=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT info->'view_id' FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
+    viz_id2=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT info->'pub_id' FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
 
     echo "Translate fields names from A4A to OpenStreetMap... $viz_id2"
-    source /home/claiton/pgarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; tr_featurelayer('${viz_id2}')") && deactivate
+    source /home/claiton/pgarcgis/bin/activate && python -c "from viz import *; tr_fields('${viz_id2}')" && deactivate
 }

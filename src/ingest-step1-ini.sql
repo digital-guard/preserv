@@ -2290,7 +2290,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_size_max int DEFAULT 1,     -- e.g.
 	p_pretty_opt int DEFAULT 3
 ) RETURNS text AS $wrap$
-  SELECT ingest.publicating_geojsons(( SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1) AND right(pack_id::text,6) = regexp_replace(split_part($3,'/',7),'[\_pk\.]','','g') ),$2,$3,$4,$5,$6);
+  SELECT ingest.publicating_geojsons(( SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1) AND right(pack_id::text,6) = regexp_replace(split_part($3,'/',9),'[\_pk\.]','','g') ),$2,$3,$4,$5,$6);
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int)
   IS 'Wrap to ingest.publicating_geojsons'
