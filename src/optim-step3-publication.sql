@@ -419,7 +419,7 @@ CREATE or replace VIEW optim.vw03generate_list_hash AS
 SELECT jsonb_build_object('pacotes',jsonb_agg(r.*)) AS y
 FROM
 (
-  SELECT legalName, scope_label, hashedfname, hashedfname_7, pack_number, local_serial_formated, path_preserv_git, info
+  SELECT legalName, scope_label, hashedfname, hashedfname_url, hashedfname_7, pack_number, local_serial_formated, path_preserv_git, info
   FROM optim.vw01full_packfilevers pf
   ORDER BY hashedfname
 ) r
