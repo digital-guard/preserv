@@ -23,7 +23,7 @@ ifneq ($(nointeraction),y)
 	@read -p "[Press ENTER to download or Ctrl+C to quit or inform orig]" _press_enter_
 endif
 	@echo " Downloading file..."
-	wget -P $(orig) http://dl.digital-guard.org/{{file_data.file}}
+	wget -P $(orig) https://dl.digital-guard.org/{{file_data.file}}
 	@echo " Fix permissions ..."
 	sudo chown postgres:www-data $(orig)/{{file_data.file}}
 	@echo " Download completed."

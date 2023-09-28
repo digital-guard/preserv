@@ -1,9 +1,6 @@
 CREATE or replace VIEW optim.vw02publication AS
   SELECT g.*,
          jsonb_strip_nulls( to_jsonb(dviz.*) ) AS viz_summary,
-         'a4a_' || replace(lower(g.isolabel_ext),'-','_') || '_' || g.class_ftname || '_' || g.id || '.zip' AS filtered_name,
-         lower(g.isolabel_ext) || '_pk' || g.pack_number || '_' ||  g.class_ftname || '.html' AS url_page,
-
          (SELECT to_jsonb(j.*) FROM optim.jurisdiction j WHERE j.isolevel = 2 AND j.jurisd_base_id = g.jurisd_base_id AND j.isolabel_ext = (split_part(g.isolabel_ext,'-',1) || '-' || split_part(g.isolabel_ext,'-',2)) ) AS jurisd2,
          (SELECT to_jsonb(j.*) FROM optim.jurisdiction j WHERE j.isolevel = 1 AND j.jurisd_base_id = g.jurisd_base_id AND j.isolabel_ext =  split_part(g.isolabel_ext,'-',1) ) AS jurisd1
   FROM
@@ -98,6 +95,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number,
       'shortnameftname', shortnameftname,
       'description', descriptionftname,
       'hashedfname', hashedfname,
+      'hashedfname_url', hashedfname_url,
       'hashedfname_without_ext', hashedfname_without_ext,
       'hashedfname_7_ext', hashedfname_7_ext,
       'isFirst', iif(row_num=1,'true'::jsonb,'false'::jsonb),
@@ -261,6 +259,7 @@ SELECT isolabel_ext, '_pk' || pack_number AS pack_number, jsonb_build_object(
                 'shortname', shortnameftname,
                 'description', descriptionftname,
                 'hashedfname', hashedfname,
+                'hashedfname_url', hashedfname_url,
                 'hashedfname_without_ext', hashedfname_without_ext,
                 'hashedfname_7_ext', hashedfname_7_ext,
                 'isFirst', iif(row_num=1,'true'::jsonb,'false'::jsonb),

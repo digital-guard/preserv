@@ -590,6 +590,7 @@ CREATE or replace VIEW optim.vw01full_packfilevers AS
          substring(pf.hashedfname, '^([0-9a-f]{7}).+$') AS hashedfname_7,
          substring(pf.hashedfname, '^([0-9a-f]{64,64})\.[a-z0-9]+$') AS hashedfname_without_ext,
          substring(pf.hashedfname, '^([0-9a-f]{7}).+$') || '...' || substring(pf.hashedfname, '^.+\.([a-z0-9]+)$') AS hashedfname_7_ext,
+         'https://dl.digital-guard.org/' || pf.hashedfname AS hashedfname_url,
          INITCAP(pf.user_resp) AS user_resp_initcap,
          au.info AS user_resp_packfilevers_info
   FROM
@@ -629,7 +630,12 @@ COMMENT ON VIEW optim.vw01full_packfilevers_ftype
 ;
 
 CREATE or replace VIEW optim.vw01full_donated_PackComponent AS
-    SELECT pf.*, pc.proc_step, pc.lineage , pc.lineage_md5 , pc.kx_profile
+    SELECT pf.*, pc.proc_step, pc.lineage , pc.lineage_md5 , pc.kx_profile,
+
+    'a4a_' || replace(lower(pf.isolabel_ext),'-','_') || '_' || (pf.ftype_info->>'class_ftname') || '_' || pf.id || '.zip' AS filtered_name,
+    lower(pf.isolabel_ext) || '_pk' || pf.pack_number || '_' ||  (pf.ftype_info->>'class_ftname') || '.html' AS url_page
+
+
     FROM optim.vw01full_packfilevers_ftype pf
     INNER JOIN optim.donated_PackComponent pc
     ON pc.packvers_id=pf.id AND pc.ftid=pf.ftid

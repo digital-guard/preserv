@@ -48,7 +48,7 @@ gen_shapefile(){
 
         update_tables ${file_id} ${database} ${file_namezip} ${url_cloud} 'shp'
 
-        echo "File available at: http://dl.digital-guard.org/out/${file_namezip}"
+        echo "File available at: https://dl.digital-guard.org/out/${file_namezip}"
         echo "File available at: ${url_cloud}"
     fi
 
@@ -88,7 +88,7 @@ gen_csv(){
 
         update_tables ${file_id} ${database} ${file_namezip} ${url_cloud} 'csv'
 
-        echo "File available at: http://dl.digital-guard.org/out/${file_namezip}"
+        echo "File available at: https://dl.digital-guard.org/out/${file_namezip}"
         echo "File available at: ${url_cloud}"
     fi
 
