@@ -1685,6 +1685,239 @@ $f$ LANGUAGE SQL;
 ------------------------
 ------------------------
 
+CREATE or replace FUNCTION ingest.feature_asis_export_osm(p_file_id bigint)
+RETURNS TABLE (kx_ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
+DECLARE
+    p_ftname text;
+    sys_housenumber text;
+BEGIN
+  SELECT ft_info->>'class_ftname', housenumber_system_type FROM ingest.vw03full_layer_file WHERE id=p_file_id
+  INTO p_ftname, sys_housenumber;
+
+  UPDATE ingest.feature_asis_discarded fad SET kx_ghs9 = f(fad.geom,1::bigint,9);
+
+  CASE
+  WHEN p_ftname IN ('geoaddress', 'parcel', 'building')  THEN
+  RETURN QUERY
+    SELECT t.ghs,t.gid,t.info,t.geom
+    FROM
+    (
+      SELECT
+        fa.kx_ghs9 AS ghs,
+        fa.feature_id::int AS gid,
+        jsonb_strip_nulls
+        (
+          jsonb_objslice
+          (
+            ARRAY['via','hnum','postcode','nsvia','place','city','country','block','district','use','levels','material','min_level','part'],
+            fa.properties - ARRAY(SELECT jsonb_object_keys(fa.properties - ARRAY['via','hnum','sup','postcode','nsvia','name','ref','nsref','blref','place','city','country','block','district','building','use','amenity','levels','material','min_level','part','height']) ),
+            ARRAY['addr:street','addr:housenumber','addr:postcode','addr:suburb','addr:place','addr:city','addr:country','addr:block','addr:district','building:use','building:levels','building:material','building:min_level','building:part']
+          )
+          ||
+          jsonb_build_object
+          (
+            -- 'info',
+            --   NULLIF(fa.properties - ARRAY['via','hnum','sup','postcode','nsvia','name','ref','nsref','blref','place','city','country','block','district','building','use','amenity','levels','material','min_level','part','height'],'{}'::jsonb)
+            --   ||
+            --   jsonb_build_object
+            --   (
+            --     'error', CASE WHEN (properties->>'is_agg')::boolean THEN 100 END,
+            --     'is_compl', COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false)
+            --   ),
+              'bytes', (CASE WHEN p_ftname IN ('parcel','building') THEN length(St_asGeoJson(fa.geom)) ELSE NULL END)
+          )
+        ) AS info,
+        fa.geom,
+
+        CASE sys_housenumber
+        -- address: [via], [hnum]
+        WHEN 'metric' THEN
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
+        WHEN 'bh-metric' THEN
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(regexp_replace(properties->>'hnum', '\D', '', 'g')), regexp_replace(properties->>'hnum', '[^[:alpha:]]', '', 'g') )
+        WHEN 'street-metric' THEN
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', regexp_replace(properties->>'hnum', '[^[:alnum:]]', '', 'g'))
+        WHEN 'block-metric' THEN
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 1)), to_bigint(split_part(replace(properties->>'hnum',' ',''), '-', 2)))
+
+          -- address: [via], [hnum], [sup     ]
+          --          [via], [hnum], [[quadra], [lote]]
+        WHEN 'ago-block' THEN
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'), to_bigint(split_part(properties->>'sup', ',', 1)), to_bigint(split_part(properties->>'sup', ',', 2)) )
+
+        -- address: [via], [sup]
+        --          [[quadra], [lote]], [sup]
+        WHEN 'df-block' THEN
+          ROW_NUMBER() OVER(ORDER BY split_part(properties->>'via', ',', 1),split_part(properties->>'via', ',', 2),properties->>'sup')
+
+        ELSE
+          ROW_NUMBER() OVER(ORDER BY properties->>'via', to_bigint(properties->>'hnum'))
+        END AS address_order
+
+      FROM
+      (
+        SELECT *
+        FROM ingest.feature_asis
+        WHERE file_id=p_file_id
+
+        UNION
+
+        SELECT *
+        FROM ingest.feature_asis_discarded fad
+        WHERE file_id=p_file_id AND fad.kx_ghs9 IS NOT NULL
+      ) fa
+    ) t
+    ORDER BY address_order;
+
+  WHEN p_ftname IN ('via') THEN
+  RETURN QUERY
+    SELECT
+      fa.kx_ghs9 AS ghs,
+      fa.feature_id::int AS gid,
+      jsonb_strip_nulls
+      (
+        jsonb_objslice
+        (
+          ARRAY['via','postcode'],
+          fa.properties - ARRAY(SELECT jsonb_object_keys(fa.properties - ARRAY['via','postcode','highway','lanes','lit','sidewalk','surface','oneway']) ),
+          ARRAY['name','postal_code']
+        )
+        ||
+        jsonb_build_object
+        (
+          -- 'info', NULLIF(fa.properties - ARRAY['via','postcode','highway','lanes','lit','sidewalk','surface','oneway'],'{}'::jsonb),
+          'bytes',length(St_asGeoJson(fa.geom))
+        )
+      ) AS info,
+      fa.geom
+    FROM
+    (
+      SELECT *
+      FROM ingest.feature_asis
+      WHERE file_id=p_file_id
+
+      UNION
+
+      SELECT *
+      FROM ingest.feature_asis_discarded fad
+      WHERE file_id=p_file_id AND fad.kx_ghs9 IS NOT NULL
+    ) fa
+    ORDER BY fa.properties->>'via', gid
+  ;
+
+  WHEN p_ftname IN ('nsvia') THEN
+  RETURN QUERY
+    SELECT
+      fa.kx_ghs9 AS ghs,
+      fa.feature_id::int AS gid,
+      jsonb_strip_nulls
+      (
+        jsonb_objslice
+        (
+          ARRAY['nsvia','postcode'],
+          fa.properties - ARRAY(SELECT jsonb_object_keys(fa.properties - ARRAY['nsvia','postcode']) ),
+          ARRAY['name','postal_code']
+        )
+        ||
+        jsonb_build_object
+        (
+          -- 'info', NULLIF(fa.properties - ARRAY['nsvia','postcode'],'{}'::jsonb),
+          'bytes',length(St_asGeoJson(fa.geom))
+        )
+      ) AS info,
+      fa.geom
+    FROM
+    (
+      SELECT *
+      FROM ingest.feature_asis
+      WHERE file_id=p_file_id
+
+      UNION
+
+      SELECT *
+      FROM ingest.feature_asis_discarded fad
+      WHERE file_id=p_file_id AND fad.kx_ghs9 IS NOT NULL
+    ) fa
+    ORDER BY fa.properties->>'nsvia', gid
+  ;
+
+  WHEN p_ftname IN ('genericvia') THEN
+  RETURN QUERY
+    SELECT
+      fa.kx_ghs9 AS ghs,
+      fa.feature_id::int AS gid,
+      jsonb_strip_nulls
+      (
+        jsonb_objslice
+        (
+          ARRAY['via'],
+          fa.properties - ARRAY(SELECT jsonb_object_keys(fa.properties - ARRAY['via']) ),
+          ARRAY['name']
+        )
+        ||
+        jsonb_build_object
+        (
+          -- 'info', NULLIF(fa.properties - ARRAY['via'],'{}'::jsonb),
+          'bytes',length(St_asGeoJson(fa.geom))
+        )
+      ) AS info,
+      fa.geom
+    FROM
+    (
+      SELECT *
+      FROM ingest.feature_asis
+      WHERE file_id=p_file_id
+
+      UNION
+
+      SELECT *
+      FROM ingest.feature_asis_discarded fad
+      WHERE file_id=p_file_id AND fad.kx_ghs9 IS NOT NULL
+    ) fa
+    ORDER BY fa.properties->>'via', gid
+  ;
+
+  WHEN p_ftname IN ('block') THEN
+  RETURN QUERY
+    SELECT
+      fa.kx_ghs9 AS ghs,
+      fa.feature_id::int AS gid,
+      jsonb_strip_nulls
+      (
+        jsonb_objslice
+        (
+          ARRAY['postcode'],
+          fa.properties - ARRAY(SELECT jsonb_object_keys(fa.properties - ARRAY['name','postcode']) ),
+          ARRAY['postal_code']
+        )
+        ||
+        jsonb_build_object
+        (
+          -- 'info', NULLIF(fa.properties - ARRAY['name','postcode'],'{}'::jsonb),
+          'bytes',length(St_asGeoJson(fa.geom))
+        )
+      ) AS info,
+      fa.geom
+    FROM
+    (
+      SELECT *
+      FROM ingest.feature_asis
+      WHERE file_id=p_file_id
+
+      UNION
+
+      SELECT *
+      FROM ingest.feature_asis_discarded fad
+      WHERE file_id=p_file_id AND fad.kx_ghs9 IS NOT NULL
+    ) fa
+    ORDER BY fa.properties->>'name', gid
+  ;
+
+  END CASE;
+END;
+$f$ LANGUAGE PLpgSQL;
+
+
 CREATE or replace FUNCTION ingest.feature_asis_export(p_file_id bigint)
 RETURNS TABLE (kx_ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
 DECLARE
