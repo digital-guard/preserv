@@ -1709,9 +1709,9 @@ BEGIN
         (
           jsonb_objslice
           (
-            ARRAY['via','hnum','postcode','nsvia','place','city','country','block','district','use','levels','material','min_level','part'],
-            fa.properties - ARRAY(SELECT jsonb_object_keys(fa.properties - ARRAY['via','hnum','sup','postcode','nsvia','name','ref','nsref','blref','place','city','country','block','district','building','use','amenity','levels','material','min_level','part','height']) ),
-            ARRAY['addr:street','addr:housenumber','addr:postcode','addr:suburb','addr:place','addr:city','addr:country','addr:block','addr:district','building:use','building:levels','building:material','building:min_level','building:part']
+            ARRAY['via','hnum','sup','postcode','nsvia','name','ref','nsref','blref','place','city','country','block','district','building','use','amenity','levels','material','min_level','part','height'],
+            fa.properties,
+            ARRAY['addr:street','addr:housenumber',NULL,'addr:postcode','addr:suburb',NULL,NULL,NULL,NULL,'addr:place','addr:city','addr:country','addr:block','addr:district',NULL,'building:use',NULL,'building:levels','building:material','building:min_level','building:part',NULL]
           )
           ||
           jsonb_build_object
@@ -1778,9 +1778,9 @@ BEGIN
       (
         jsonb_objslice
         (
-          ARRAY['via','postcode'],
-          fa.properties - ARRAY(SELECT jsonb_object_keys(fa.properties - ARRAY['via','postcode','highway','lanes','lit','sidewalk','surface','oneway']) ),
-          ARRAY['name','postal_code']
+          ARRAY['via','postcode','highway','lanes','lit','sidewalk','surface','oneway'],
+          fa.properties,
+          ARRAY['name','postal_code',NULL,NULL,NULL,NULL,NULL,NULL]
         )
         ||
         jsonb_build_object
@@ -1815,7 +1815,7 @@ BEGIN
         jsonb_objslice
         (
           ARRAY['nsvia','postcode'],
-          fa.properties - ARRAY(SELECT jsonb_object_keys(fa.properties - ARRAY['nsvia','postcode']) ),
+          fa.properties,
           ARRAY['name','postal_code']
         )
         ||
@@ -1851,7 +1851,7 @@ BEGIN
         jsonb_objslice
         (
           ARRAY['via'],
-          fa.properties - ARRAY(SELECT jsonb_object_keys(fa.properties - ARRAY['via']) ),
+          fa.properties,
           ARRAY['name']
         )
         ||
@@ -1886,9 +1886,9 @@ BEGIN
       (
         jsonb_objslice
         (
-          ARRAY['postcode'],
-          fa.properties - ARRAY(SELECT jsonb_object_keys(fa.properties - ARRAY['name','postcode']) ),
-          ARRAY['postal_code']
+          ARRAY['name','postcode'],
+          fa.properties,
+          ARRAY[NULL,'postal_code']
         )
         ||
         jsonb_build_object
