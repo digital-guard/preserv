@@ -1834,7 +1834,7 @@ BEGIN
 
       UNION
 
-      SELECT *
+      SELECT fad.file_id, fad.feature_id, fad.properties, ST_MakeValid(fad.geom) AS geom, fad.kx_ghs9
       FROM ingest.feature_asis_discarded fad
       WHERE file_id=p_file_id AND fad.kx_ghs9 IS NOT NULL
     ) fa
