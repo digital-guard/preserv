@@ -91,7 +91,7 @@ endif
 {{/isGeojson}}
 {{#isTxt2sql}}
 {{^isUtf8}}
-	psql $(pg_uri_db) -c "SELECT ingest.copy_tabular_data( '$(sandbox)/{{orig_filename}}.unix_utf8.csv', '{{tabname}}'{{#charsetcopy}},'{{charsetcopy}}'{{/charsetcopy}}{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+	psql $(pg_uri_db) -c "SELECT ingest.copy_tabular_data( '$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.txt{{/orig_filename_with_extension}}', '{{tabname}}'{{#charsetcopy}},'{{charsetcopy}}'{{/charsetcopy}}{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
 {{/isUtf8}}
 {{#isUtf8}}
 	psql $(pg_uri_db) -c "SELECT ingest.copy_tabular_data( '$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.txt{{/orig_filename_with_extension}}', '{{tabname}}'{{#charset}},'{{charset}}'{{/charset}}{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
