@@ -91,7 +91,7 @@ ifeq ($(DB_TEST),$(pg_db))
 	@read -p "[Press ENTER to drop or Ctrl+C to quit]" _press_enter_
 	psql $(pg_uri_root) -c "DROP DATABASE $(pg_db)"
 endif
-	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_db)"
+	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_db); COMMENT ON DATABASE $(pg_db) IS 'INGEST database.';"
 	@echo "--- Preparing filesystem... ---"
 	rm -f $(lockpath)/digitalPreservation-makeSQL.~feito
 	@echo "--- Preparing databse... ---"
@@ -113,7 +113,7 @@ ifeq ($(DL_TEST),$(pg_datalake))
 	@read -p "[Press ENTER to drop or Ctrl+C to quit]" _press_enter_
 	psql $(pg_uri_root) -c "DROP DATABASE $(pg_datalake)"
 endif
-	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_datalake)"
+	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_datalake); COMMENT ON DATABASE $(pg_datalake) IS 'TEST database.';"
 	@echo "--- Preparing filesystem... ---"
 	rm -f $(lockpath)/digitalPreservation-makeSQL.~feito
 	@echo "--- Preparing databses... ---"
