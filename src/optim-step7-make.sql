@@ -315,6 +315,11 @@ BEGIN
             RAISE NOTICE 'codec resultante : %', codec_desc;
         END IF;
 
+        IF codec_desc IS NOT NULL AND codec_desc?'charset' AND lower(codec_desc->>'charset') = 'utf-8'
+        THEN
+            dict := jsonb_set( dict, array['layers',key,'isUtf8'], 'true'::jsonb );
+        END IF;
+
         IF codec_extension IS NOT NULL
         THEN
             dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb(codec_extension) );
@@ -325,6 +330,7 @@ BEGIN
             WHEN 'shp2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('shp'::text) );
             WHEN 'shp2sqlparalell'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('shp'::text) );
             WHEN 'geojson2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('geojson'::text) );
+            WHEN 'txt2sql'  THEN dict := jsonb_set( dict, array['layers',key,'extension'], to_jsonb('txt'::text) );
             ELSE
                 --  do nothing
             END CASE;
