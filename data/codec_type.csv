@@ -17,6 +17,6 @@ SHP,MS-Windows,x-gis/x-shapefile,charset=Windows-1252;srid=4326
 TAB,,,
 TSV,,text/csv,charset=UTF-8;delimiter=%09;srid=4326
 TXT,,text/plain,charset=UTF-8;delimiter=%7C;srid=4326
-TXT,semicolon,text/csv,charset=us-ascii;delimiter=%3B;srid=4326
+TXT,semicolon,text/csv,charset=us-ascii;delimiter=%3B;srid=4326;charsetcopy=sql-ascii
 XLSX,,,
 GDB,,,

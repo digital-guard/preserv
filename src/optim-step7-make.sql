@@ -315,7 +315,7 @@ BEGIN
             RAISE NOTICE 'codec resultante : %', codec_desc;
         END IF;
 
-        IF codec_desc IS NOT NULL AND codec_desc?'charset' AND lower(codec_desc->>'charset') = 'utf-8'
+        IF codec_desc IS NOT NULL AND codec_desc?'charset' AND lower(codec_desc->>'charset') IN ('utf-8')
         THEN
             dict := jsonb_set( dict, array['layers',key,'isUtf8'], 'true'::jsonb );
         END IF;

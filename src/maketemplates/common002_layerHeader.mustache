@@ -29,7 +29,7 @@ endif
 	@echo " Download completed."
 endif
 
-	psql $(pg_uri_db) -c "DROP {{#isCsv}}FOREIGN {{/isCsv}}{{#isTxt2sql}}FOREIGN {{/isTxt2sql}}TABLE IF EXISTS {{tabname}} CASCADE"
+	psql $(pg_uri_db) -c "DROP {{#isCsv}}FOREIGN {{/isCsv}}TABLE IF EXISTS {{tabname}} CASCADE"
 {{^isOsm}}
 	@tput bold
 	@echo Extracting ....

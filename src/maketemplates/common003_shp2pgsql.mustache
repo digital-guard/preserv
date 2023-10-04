@@ -91,9 +91,7 @@ endif
 {{/isGeojson}}
 {{#isTxt2sql}}
 {{^isUtf8}}
-	@echo Alterando codificação para UTF8 e o tipo de quebra de linha de CRLF para LF ...
-	iconv -f {{charset}} -t UTF-8 $(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.txt{{/orig_filename_with_extension}} | dos2unix > $(sandbox)/{{orig_filename}}.unix_utf8.txt
-	psql $(pg_uri_db) -c "SELECT ingest.copy_tabular_data( '$(sandbox)/{{orig_filename}}.unix_utf8.csv', '{{tabname}}','UTF-8'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+	psql $(pg_uri_db) -c "SELECT ingest.copy_tabular_data( '$(sandbox)/{{orig_filename}}.unix_utf8.csv', '{{tabname}}'{{#charsetcopy}},'{{charsetcopy}}'{{/charsetcopy}}{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
 {{/isUtf8}}
 {{#isUtf8}}
 	psql $(pg_uri_db) -c "SELECT ingest.copy_tabular_data( '$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.txt{{/orig_filename_with_extension}}', '{{tabname}}'{{#charset}},'{{charset}}'{{/charset}}{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
