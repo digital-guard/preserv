@@ -1917,7 +1917,6 @@ BEGIN
 END;
 $f$ LANGUAGE PLpgSQL;
 
-
 CREATE or replace FUNCTION ingest.feature_asis_export(p_file_id bigint)
 RETURNS TABLE (kx_ghs9 text, gid int, info jsonb, geom geometry(Point,4326)) AS $f$
 DECLARE
@@ -2005,7 +2004,6 @@ BEGIN
         CASE WHEN ((trim(properties->>'hnum') = '') IS FALSE) THEN trim(properties->>'hnum') ELSE '?' END
       )
       END AS address
-
       FROM ingest.feature_asis AS fa
       WHERE fa.file_id=p_file_id
   ) t
@@ -2061,7 +2059,6 @@ BEGIN
   END CASE;
 END;
 $f$ LANGUAGE PLpgSQL;
---$f$ LANGUAGE SQL IMMUTABLE;
 -- SELECT * FROM ingest.feature_asis_export(5) t LIMIT 1000;
 
 CREATE or replace FUNCTION ingest.feature_asis_export_csv(
@@ -2209,35 +2206,33 @@ CREATE TABLE ingest.publicating_geojsons_p5distrib(
  geom     geometry
 );
 
-CREATE FUNCTION ingest.publicating_geojsons_p1(
+CREATE or replace FUNCTION ingest.publicating_geojsons_p1(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
 	p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
 
+  DELETE FROM hcode.distribution_reduce;
+  DELETE FROM hcode.distribution_reduce_aux;
+  DELETE FROM hcode.distribution_result;
+  DELETE FROM hcode.distribution_result_aux;
+
+  DELETE FROM ingest.publicating_geojsons_p3exprefix_aux;
   DELETE FROM ingest.publicating_geojsons_p3exprefix;
-  INSERT INTO ingest.publicating_geojsons_p3exprefix
+  DELETE FROM ingest.publicating_geojsons_p2distrib;
+  DELETE FROM ingest.publicating_geojsons_p5distrib;
+
+  INSERT INTO ingest.publicating_geojsons_p3exprefix_aux
      SELECT kx_ghs9, NULL::text, gid, info, geom
      FROM ingest.feature_asis_export(p_file_id) t
   ;
-  SELECT 'p1';
-$f$ language SQL VOLATILE; --fim p1
 
-/*
-CREATE FUNCTION ingest.publicating_geojsons_p2(
-	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
-	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
-	p_sum  boolean  DEFAULT false
-) RETURNS text  AS $f$
-
-  UPDATE ingest.donated_PackComponent
-  SET proc_step=4, 
-      kx_profile = coalesce(kx_profile,'{}'::jsonb) || jsonb_build_object('ghs_distrib_mosaic', geocode_distribution_generate('ingest.publicating_geojsons_p3exprefix',7, p_sum))
-  WHERE id= p_file_id
+  INSERT INTO hcode.distribution_reduce
+     SELECT kx_ghs9, (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END)
+     FROM ingest.publicating_geojsons_p3exprefix_aux
   ;
 
-  SELECT 'p2';
-$f$ language SQL VOLATILE; --fim p2
-*/
+  SELECT 'p1';
+$f$ language SQL VOLATILE; --fim p1
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_p3(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
@@ -2255,7 +2250,7 @@ BEGIN
             (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
         ) AS geom
         FROM hcode.distribution_reduce_recursive_raw_alt(
-            ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix)),
+            ((SELECT jsonb_object_agg(kx_ghs9,(CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END) ) FROM ingest.publicating_geojsons_p3exprefix_aux)),
             1,
             (
                 CASE (SELECT COUNT(*) FROM ingest.feature_asis WHERE file_id=p_file_id ) > 1000000
@@ -2271,29 +2266,16 @@ BEGIN
 
     PERFORM pg_catalog.pg_file_unlink(p_fileref || '/'|| (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) || '_*.geojson') FROM ingest.vw03full_layer_file WHERE id=$1;
 
-    --UPDATE ingest.publicating_geojsons_p3exprefix
-    --SET prefix=t.prefix
-    --FROM (
-        --SELECT hcode AS prefix, unnest(jj) as kx_ghs9
-        --FROM ingest.publicating_geojsons_p2distrib
-    --) t
-    --WHERE t.kx_ghs9 = publicating_geojsons_p3exprefix.kx_ghs9
-    --;
-
-    DELETE FROM ingest.publicating_geojsons_p3exprefix_aux;
-    INSERT INTO ingest.publicating_geojsons_p3exprefix_aux
+    DELETE FROM ingest.publicating_geojsons_p3exprefix;
+    INSERT INTO ingest.publicating_geojsons_p3exprefix
     SELECT p3.kx_ghs9, p2.prefix, p3.gid, p3.info, p3.geom
-    FROM ingest.publicating_geojsons_p3exprefix p3
+    FROM ingest.publicating_geojsons_p3exprefix_aux p3
     LEFT JOIN
       (
         SELECT unnest(jj) as kx_ghs9, hcode AS prefix
         FROM ingest.publicating_geojsons_p2distrib
       ) p2
     ON p3.kx_ghs9 = p2.kx_ghs9;
-
-    DELETE FROM ingest.publicating_geojsons_p3exprefix;
-    INSERT INTO ingest.publicating_geojsons_p3exprefix
-    SELECT * FROM ingest.publicating_geojsons_p3exprefix_aux;
 
     UPDATE ingest.donated_PackComponent
     SET proc_step=4, 
@@ -2303,9 +2285,53 @@ BEGIN
 
     DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
     DELETE FROM ingest.publicating_geojsons_p3exprefix_aux;
+
     RETURN 'p3';
 END
 $f$ language PLpgSQL; --fim p3
+
+CREATE or replace FUNCTION ingest.publicating_geojsons_p3a(
+	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
+	p_isolabel_ext  text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+	p_fileref text,       --
+	p_buffer_type int DEFAULT 1,
+	p_size_max    int DEFAULT 1 -- 5. max size of hcode
+) RETURNS text  AS $f$
+BEGIN
+    DELETE FROM ingest.publicating_geojsons_p2distrib;
+    INSERT INTO ingest.publicating_geojsons_p2distrib
+        SELECT t.hcode, t.n_items, t.n_keys,  t.jj,
+        ST_Intersection(
+            ST_SetSRID( ST_geomFromGeohash(replace(t.hcode, '*', '')) ,  4326),
+            (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
+        ) AS geom
+        FROM hcode.distribution_result t
+    ;
+
+    PERFORM pg_catalog.pg_file_unlink(p_fileref || '/'|| (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) || '_*.geojson') FROM ingest.vw03full_layer_file WHERE id=$1;
+
+    DELETE FROM ingest.publicating_geojsons_p3exprefix;
+    INSERT INTO ingest.publicating_geojsons_p3exprefix
+    SELECT p3.kx_ghs9, p2.hcode, p3.gid, p3.info, p3.geom
+    FROM ingest.publicating_geojsons_p3exprefix_aux p3
+    LEFT JOIN
+      (
+        SELECT unnest(jj) as kx_ghs9, hcode
+        FROM ingest.publicating_geojsons_p2distrib
+      ) p2
+    ON p3.kx_ghs9 = p2.kx_ghs9;
+
+    UPDATE ingest.donated_PackComponent
+    SET proc_step=4,
+        kx_profile = coalesce(kx_profile,'{}'::jsonb) || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_keys) FROM ingest.publicating_geojsons_p2distrib))
+    WHERE id= p_file_id
+    ;
+
+    DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
+    DELETE FROM ingest.publicating_geojsons_p3exprefix_aux;
+    RETURN 'p3';
+END
+$f$ language PLpgSQL; --fim p3a
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_p4(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
@@ -2369,7 +2395,6 @@ BEGIN
   ;
 END
 $f$ language PLpgSQL; -- fim p4
-
 
 CREATE or replace FUNCTION ingest.publicating_geojsons_p5(
 	p_file_id    bigint,  -- e.g. 1, see ingest.donated_PackComponent
@@ -2508,7 +2533,6 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_pretty_opt int DEFAULT 3
 ) RETURNS text  AS $f$
   SELECT ingest.publicating_geojsons_p1($1,$2);
-  --SELECT ingest.publicating_geojsons_p2($1,$2,(SELECT CASE geomtype WHEN 'point' THEN false ELSE true END FROM ingest.vw03full_layer_file WHERE id=$1));
   SELECT ingest.publicating_geojsons_p3($1,$2,$3,$4,$5);
   SELECT ingest.publicating_geojsons_p4($1,$2,$3);
   SELECT ingest.publicating_geojsons_p5($1,$2,$3,$4,$6);
@@ -2530,6 +2554,89 @@ COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int)
 ;
 -- SELECT ingest.publicating_geojsons('geoaddress','BR-MG-BeloHorizonte','folder');
 
+
+CREATE OR replace PROCEDURE ingest.ppublicating_geojsons(
+  p_file_id      bigint,  -- e.g. 1, see ingest.donated_PackComponent
+  p_isolabel_ext text, -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+  p_fileref      text,       --
+  p_buffer_type  int DEFAULT 1,
+  p_size_max     int DEFAULT 1, -- 5. max size of hcode
+  p_pretty_opt   int DEFAULT 3
+)
+LANGUAGE PLpgSQL
+AS $$
+DECLARE
+  x int;
+  tsum int;
+  tmin int;
+  str text;
+BEGIN
+  DELETE FROM hcode.distribution_reduce;
+  DELETE FROM hcode.distribution_reduce_aux;
+  DELETE FROM hcode.distribution_result;
+  DELETE FROM hcode.distribution_result_aux;
+
+  DELETE FROM ingest.publicating_geojsons_p3exprefix_aux;
+  DELETE FROM ingest.publicating_geojsons_p3exprefix;
+  DELETE FROM ingest.publicating_geojsons_p2distrib;
+  DELETE FROM ingest.publicating_geojsons_p5distrib;
+
+  INSERT INTO ingest.publicating_geojsons_p3exprefix_aux
+     SELECT kx_ghs9, NULL::text, gid, info, geom
+     FROM ingest.feature_asis_export(53) t
+  ;
+
+  INSERT INTO hcode.distribution_reduce
+     SELECT kx_ghs9, (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END)
+     FROM ingest.publicating_geojsons_p3exprefix_aux
+  ;
+
+  COMMIT;
+
+  x := (SELECT (
+        CASE (SELECT COUNT(*) FROM ingest.feature_asis WHERE file_id=p_file_id ) > 1000000
+        WHEN TRUE THEN (SELECT length((geohash_cover_list(geom))[1]) FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=p_isolabel_ext)
+        ELSE (SELECT length((geohash_cover_list( ST_Collect(ST_Force2D(geom)) ))[1]) FROM ingest.feature_asis WHERE file_id=$1)
+        END
+    ));
+  tsum := (SELECT (lineage->'hcode_distribution_parameters'->'p_threshold_sum')::int FROM ingest.donated_PackComponent WHERE id= p_file_id);
+  tmin := (SELECT (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1000::int ELSE 102400::int END));
+
+  CALL hcode.distribution_reduce_recursive_raw_alta(1,x,$5,tsum,tmin);
+
+  COMMIT;
+
+  SELECT ingest.publicating_geojsons_p3a($1,$2,$3,$4,$5) INTO str;
+  RAISE NOTICE '%', str ;
+  COMMIT;
+  SELECT ingest.publicating_geojsons_p4($1,$2,$3) INTO str;
+  RAISE NOTICE '%', str ;
+  COMMIT;
+  SELECT ingest.publicating_geojsons_p5($1,$2,$3,$4,$6) INTO str;
+  RAISE NOTICE '%', str ;
+
+END;
+$$;
+-- CALL ingest.ppublicating_geojsons(53,'MX','/var/gits/_dg/preservCutGeo-MX2021/data/_pk0002.01/geoaddress',1,9);
+
+CREATE OR replace PROCEDURE ingest.ppublicating_geojsons(
+	p_ftname text,                -- e.g. 'geoaddress'
+	p_isolabel_ext  text,         -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+	p_fileref text,               -- e.g.
+	p_buffer_type int DEFAULT 1,  -- e.g.
+	p_size_max int DEFAULT 1,     -- e.g.
+	p_pretty_opt int DEFAULT 3
+)
+LANGUAGE PLpgSQL
+AS $$
+DECLARE
+  x int;
+BEGIN
+  x := ( SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1) AND right(pack_id::text,6) = regexp_replace(split_part($3,'/',7),'[\_pk\.]','','g') );
+  CALL ingest.ppublicating_geojsons(x,$2,$3,$4,$5,$6);
+END;
+$$;
+-- CALL ingest.ppublicating_geojsons('geoaddress','MX','/var/gits/_dg/preservCutGeo-MX2021/data/_pk0002.01/geoaddress',1,9);
 -- ----------------------------
 
 CREATE or replace FUNCTION ingest.join(
