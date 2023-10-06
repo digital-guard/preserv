@@ -506,7 +506,7 @@ FROM
 
 -- https://github.com/AddressForAll/site-v2/issues/59
 CREATE or replace VIEW api.pkindown AS
-  SELECT isolabel_ext, legalname, pack_number, MAX(description), SUM(geoaddress) AS geoaddress, SUM(parcel) AS parcel, SUM(via) AS via, SUM(building) AS building, SUM(block) AS block, SUM(nsvia) AS nsvia, SUM(genericvia) AS genericvia, MAX(license), MAX(url)
+  SELECT isolabel_ext, legalname, pack_number, MAX(description) AS description, SUM(geoaddress) AS geoaddress, SUM(parcel) AS parcel, SUM(via) AS via, SUM(building) AS building, SUM(block) AS block, SUM(nsvia) AS nsvia, SUM(genericvia) AS genericvia, MAX(license) AS license, MAX(url) As url
   FROM
   (
     SELECT
