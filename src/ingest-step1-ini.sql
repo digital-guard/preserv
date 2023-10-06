@@ -2583,7 +2583,7 @@ BEGIN
 
   INSERT INTO ingest.publicating_geojsons_p3exprefix_aux
      SELECT kx_ghs9, NULL::text, gid, info, geom
-     FROM ingest.feature_asis_export(53) t
+     FROM ingest.feature_asis_export(p_file_id) t
   ;
 
   INSERT INTO hcode.distribution_reduce
