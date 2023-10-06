@@ -499,7 +499,40 @@ FROM
     FROM generate_series('2020-01-01 00:00'::timestamp, NOW()- interval '3 months', '3 months') t(date)
     ORDER BY date
     $$
-  ) AS t ("country" text, "Q1 2020" bigint, "Q2 2020" bigint,"Q3 2020" bigint,"Q4 2020" bigint,"Q1 2021" bigint,"Q2 2021" bigint,"Q3 2021" bigint,"Q4 2021" bigint,"Q1 2022" bigint,"Q2 2022" bigint,"Q3 2022" bigint,"Q4 2022" bigint,"Q1 2023" bigint,"Q2 2023" bigint)
+  ) AS t ("country" text, "Q1 2020" bigint, "Q2 2020" bigint,"Q3 2020" bigint,"Q4 2020" bigint,"Q1 2021" bigint,"Q2 2021" bigint,"Q3 2021" bigint,"Q4 2021" bigint,"Q1 2022" bigint,"Q2 2022" bigint,"Q3 2022" bigint,"Q4 2022" bigint,"Q1 2023" bigint,"Q2 2023" bigint,"Q3 2023" bigint)
+;
+
+----------------------
+
+-- https://github.com/AddressForAll/site-v2/issues/59
+CREATE or replace VIEW api.pkindown AS
+  SELECT isolabel_ext, legalname, pack_number, MAX(description), SUM(geoaddress) AS geoaddress, SUM(parcel) AS parcel, SUM(via) AS via, SUM(building) AS building, SUM(block) AS block, SUM(nsvia) AS nsvia, SUM(genericvia) AS genericvia, MAX(license), MAX(url)
+  FROM
+  (
+    SELECT
+      isolabel_ext,
+      legalname,
+      pack_number,
+      packtpl_info->>'about' AS description,
+
+      CASE WHEN (ftype_info->>'class_ftname') = 'geoaddress' THEN (jsonb_array_to_text_array((lineage->'statistics'))::int[])[16] ELSE NULL END AS geoaddress,
+      CASE WHEN (ftype_info->>'class_ftname') = 'parcel'     THEN (jsonb_array_to_text_array((lineage->'statistics'))::int[])[16] ELSE NULL END AS parcel,
+      CASE WHEN (ftype_info->>'class_ftname') = 'via'        THEN (jsonb_array_to_text_array((lineage->'statistics'))::int[])[16] ELSE NULL END AS via,
+      CASE WHEN (ftype_info->>'class_ftname') = 'building'   THEN (jsonb_array_to_text_array((lineage->'statistics'))::int[])[16] ELSE NULL END AS building,
+      CASE WHEN (ftype_info->>'class_ftname') = 'block'      THEN (jsonb_array_to_text_array((lineage->'statistics'))::int[])[16] ELSE NULL END AS block,
+      CASE WHEN (ftype_info->>'class_ftname') = 'nsvia'      THEN (jsonb_array_to_text_array((lineage->'statistics'))::int[])[16] ELSE NULL END AS nsvia,
+      CASE WHEN (ftype_info->>'class_ftname') = 'genericvia' THEN (jsonb_array_to_text_array((lineage->'statistics'))::int[])[16] ELSE NULL END AS genericvia,
+
+      license_data->>'id_label' || CASE WHEN license_data->>'id_label' = '' THEN  '' ELSE '-' || (license_data->>'id_version')::text END AS license,
+      path_preserv_git AS url
+    FROM optim.vw01full_donated_PackComponent pf
+    WHERE pf.ftid > 19
+  ) a
+  GROUP BY isolabel_ext, legalname, pack_number
+  ORDER BY 1, 2, 3
+;
+COMMENT ON VIEW api.pkindown
+  IS 'Returns some information about packages listed on the https://addressforall.org/downloads website.'
 ;
 
 ----------------------
@@ -648,30 +681,6 @@ COMMENT ON MATERIALIZED VIEW optim.mvwjurisdiction_geomeez
 CREATE or replace VIEW api.metadata_viz AS
 SELECT *
 FROM optim.vw03_metadata_viz
-;
-
-----------------------
-
--- https://github.com/AddressForAll/site-v2/issues/59
-CREATE or replace VIEW api.pkindown AS
-  SELECT *
-  FROM
-  (
-    SELECT
-      isolabel_ext,
-      legalname,
-      pack_number,
-      packtpl_info->>'about' AS description,
-      license_data->>'id_label' || CASE WHEN license_data->>'id_label' = '' THEN  '' ELSE '-' || (license_data->>'id_version')::text END AS license,
-      path_preserv_git AS url
-    FROM optim.vw01full_donated_PackComponent pf
-    WHERE pf.ftid > 19
-  ) a
-  GROUP BY isolabel_ext, legalname, pack_number, description, license, url
-  ORDER BY 1, 2, 3
-;
-COMMENT ON VIEW api.pkindown
-  IS 'Returns some information about packages listed on the https://addressforall.org/downloads website.'
 ;
 
 ----------------------
