@@ -2329,7 +2329,7 @@ BEGIN
 
     DELETE FROM ingest.publicating_geojsons_p2distrib; -- limpa
     DELETE FROM ingest.publicating_geojsons_p3exprefix_aux;
-    RETURN 'p3';
+    RETURN 'Obtido mosaico.';
 END
 $f$ language PLpgSQL; --fim p3a
 
@@ -2391,7 +2391,7 @@ BEGIN
   ELSE NULL;
   END CASE;
 
-  RETURN (SELECT 'Arquivos de file_id='|| p_file_id::text || ' publicados em ' || p_file_id::text || '/' || (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) ||'_*.geojson' FROM ingest.vw03full_layer_file WHERE id=$1)
+  RETURN (SELECT 'Arquivos de file_id='|| p_file_id::text || ' publicados em ' || p_fileref::text || '/' || (CASE geomtype WHEN 'point' THEN 'pts' WHEN 'line' THEN 'lns' WHEN 'poly' THEN 'pols' END) ||'_*.geojson' FROM ingest.vw03full_layer_file WHERE id=$1)
   ;
 END
 $f$ language PLpgSQL; -- fim p4
@@ -2547,7 +2547,7 @@ CREATE or replace FUNCTION ingest.publicating_geojsons(
 	p_size_max int DEFAULT 1,     -- e.g.
 	p_pretty_opt int DEFAULT 3
 ) RETURNS text AS $wrap$
-  SELECT ingest.publicating_geojsons(( SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1) AND right(pack_id::text,6) = regexp_replace(split_part($3,'/',7),'[\_pk\.]','','g') ),$2,$3,$4,$5,$6);
+  SELECT ingest.publicating_geojsons(( SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1) AND right(pack_id::text,6) = regexp_replace(split_part($3,'/',9),'[\_pk\.]','','g') ),$2,$3,$4,$5,$6);
 $wrap$ LANGUAGE SQL;
 COMMENT ON FUNCTION ingest.publicating_geojsons(text,text,text,int,int,int)
   IS 'Wrap to ingest.publicating_geojsons'
@@ -2571,6 +2571,7 @@ DECLARE
   tmin int;
   str text;
 BEGIN
+  RAISE NOTICE 'Clean tables.';
   DELETE FROM hcode.distribution_reduce;
   DELETE FROM hcode.distribution_reduce_aux;
   DELETE FROM hcode.distribution_result;
@@ -2581,11 +2582,13 @@ BEGIN
   DELETE FROM ingest.publicating_geojsons_p2distrib;
   DELETE FROM ingest.publicating_geojsons_p5distrib;
 
+  RAISE NOTICE 'Export data.';
   INSERT INTO ingest.publicating_geojsons_p3exprefix_aux
      SELECT kx_ghs9, NULL::text, gid, info, geom
      FROM ingest.feature_asis_export(p_file_id) t
   ;
 
+  RAISE NOTICE 'Reduce data.';
   INSERT INTO hcode.distribution_reduce
      SELECT kx_ghs9, (CASE (SELECT geomtype FROM ingest.vw03full_layer_file WHERE id=$1) WHEN 'point' THEN 1::bigint ELSE ((info->'bytes')::bigint) END)
      FROM ingest.publicating_geojsons_p3exprefix_aux
@@ -2632,7 +2635,7 @@ AS $$
 DECLARE
   x int;
 BEGIN
-  x := ( SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1) AND right(pack_id::text,6) = regexp_replace(split_part($3,'/',7),'[\_pk\.]','','g') );
+  x := ( SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1) AND right(pack_id::text,6) = regexp_replace(split_part($3,'/',9),'[\_pk\.]','','g') );
   CALL ingest.ppublicating_geojsons(x,$2,$3,$4,$5,$6);
 END;
 $$;
