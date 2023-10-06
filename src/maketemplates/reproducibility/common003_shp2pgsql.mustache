@@ -73,5 +73,10 @@ psql {{pg_uri}}/{{pg_db}} -c "CREATE TABLE {{tabname}} AS SELECT * FROM geojson_
 fi
 {{/isGeojson}}
 {{#isTxt2sql}}
-psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.copy_tabular_data( '{{sandbox}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.txt{{/orig_filename_with_extension}}', '{{tabname}}'{{#charset}},'{{charset}}'{{/charset}}{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+{{^isUtf8}}
+psql $(pg_uri_db) -c "SELECT ingest.copy_tabular_data( '$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.txt{{/orig_filename_with_extension}}', '{{tabname}}'{{#charsetcopy}},'{{charsetcopy}}'{{/charsetcopy}}{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+{{/isUtf8}}
+{{#isUtf8}}
+psql $(pg_uri_db) -c "SELECT ingest.copy_tabular_data( '$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.txt{{/orig_filename_with_extension}}', '{{tabname}}'{{#charset}},'{{charset}}'{{/charset}}{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+{{/isUtf8}}
 {{/isTxt2sql}}
