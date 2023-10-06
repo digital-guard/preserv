@@ -1716,14 +1716,14 @@ BEGIN
           ||
           jsonb_build_object
           (
-            -- 'info',
-            --   NULLIF(fa.properties - ARRAY['via','hnum','sup','postcode','nsvia','name','ref','nsref','blref','place','city','country','block','district','building','use','amenity','levels','material','min_level','part','height'],'{}'::jsonb)
-            --   ||
-            --   jsonb_build_object
-            --   (
-            --     'error', CASE WHEN (properties->>'is_agg')::boolean THEN 100 END,
-            --     'is_compl', COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false)
-            --   ),
+            'info',
+              NULLIF(fa.properties - ARRAY['via','hnum','sup','postcode','nsvia','name','ref','nsref','blref','place','city','country','block','district','building','use','amenity','levels','material','min_level','part','height'],'{}'::jsonb)
+              ||
+              jsonb_build_object
+              (
+                'error', CASE WHEN (properties->>'is_agg')::boolean THEN 100 END,
+                'is_compl', COALESCE(nullif(properties->'is_complemento_provavel','null')::boolean,false)
+              ),
               'bytes', (CASE WHEN p_ftname IN ('parcel','building') THEN length(St_asGeoJson(fa.geom)) ELSE NULL END)
           )
         ) AS info,
@@ -1785,7 +1785,7 @@ BEGIN
         ||
         jsonb_build_object
         (
-          -- 'info', NULLIF(fa.properties - ARRAY['via','postcode','highway','lanes','lit','sidewalk','surface','oneway'],'{}'::jsonb),
+          'info', NULLIF(fa.properties - ARRAY['via','postcode','highway','lanes','lit','sidewalk','surface','oneway'],'{}'::jsonb),
           'bytes',length(St_asGeoJson(fa.geom))
         )
       ) AS info,
@@ -1821,7 +1821,7 @@ BEGIN
         ||
         jsonb_build_object
         (
-          -- 'info', NULLIF(fa.properties - ARRAY['nsvia','postcode'],'{}'::jsonb),
+          'info', NULLIF(fa.properties - ARRAY['nsvia','postcode'],'{}'::jsonb),
           'bytes',length(St_asGeoJson(fa.geom))
         )
       ) AS info,
@@ -1857,7 +1857,7 @@ BEGIN
         ||
         jsonb_build_object
         (
-          -- 'info', NULLIF(fa.properties - ARRAY['via'],'{}'::jsonb),
+          'info', NULLIF(fa.properties - ARRAY['via'],'{}'::jsonb),
           'bytes',length(St_asGeoJson(fa.geom))
         )
       ) AS info,
@@ -1893,7 +1893,7 @@ BEGIN
         ||
         jsonb_build_object
         (
-          -- 'info', NULLIF(fa.properties - ARRAY['name','postcode'],'{}'::jsonb),
+          'info', NULLIF(fa.properties - ARRAY['name','postcode'],'{}'::jsonb),
           'bytes',length(St_asGeoJson(fa.geom))
         )
       ) AS info,
