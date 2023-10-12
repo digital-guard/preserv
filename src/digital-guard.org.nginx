@@ -4,7 +4,6 @@
 
 server {
     server_name digital-guard.org www.digital-guard.org;
-    # listen 80;
     listen 443 ssl;
     include /etc/nginx/ssl.conf;
     root /var/www/digital-guard.org/;
@@ -86,4 +85,15 @@ server {
     access_log /var/log/nginx/docs.digital-guard.org.access_log;
 
     return 302 https://wiki.addressforall.org/doc/Documenta%C3%A7%C3%A3o_Digital-guard;
+} # \server
+
+server {
+    server_name git-site.digital-guard.org www.git-site.digital-guard.org;
+    listen 443 ssl;
+    include /etc/nginx/ssl.conf;
+
+    location ~ ^/?.+ {
+        rewrite ^/?(.*)$ /$1 break;
+        proxy_pass https://digital-guard.github.io;
+    }
 } # \server
