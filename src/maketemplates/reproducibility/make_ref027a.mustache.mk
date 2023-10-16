@@ -146,6 +146,31 @@ mkdir -p {{pg_io}}
 {{>common006_clean}}
 {{>common008_publicating_geojsons}}
 {{/datagrid}}
+
+{{#geopoint}}
+# layer geopoint:
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
+mkdir -m 777 -p {{sandbox}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
+mkdir -p {{pg_io}}
+{{>common002_layerHeader}}
+{{>common003_shp2pgsql}}
+{{>common001_pgAny_load}}
+{{>common006_clean}}
+{{>common008_publicating_geojsons}}
+{{/geopoint}}
+
+{{#cadgeopoint}}
+# layer cadgeopoint:
+rm -rf {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}} || true
+mkdir -m 777 -p {{sandbox}}
+mkdir -m 777 -p {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}
+mkdir -p {{pg_io}}
+{{>common002_layerHeader}}
+{{>common003_shp2pgsql}}
+{{>common001_pgAny_load}}
+{{>common006_clean}}
+{{/cadgeopoint}}
 {{/layers}}
 
 {{#openstreetmap}}

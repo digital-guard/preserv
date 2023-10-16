@@ -233,6 +233,32 @@ datagrid-clean:
 {{>common008_publicating_geojsons}}
 {{/datagrid}}
 
+{{#geopoint}}
+geopoint: tabname = {{tabname}}
+geopoint: makedirs
+{{>common002_layerHeader}}
+{{>common003_shp2pgsql}}
+{{>common001_pgAny_load}}
+{{>common007_layerFooter}}
+
+geopoint-clean:
+{{>common006_clean}}
+
+{{>common008_publicating_geojsons}}
+{{/geopoint}}
+
+{{#cadgeopoint}}
+cadgeopoint: tabname = {{tabname}}
+cadgeopoint: makedirs
+{{>common002_layerHeader}}
+{{>common003_shp2pgsql}}
+{{>common001_pgAny_load}}
+{{>common007_layerFooter}}
+
+cadgeopoint-clean:
+{{>common006_clean}}
+{{/cadgeopoint}}
+
 {{/layers}}
 
 {{#openstreetmap}}
