@@ -729,3 +729,11 @@ SELECT api.plicenses('ecl');
 SELECT api.plicenses('cc0~1.0');
 SELECT api.plicenses('cc0-1.0');
 */
+
+----------------------
+
+CREATE or replace VIEW api.full_packfilevers AS
+SELECT *
+FROM optim.vw01full_packfilevers
+;
+
