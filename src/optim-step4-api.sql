@@ -327,6 +327,92 @@ COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
 ;
 CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON mvwjurisdiction_synonym (synonym);
 
+
+CREATE or replace FUNCTION optim.generate_synonym_csv(
+  p_isolabel_ext text,
+  p_path text
+) RETURNS text AS $f$
+DECLARE
+    q_copy text;
+BEGIN
+  q_copy := $$
+    COPY (
+      SELECT *
+      FROM optim.jurisdiction_abbrev_option
+      WHERE isolabel_ext %s
+      ORDER BY isolabel_ext
+    ) TO '%s' CSV HEADER
+  $$;
+
+  EXECUTE format(q_copy,'LIKE ''' || p_isolabel_ext || '%''',p_path);
+
+  RETURN 'Ok.';
+END
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION optim.generate_synonym_csv(text,text)
+  IS 'Generate csv with isolevel=3 coverage and overlay in separate array.'
+;
+/*
+SELECT optim.generate_synonym_csv('BR','/tmp/pg_io/synonymbr.csv');
+SELECT optim.generate_synonym_csv('CO','/tmp/pg_io/synonymco.csv');
+SELECT optim.generate_synonym_csv('UY','/tmp/pg_io/synonymuy.csv');
+*/
+
+CREATE or replace FUNCTION optim.generate_synonym_a4a_csv(
+  p_isolabel_ext text,
+  p_path text
+) RETURNS text AS $f$
+DECLARE
+    q_copy text;
+BEGIN
+  q_copy := $$
+    COPY (
+      -- SELECT true, 5, isolabel_ext, synonym, '2022-01-01'
+      SELECT isolabel_ext, synonym
+      FROM optim.vwjurisdiction_synonym
+      WHERE isolabel_ext %s
+      ORDER BY isolabel_ext
+    ) TO '%s' CSV HEADER
+  $$;
+
+  EXECUTE format(q_copy,'LIKE ''' || p_isolabel_ext || '%''',p_path);
+
+  RETURN 'Ok.';
+END
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION optim.generate_synonym_a4a_csv(text,text)
+  IS 'Generate csv with isolevel=3 coverage and overlay in separate array.'
+;
+/*
+SELECT optim.generate_synonym_a4a_csv('BR','/tmp/pg_io/synonym_a4abr.csv');
+SELECT optim.generate_synonym_a4a_csv('CO','/tmp/pg_io/synonym_a4aco.csv');
+SELECT optim.generate_synonym_a4a_csv('UY','/tmp/pg_io/synonym_a4auy.csv');
+*/
+
+CREATE or replace FUNCTION optim.generate_synonym_ref_csv(
+  p_path text
+) RETURNS text AS $f$
+DECLARE
+    q_copy text;
+BEGIN
+  q_copy := $$
+    COPY (
+      SELECT *
+      FROM optim.jurisdiction_abbrev_ref
+      ORDER BY abbrevref_id
+    ) TO '%s' CSV HEADER
+  $$;
+
+  EXECUTE format(q_copy,p_path);
+
+  RETURN 'Ok.';
+END
+$f$ LANGUAGE PLpgSQL;
+COMMENT ON FUNCTION optim.generate_synonym_ref_csv(text)
+  IS 'Generate csv with isolevel=3 coverage and overlay in separate array.'
+;
+-- SELECT optim.generate_synonym_ref_csv('/tmp/pg_io/synonym_ref.csv');
+
 CREATE or replace FUNCTION str_geocodeiso_decode(iso text)
 RETURNS text[] as $f$
   SELECT isolabel_ext || array[split_part(isolabel_ext,'-',1)]
