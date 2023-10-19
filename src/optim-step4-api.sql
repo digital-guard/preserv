@@ -167,32 +167,15 @@ FROM (
 ) t
 ;
 
-DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym;
-CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
+CREATE VIEW optim.vwjurisdiction_synonym AS
 SELECT DISTINCT lower(synonym) AS synonym, isolabel_ext
 FROM
 (
   (
-    -- identidade
-    SELECT isolabel_ext AS synonym, isolabel_ext AS isolabel_ext
-    FROM optim.jurisdiction
-    WHERE isolevel > 1 AND osm_id NOT IN (SELECT parent_id FROM optim.jurisdiction WHERE (info->'capital')::int = 1)
-  )
-  UNION ALL
-  (
-    -- não deve retornar abbrev repetidos
-    SELECT abbrev, MAX(isolabel_ext)
-    FROM optim.jurisdiction_abbrev_option
-    WHERE selected IS TRUE
-    GROUP BY abbrev
-    HAVING count(*) = 1
-  )
-  UNION ALL
-  (
     -- co state abbrev, mun abbrev.
     -- e.g.: CO-A-IGI
     SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| split_part(abbrev,'-',3) AS synonym, MAX(isolabel_ext) AS isolabel_ext
-    FROM 
+    FROM
     (
         -- não deve retornar abbrev repetidos
         SELECT abbrev, MAX(isolabel_ext) AS isolabel_ext
@@ -296,21 +279,53 @@ FROM
     -- br-uf-uf para capitais de isolevel = 2
     SELECT lower('BR-' || parent_abbrev || '-' || parent_abbrev) AS synonym, isolabel_ext
     FROM optim.jurisdiction j
-    WHERE (info->'capital')::int > 0 AND isolevel::int = 3 AND isolabel_ext LIKE 'BR-%-%'
+    WHERE (info->'is_capital_isolevel')::int > 0 AND isolevel::int = 3 AND isolabel_ext LIKE 'BR-%-%'
   )
   UNION ALL
   (
     -- br-uf para capitais de isolevel = 1 e que cidade=distrito
     SELECT lower(split_part(isolabel_ext,'-',1) || '-' || split_part(isolabel_ext,'-',2)) AS synonym, isolabel_ext
     FROM optim.jurisdiction j
-    WHERE (info->'capital')::int = 1 AND isolevel::int = 3
+    WHERE (info->'is_capital_isolevel')::int = 1 AND isolevel::int = 3
   )
 ) z
 ;
-CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON mvwjurisdiction_synonym (synonym);
+-- CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON optim.vwjurisdiction_synonym (synonym);
+COMMENT ON VIEW optim.vwjurisdiction_synonym
+ IS 'Synonymous names of jurisdictions.'
+;
+
+DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym;
+CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
+SELECT DISTINCT synonym, isolabel_ext
+FROM
+(
+  (
+    -- identidade
+    SELECT lower(isolabel_ext) AS synonym, isolabel_ext AS isolabel_ext
+    FROM optim.jurisdiction
+    WHERE isolevel > 1 AND osm_id NOT IN (SELECT parent_id FROM optim.jurisdiction WHERE (info->'is_capital_isolevel')::int = 1)
+  )
+  UNION ALL
+  (
+    -- não deve retornar abbrev repetidos
+    SELECT lower(abbrev) AS synonym, MAX(isolabel_ext) AS isolabel_ext
+    FROM optim.jurisdiction_abbrev_option
+    WHERE selected IS TRUE
+    GROUP BY abbrev
+    HAVING count(*) = 1
+  )
+  UNION ALL
+  (
+    SELECT *
+    FROM optim.vwjurisdiction_synonym
+  )
+) z
+;
 COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
  IS 'Synonymous names of jurisdictions.'
 ;
+CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON mvwjurisdiction_synonym (synonym);
 
 CREATE or replace FUNCTION str_geocodeiso_decode(iso text)
 RETURNS text[] as $f$
