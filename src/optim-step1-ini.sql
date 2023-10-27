@@ -1260,7 +1260,7 @@ BEGIN
   ) r
   WHERE c.packvers_id= r.id AND hashedfnametype ='shp' AND lower(split_part(r.jurisdiction_pack_layer,'/',3)) = (SELECT split_part(ftname,'_',1) FROM optim.feature_type WHERE ftid = c.ftid )
   -- RETURNING 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.'
-  ; "class_ftname"
+  ;
   RETURN 'Ok, update viz_uri in info of optim.donated_PackComponent_cloudControl.';
 END;
 $f$ LANGUAGE PLpgSQL;
