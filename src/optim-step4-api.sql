@@ -459,20 +459,20 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
                         'area', ST_Area(geom,true),
                         'jurisd_base_id', jurisd_base_id,
                         'is_multipolygon', CASE WHEN GeometryType(geom) IN ('MULTIPOLYGON') THEN TRUE ELSE FALSE END,
-                        'size_shortestprefix', size_shortestprefix,
+                        -- 'size_shortestprefix', size_shortestprefix,
                         'canonical_pathname', CASE WHEN jurisd_base_id=170 THEN 'CO-'|| jurisd_local_id ELSE isolabel_ext END
                         )
                     )::jsonb)
             )
         )
-    FROM optim.vw01full_jurisdiction_geom g,
+    FROM optim.vw01full_jurisdiction_geom g/*,
 
     LATERAL
     (
       SELECT MIN(LENGTH(kx_prefix)) AS size_shortestprefix
       FROM osmc.coverage
       WHERE isolabel_ext = g.isolabel_ext AND is_overlay IS FALSE
-    ) s
+    ) s*/
 
     WHERE g.isolabel_ext = (SELECT (str_geocodeiso_decode(p_code))[1])
 $f$ LANGUAGE SQL IMMUTABLE;
