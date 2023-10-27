@@ -10,7 +10,7 @@ SELECT optim.load_codec_type();
 SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/jurisdPoint.csv','tmp_orig.jurisdPoints',',');
 
 -- dl.digital-guard: preserv/data/redirs/fromDL_toFileServer.csv
-SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/redirs/fromDL_toFileServer.csv','tmp_orig.redirects_viz',',');
+SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/redirs/fromDL_toFileServer.csv','tmp_orig.redirects_dlguard',',');
 
 -- Data VisualiZation: preserv/data/redirs/fromCutLayer_toVizLayer.csv
 SELECT optim.fdw_generate_direct_csv('/var/gits/_dg/preserv/data/redirs/fromCutLayer_toVizLayer.csv','tmp_orig.redirects_viz',',');
