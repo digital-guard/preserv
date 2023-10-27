@@ -1190,7 +1190,7 @@ FROM
 (
   SELECT id, pack_id, class_ftname, jsonb_agg(jsonb_build_object(
                   'hashedfname', hashedfname,
-                  'hashedfname_url', 'https://dl.digital-guard.org/' || hashedfname,
+                  'hashedfname_url', 'https://dl.digital-guard.org/out/' || hashedfname,
                   'hashedfname_7', hashedfname_7,
                   'hashedfnametype',hashedfnametype,
                   'hashedfname_without_ext', hashedfname_without_ext,
