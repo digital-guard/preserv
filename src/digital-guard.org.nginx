@@ -4,7 +4,7 @@
 
 server {
     server_name digital-guard.org www.digital-guard.org;
-    listen 443 ssl;
+    listen 443 ssl http2;
     include /etc/nginx/ssl.conf;
     root /var/www/digital-guard.org/;
     index index.php index.html index.htm;
@@ -23,7 +23,7 @@ server {
 server {
     server_name dl.digital-guard.org www.dl.digital-guard.org;
     listen 80;
-    listen 443 ssl;
+    listen 443 ssl http2;
     include /etc/nginx/ssl.conf;
     root /var/www/dl.digital-guard.org/;
     index index.php index.html index.htm;
@@ -51,7 +51,7 @@ server {
 
 server {
     server_name git.digital-guard.org www.git.digital-guard.org;
-    listen 443 ssl;
+    listen 443 ssl http2;
     include /etc/nginx/ssl.conf;
 
     location ~ ^/?.+ {
@@ -62,7 +62,7 @@ server {
 
 server {
     server_name lic.digital-guard.org www.lic.digital-guard.org;
-    listen 443 ssl;
+    listen 443 ssl http2;
     include /etc/nginx/ssl.conf;
     root /var/www/lic.digital-guard.org/;
     index  index.php index.html index.htm;
@@ -80,7 +80,7 @@ server {
 
 server {
     server_name docs.digital-guard.org www.docs.digital-guard.org;
-    listen 443 ssl;
+    listen 443 ssl http2;
     include /etc/nginx/ssl.conf;
     access_log /var/log/nginx/docs.digital-guard.org.access_log;
 
@@ -89,7 +89,7 @@ server {
 
 server {
     server_name git-site.digital-guard.org www.git-site.digital-guard.org;
-    listen 443 ssl;
+    listen 443 ssl http2;
     include /etc/nginx/ssl.conf;
 
     location ~ ^/?.+ {
