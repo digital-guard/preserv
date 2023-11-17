@@ -1,5 +1,12 @@
 CREATE SCHEMA IF NOT EXISTS api;
 
+#https://github.com/PostgREST/postgrest/pull/2624
+COMMENT ON SCHEMA "api" IS
+$$AddressForAll API documentation
+
+A RESTful API that serves AddressForAll data.
+$$;
+
 CREATE or replace VIEW api.jurisdiction AS
 SELECT osm_id,
       jurisd_base_id,
@@ -15,6 +22,9 @@ SELECT osm_id,
 FROM optim.jurisdiction
 ORDER BY jurisd_base_id, isolevel, name
 ;
+COMMENT ON VIEW api.jurisdiction
+  IS 'Returns list of jurisdictions from optim schema.'
+;
 --curl "http://localhost:3103/jurisdiction?jurisd_base_id=eq.76&parent_abbrev=eq.CE" -H "Accept: text/csv"
 -- https://osm.codes/_sql.csv/jurisdiction?jurisd_base_id=eq.76&parent_abbrev=eq.CE
 
@@ -23,10 +33,16 @@ ORDER BY jurisd_base_id, isolevel, name
 CREATE or replace VIEW api.donors AS
     SELECT * FROM tmp_orig.donors
 ;
+COMMENT ON VIEW api.donors
+  IS 'Raw data of donor.csv of all jurisdiction.'
+;
 
 -- Union de fdw_donatedpack X fdw_donor de todas as jurisdições
 CREATE or replace VIEW api.donatedpacks_donor AS
     SELECT * FROM tmp_orig.donatedpacks_donor
+;
+COMMENT ON VIEW api.donatedpacks_donor
+  IS 'Joining raw data from donatedPack.csv with donor.csv from all jurisdictions.'
 ;
 
 --tabelão
@@ -83,6 +99,9 @@ LEFT JOIN
 ON substring(to_char(a.packvers_id,'FM00000000000000'),4,8) = to_char(b.pack_id,'FM00000000')
     AND substring(to_char(a.packvers_id,'FM00000000000000'),1,3)::int = (SELECT jurisd_base_id FROM optim.jurisdiction WHERE lower(isolabel_ext)=jurisdiction)
 ;
+COMMENT ON VIEW api.stats_donated_packcomponent
+  IS 'Tabelão.'
+;
 --curl "http://localhost:3103/stats_donated_packcomponent?uri_objtype=like.*email*" -H "Accept: text/csv"
 
 -- Para gráfico donor_status X number of donors
@@ -104,12 +123,18 @@ CREATE or replace VIEW api.stats_donors_prospection AS
     ) r
     ORDER BY donor_status
 ;
+COMMENT ON VIEW api.stats_donors_prospection
+  IS 'For donor_status X number of donors chart.'
+;
 
 -- Para gráfico layers X packages
 CREATE or replace VIEW api.stats_donated_packcomponent_classgrouped AS
     SELECT ftname_class, COUNT(*) AS amount
     FROM api.stats_donated_packcomponent
     GROUP BY ftname_class
+;
+COMMENT ON VIEW api.stats_donated_packcomponent_classgrouped
+  IS 'For layers X packages chart.'
 ;
 
 -- Para gráfico donated packages X date
@@ -128,6 +153,9 @@ CREATE or replace VIEW api.stats_donated_pack_timeline AS
     ) s
     ORDER BY accepted_date
 ;
+COMMENT ON VIEW api.stats_donated_pack_timeline
+  IS 'For donated packages X date chart.'
+;
 
 -- Para tabela de licenças
 CREATE or replace VIEW api.stats_donated_pack_licensegrouped AS
@@ -135,6 +163,9 @@ CREATE or replace VIEW api.stats_donated_pack_licensegrouped AS
     FROM api.stats_donated_packcomponent
     WHERE ftname IN ('geoaddress_full', 'parcel_full')
     GROUP BY license_family, license_is_explicit
+;
+COMMENT ON VIEW api.stats_donated_pack_licensegrouped
+  IS 'Amount of data per license considering layers geoaddress_full and parcel_full on the raw data provided by stats_donated_packcomponent.'
 ;
 
 ---------
@@ -166,6 +197,10 @@ FROM (
     ON s.isolabel_ext = (SELECT a[1]||'-'||a[2] FROM regexp_split_to_array (r.isolabel_ext,'(-)') a)
 ) t
 ;
+COMMENT ON VIEW api.jurisdiction_lexlabel
+  IS 'Jurisdictions in lex format.'
+;
+
 
 CREATE VIEW optim.vwjurisdiction_synonym AS
 SELECT DISTINCT lower(synonym) AS synonym, isolabel_ext
@@ -567,6 +602,9 @@ FROM
 GROUP BY country, quarter
 ORDER BY country, split_part(quarter,' ',2), split_part(quarter,' ',1)
 ;
+COMMENT ON VIEW api.quarter
+  IS 'For amount data X quarter chart.'
+;
 
 CREATE EXTENSION tablefunc;
 
@@ -601,6 +639,9 @@ FROM
     ORDER BY date
     $$
   ) AS t ("country" text, "Q1 2020" bigint, "Q2 2020" bigint,"Q3 2020" bigint,"Q4 2020" bigint,"Q1 2021" bigint,"Q2 2021" bigint,"Q3 2021" bigint,"Q4 2021" bigint,"Q1 2022" bigint,"Q2 2022" bigint,"Q3 2022" bigint,"Q4 2022" bigint,"Q1 2023" bigint,"Q2 2023" bigint,"Q3 2023" bigint)
+;
+COMMENT ON VIEW api.quarter2
+  IS 'For amount data X quarter chart.'
 ;
 
 ----------------------
@@ -731,7 +772,9 @@ CREATE or replace VIEW api.redirects AS
 COMMENT ON VIEW api.redirects
   IS ''
 ;
-
+COMMENT ON VIEW api.redirects
+  IS 'Redirects the DL.digital-guard eternal hyperlink to cloud storage.'
+;
 ----------------------
 
 CREATE or replace FUNCTION api.download_list(
@@ -783,12 +826,17 @@ CREATE or replace VIEW api.metadata_viz AS
 SELECT *
 FROM optim.vw03_metadata_viz
 ;
-
+COMMENT ON VIEW api.metadata_viz
+  IS 'Redirects the viz canonical  hyperlink to external provider.'
+;
 ----------------------
 
 CREATE or replace VIEW api.licenses AS
 SELECT *
 FROM license.licenses_implieds
+;
+COMMENT ON VIEW api.licenses
+  IS 'Merge implicit and explicit licenses.'
 ;
 
 CREATE or replace FUNCTION api.plicenses(
@@ -821,7 +869,7 @@ CREATE or replace FUNCTION api.plicenses(
   ) r
 $f$ LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION api.plicenses(text)
-  IS '.'
+  IS 'Get license info.'
 ;
 /*
 SELECT api.plicenses();
@@ -837,4 +885,6 @@ CREATE or replace VIEW api.full_packfilevers AS
 SELECT *
 FROM optim.vw01full_packfilevers
 ;
-
+COMMENT ON VIEW api.full_packfilevers
+  IS 'Get the latest version of donated packages. Join between donated_packfilevers, donated_PackTpl, jurisdiction, auth_user and licenses_implieds.'
+;

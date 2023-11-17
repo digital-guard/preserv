@@ -612,7 +612,7 @@ CREATE or replace VIEW optim.vw01full_packfilevers AS
   ORDER BY pt.isolabel_ext, pt.local_serial, pt.pk_count
 ;
 COMMENT ON VIEW optim.vw01full_packfilevers
-  IS 'Join donated_packfilevers with donated_PackTpl, donor and vw01full_jurisdiction_geom.'
+  IS 'Join donated_packfilevers with donated_PackTpl and auth_user.'
 ;
 
 CREATE or replace VIEW optim.vw01full_packfilevers_ftype AS
