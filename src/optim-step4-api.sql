@@ -1,11 +1,17 @@
 CREATE SCHEMA IF NOT EXISTS api;
 
-#https://github.com/PostgREST/postgrest/pull/2624
+-- https://github.com/PostgREST/postgrest/pull/2624
 COMMENT ON SCHEMA "api" IS
 $$AddressForAll API documentation
 
 A RESTful API that serves AddressForAll data.
 $$;
+
+CREATE ROLE webanon nologin;
+-- https://www.postgresql.org/docs/current/predefined-roles.html
+GRANT pg_read_all_data TO webanon;
+
+------------------
 
 CREATE or replace VIEW api.jurisdiction AS
 SELECT osm_id,
