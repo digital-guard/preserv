@@ -28,6 +28,18 @@ SELECT osm_id,
 FROM optim.jurisdiction
 ORDER BY jurisd_base_id, isolevel, name
 ;
+COMMENT ON COLUMN api.jurisdiction.osm_id          IS 'Relation identifier in OpenStreetMap.';
+COMMENT ON COLUMN api.jurisdiction.jurisd_base_id  IS 'ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans).';
+COMMENT ON COLUMN api.jurisdiction.jurisd_local_id IS 'NaturalEarthData country gid.';
+COMMENT ON COLUMN api.jurisdiction.name            IS 'Name of jurisdiction';
+COMMENT ON COLUMN api.jurisdiction.parent_abbrev   IS 'Abbreviation of parent name.';
+COMMENT ON COLUMN api.jurisdiction.abbrev          IS 'Name abbreviation.';
+COMMENT ON COLUMN api.jurisdiction.wikidata_id     IS 'wikidata identifier without Q prefix.';
+COMMENT ON COLUMN api.jurisdiction.lexlabel        IS 'Cache from name; e.g. sao.paulo.';
+COMMENT ON COLUMN api.jurisdiction.isolabel_ext    IS 'Cache from parent_abbrev (ISO) and name (camel case); e.g. BR-SP-SaoPaulo.';
+COMMENT ON COLUMN api.jurisdiction.ddd             IS 'Direct distance dialing.';
+COMMENT ON COLUMN api.jurisdiction.info            IS 'Others information.';
+
 COMMENT ON VIEW api.jurisdiction
   IS 'Returns list of jurisdictions from optim schema.'
 ;
@@ -39,6 +51,16 @@ COMMENT ON VIEW api.jurisdiction
 CREATE or replace VIEW api.donors AS
     SELECT * FROM tmp_orig.donors
 ;
+COMMENT ON COLUMN api.donors.jurisdiction IS 'ISO3166-1 country id (e.g. Brazil is BR)';
+COMMENT ON COLUMN api.donors.local_id     IS 'Donor serial identifier';
+COMMENT ON COLUMN api.donors.scope_label  IS 'OSM convention for admin_level tag in country.';
+COMMENT ON COLUMN api.donors.vat_id       IS 'in the Brazilian case is CNPJ number.';
+COMMENT ON COLUMN api.donors."legalName"    IS 'in the Brazilian case is Razao Social.';
+COMMENT ON COLUMN api.donors.wikidata_id  IS 'wikidata identifier without Q prefix.';
+COMMENT ON COLUMN api.donors.url          IS 'Official home page of the organization.';
+COMMENT ON COLUMN api.donors.donor_date   IS 'Date of inclusion of the donor.';
+COMMENT ON COLUMN api.donors.donor_status IS '-1: unknown, 0: Donors contacted, 1: Donors interested in collaborating, 2: Donated pack received, 3: Donated pack published.';
+
 COMMENT ON VIEW api.donors
   IS 'Raw data of donor.csv of all jurisdiction.'
 ;
@@ -129,6 +151,11 @@ CREATE or replace VIEW api.stats_donors_prospection AS
     ) r
     ORDER BY donor_status
 ;
+COMMENT ON COLUMN api.stats_donors_prospection.donor_status       IS '-1: unknown, 0: Donors contacted, 1: Donors interested in collaborating, 2: Donated pack received, 3: Donated pack published.';
+COMMENT ON COLUMN api.stats_donors_prospection.label              IS 'Label for donor_status.';
+COMMENT ON COLUMN api.stats_donors_prospection.amount             IS 'Number of donors by donor_status.';
+COMMENT ON COLUMN api.stats_donors_prospection.accumulated_amount IS 'Accumulated number of donors less or equal than donor_status.';
+
 COMMENT ON VIEW api.stats_donors_prospection
   IS 'For donor_status X number of donors chart.'
 ;
@@ -139,6 +166,9 @@ CREATE or replace VIEW api.stats_donated_packcomponent_classgrouped AS
     FROM api.stats_donated_packcomponent
     GROUP BY ftname_class
 ;
+COMMENT ON COLUMN api.stats_donated_packcomponent_classgrouped.ftname_class IS 'Feature class type name.';
+COMMENT ON COLUMN api.stats_donated_packcomponent_classgrouped.amount       IS 'Amount of packages in the feature class.';
+
 COMMENT ON VIEW api.stats_donated_packcomponent_classgrouped
   IS 'For layers X packages chart.'
 ;
@@ -159,6 +189,9 @@ CREATE or replace VIEW api.stats_donated_pack_timeline AS
     ) s
     ORDER BY accepted_date
 ;
+COMMENT ON COLUMN api.stats_donated_pack_timeline.accepted_date      IS 'Date the package was accepted.';
+COMMENT ON COLUMN api.stats_donated_pack_timeline.accumulated_amount IS 'Accumulated number of packages to date.';
+
 COMMENT ON VIEW api.stats_donated_pack_timeline
   IS 'For donated packages X date chart.'
 ;
@@ -170,6 +203,11 @@ CREATE or replace VIEW api.stats_donated_pack_licensegrouped AS
     WHERE ftname IN ('geoaddress_full', 'parcel_full')
     GROUP BY license_family, license_is_explicit
 ;
+COMMENT ON COLUMN api.stats_donated_pack_licensegrouped.license_family      IS 'License family.';
+COMMENT ON COLUMN api.stats_donated_pack_licensegrouped.license_is_explicit IS 'Flag, indicates whether the license was explicitly informed.';
+COMMENT ON COLUMN api.stats_donated_pack_licensegrouped.donor_amount        IS 'Number of donors who donated data with the license family.';
+COMMENT ON COLUMN api.stats_donated_pack_licensegrouped.data_amount         IS 'Amount of data with the license family.';
+
 COMMENT ON VIEW api.stats_donated_pack_licensegrouped
   IS 'Amount of data per license considering layers geoaddress_full and parcel_full on the raw data provided by stats_donated_packcomponent.'
 ;
@@ -203,10 +241,14 @@ FROM (
     ON s.isolabel_ext = (SELECT a[1]||'-'||a[2] FROM regexp_split_to_array (r.isolabel_ext,'(-)') a)
 ) t
 ;
+COMMENT ON COLUMN api.jurisdiction_lexlabel.isolabel_ext           IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
+COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel1        IS 'isolabel_ext in lex format, e.g. br;sao.paulo;sao.paulo.';
+COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel2        IS 'isolabel_ext in lex format, e.g. br;sp;sao.paulo.';
+COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel2_abbrev IS 'isolabel_ext in lex format, e.g. br;sp;spa.';
+
 COMMENT ON VIEW api.jurisdiction_lexlabel
   IS 'Jurisdictions in lex format.'
 ;
-
 
 CREATE VIEW optim.vwjurisdiction_synonym AS
 SELECT DISTINCT lower(synonym) AS synonym, isolabel_ext
@@ -332,6 +374,9 @@ FROM
 ) z
 ;
 -- CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON optim.vwjurisdiction_synonym (synonym);
+COMMENT ON COLUMN optim.vwjurisdiction_synonym.synonym      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
+COMMENT ON COLUMN optim.vwjurisdiction_synonym.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
+
 COMMENT ON VIEW optim.vwjurisdiction_synonym
  IS 'Synonymous names of jurisdictions.'
 ;
@@ -363,6 +408,9 @@ FROM
   )
 ) z
 ;
+COMMENT ON COLUMN mvwjurisdiction_synonym.synonym      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
+COMMENT ON COLUMN mvwjurisdiction_synonym.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
+
 COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
  IS 'Synonymous names of jurisdictions.'
 ;
@@ -608,6 +656,10 @@ FROM
 GROUP BY country, quarter
 ORDER BY country, split_part(quarter,' ',2), split_part(quarter,' ',1)
 ;
+COMMENT ON COLUMN api.quarter.country  IS 'ISO country; e.g. BR.';
+COMMENT ON COLUMN api.quarter.quarter  IS 'Quarter of the year.';
+COMMENT ON COLUMN api.quarter.n        IS 'Amount of data accumulated up to the quarter of the year.';
+
 COMMENT ON VIEW api.quarter
   IS 'For amount data X quarter chart.'
 ;
@@ -679,6 +731,20 @@ CREATE or replace VIEW api.pkindown AS
   GROUP BY isolabel_ext, legalname, pack_number
   ORDER BY 1, 2, 3
 ;
+COMMENT ON COLUMN api.pkindown.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
+COMMENT ON COLUMN api.pkindown.legalname    IS 'in the Brazilian case is Razao Social.';
+COMMENT ON COLUMN api.pkindown.pack_number  IS 'Package number in the format dddd.dd.';
+COMMENT ON COLUMN api.pkindown.description  IS 'Package description.';
+COMMENT ON COLUMN api.pkindown.geoaddress   IS 'Number of features in the layer. Null means that layer does not exist in the package.';
+COMMENT ON COLUMN api.pkindown.parcel       IS 'Number of features in the layer. Null means that layer does not exist in the package.';
+COMMENT ON COLUMN api.pkindown.via          IS 'Number of features in the layer. Null means that layer does not exist in the package.';
+COMMENT ON COLUMN api.pkindown.building     IS 'Number of features in the layer. Null means that layer does not exist in the package.';
+COMMENT ON COLUMN api.pkindown.block        IS 'Number of features in the layer. Null means that layer does not exist in the package.';
+COMMENT ON COLUMN api.pkindown.nsvia        IS 'Number of features in the layer. Null means that layer does not exist in the package.';
+COMMENT ON COLUMN api.pkindown.genericvia   IS 'Number of features in the layer. Null means that layer does not exist in the package.';
+COMMENT ON COLUMN api.pkindown.license      IS 'Package license.';
+COMMENT ON COLUMN api.pkindown.url          IS 'Hyperlink to package page in the git repository.';
+
 COMMENT ON VIEW api.pkindown
   IS 'Returns some information about packages listed on the https://addressforall.org/downloads website.'
 ;
@@ -775,9 +841,9 @@ CREATE or replace VIEW api.redirects AS
     SELECT hashedfname, hashedfnameuri
     FROM optim.donated_PackComponent_cloudControl
 ;
-COMMENT ON VIEW api.redirects
-  IS ''
-;
+COMMENT ON COLUMN api.redirects.fhash IS 'sha256.ext of file.';
+COMMENT ON COLUMN api.redirects.furi  IS 'hashedfname file cloud link.';
+
 COMMENT ON VIEW api.redirects
   IS 'Redirects the DL.digital-guard eternal hyperlink to cloud storage.'
 ;
@@ -901,10 +967,6 @@ CREATE or replace VIEW api.consolidated_data AS
 SELECT  isolabel_ext, via_name, house_number, postcode, license_family, latitude, longitude, afa_id, afacodes_scientific, geom_frontparcel, score
 FROM optim.consolidated_data
 ;
-COMMENT ON VIEW api.consolidated_data
-  IS 'Returns consolidated data.'
-;
-
 COMMENT ON COLUMN api.consolidated_data.isolabel_ext     IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
 COMMENT ON COLUMN api.consolidated_data.via_name         IS 'Via name.';
 COMMENT ON COLUMN api.consolidated_data.house_number     IS 'House number.';
@@ -916,3 +978,7 @@ COMMENT ON COLUMN api.consolidated_data.afa_id              IS 'AFAcodes scienti
 COMMENT ON COLUMN api.consolidated_data.afacodes_scientific IS 'AFAcodes scientific.';
 COMMENT ON COLUMN api.consolidated_data.geom_frontparcel IS 'Flag. Indicates if geometry is in front of the parcel.';
 COMMENT ON COLUMN api.consolidated_data.score            IS '...';
+
+COMMENT ON VIEW api.consolidated_data
+  IS 'Returns consolidated data.'
+;
