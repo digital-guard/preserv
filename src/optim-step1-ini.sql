@@ -45,8 +45,8 @@ COMMENT ON COLUMN optim.jurisdiction.iso_country_id          IS 'Numeric officia
 COMMENT ON COLUMN optim.jurisdiction.parent_id               IS 'osm_id of top admin_level.';
 COMMENT ON COLUMN optim.jurisdiction.admin_level             IS 'OSM convention for admin_level tag in country.';
 COMMENT ON COLUMN optim.jurisdiction.name                    IS 'Name of jurisdiction';
---COMMENT ON COLUMN optim.jurisdiction.parent_abbrev           IS '';
---COMMENT ON COLUMN optim.jurisdiction.abbrev                  IS '';
+COMMENT ON COLUMN optim.jurisdiction.parent_abbrev           IS 'Abbreviation of parent name.';
+COMMENT ON COLUMN optim.jurisdiction.abbrev                  IS 'Name abbreviation.';
 COMMENT ON COLUMN optim.jurisdiction.wikidata_id             IS 'wikidata identifier without Q prefix.';
 COMMENT ON COLUMN optim.jurisdiction.lexlabel                IS 'Cache from name; e.g. sao.paulo.';
 COMMENT ON COLUMN optim.jurisdiction.isolabel_ext            IS 'Cache from parent_abbrev (ISO) and name (camel case); e.g. BR-SP-SaoPaulo.';
