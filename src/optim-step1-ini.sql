@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   info            JSONb,                -- creation, extinction, postalCode_ranges, notes, etc.
   name_en         text,
   isolevel        integer,
-  ne_country_id   int      NOT NULL,    -- NaturalEarthData country gid.
+  ne_country_id   int      NOT NULL     -- NaturalEarthData country gid.
                                         -- https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_0_countries.zip
   ,UNIQUE(isolabel_ext)
   ,UNIQUE(wikidata_id)
