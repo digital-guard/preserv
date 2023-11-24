@@ -12,25 +12,26 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   -- need a view vw01current_jurisdiction to avoid the lost of non-current.
   -- https://schema.org/AdministrativeArea or https://schema.org/jurisdiction ?
   -- OSM use AdminLevel, etc. but LexML uses Jurisdiction.
-  osm_id bigint PRIMARY KEY,    -- official or adapted geometry. AdministrativeArea.
-  jurisd_base_id int NOT NULL,  -- ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans)
-  jurisd_local_id int   NOT NULL, -- numeric official ID like IBGE_ID of BR jurisdiction.
-  iso_country_id int   NOT NULL, -- numeric official ID like IBGE_ID of BR jurisdiction.
-  -- for example BR's ACRE is 12 and its cities are {1200013, 1200054,etc}.
-  parent_id bigint REFERENCES optim.jurisdiction(osm_id), -- null for INT.
-  admin_level smallint NOT NULL CHECK(admin_level>0 AND admin_level<100), -- 2=country (e.g. BR), at BR: 4=UFs, 8=municipios.
-  name    text  NOT NULL CHECK(length(name)<60), -- city name for admin_level=8.
-  parent_abbrev   text  NOT NULL, -- state is admin-level2, country level1
-  abbrev text,  --CHECK(length(abbrev)>=2 AND length(abbrev)<=5), -- ISO and other abbreviations
-  wikidata_id  bigint,  --  from '^Q\d+'
-  lexlabel     text NOT NULL,  -- cache from name; e.g. 'sao.paulo'.
-  isolabel_ext text NOT NULL,  -- cache from parent_abbrev (ISO) and name (camel case); e.g. 'BR-SP-SaoPaulo'.
-  ddd          integer, -- Direct distance dialing
-  housenumber_system_type text, -- housenumber system
-  lex_urn text, -- housenumber system law
-  info JSONb, -- creation, extinction, postalCode_ranges, notes, etc.
-  name_en text,
-  isolevel integer
+  osm_id          bigint   PRIMARY KEY, -- official or adapted geometry. AdministrativeArea.
+  jurisd_base_id  int      NOT NULL,    -- ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans)
+  jurisd_local_id int      NOT NULL,    -- numeric official ID like IBGE_ID of BR jurisdiction.
+                                        -- for example BR's ACRE is 12 and its cities are {1200013, 1200054,etc}.
+  parent_id       bigint   REFERENCES optim.jurisdiction(osm_id),             -- null for INT.
+  admin_level     smallint NOT NULL CHECK(admin_level>0 AND admin_level<100), -- 2=country (e.g. BR), at BR: 4=UFs, 8=municipios.
+  name            text     NOT NULL CHECK(length(name)<60),                   -- city name for admin_level=8.
+  parent_abbrev   text     NOT NULL,    -- state is admin-level2, country level1
+  abbrev          text,                 -- CHECK(length(abbrev)>=2 AND length(abbrev)<=5), -- ISO and other abbreviations
+  wikidata_id     bigint,               -- from '^Q\d+'
+  lexlabel        text     NOT NULL,    -- cache from name; e.g. 'sao.paulo'.
+  isolabel_ext    text     NOT NULL,    -- cache from parent_abbrev (ISO) and name (camel case); e.g. 'BR-SP-SaoPaulo'.
+  ddd             integer,              -- Direct distance dialing
+  housenumber_system_type text,         -- housenumber system
+  lex_urn         text,                 -- housenumber system law
+  info            JSONb,                -- creation, extinction, postalCode_ranges, notes, etc.
+  name_en         text,
+  isolevel        integer,
+  ne_country_id   int      NOT NULL,    -- NaturalEarthData country gid.
+                                        -- https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_0_countries.zip
   ,UNIQUE(isolabel_ext)
   ,UNIQUE(wikidata_id)
   ,UNIQUE(jurisd_base_id,jurisd_local_id)
@@ -40,8 +41,7 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
 );
 COMMENT ON COLUMN optim.jurisdiction.osm_id                  IS 'Relation identifier in OpenStreetMap.';
 COMMENT ON COLUMN optim.jurisdiction.jurisd_base_id          IS 'ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans).';
-COMMENT ON COLUMN optim.jurisdiction.jurisd_local_id         IS 'NaturalEarthData country gid.';
-COMMENT ON COLUMN optim.jurisdiction.iso_country_id          IS 'Numeric official ID like IBGE_ID of BR jurisdiction. For example ACRE is 12 and its cities are {1200013, 1200054,etc}.';
+COMMENT ON COLUMN optim.jurisdiction.jurisd_local_id         IS 'Numeric official ID like IBGE_ID of BR jurisdiction. For example ACRE is 12 and its cities are {1200013, 1200054,etc}.';
 COMMENT ON COLUMN optim.jurisdiction.parent_id               IS 'osm_id of top admin_level.';
 COMMENT ON COLUMN optim.jurisdiction.admin_level             IS 'OSM convention for admin_level tag in country.';
 COMMENT ON COLUMN optim.jurisdiction.name                    IS 'Name of jurisdiction';
@@ -56,6 +56,7 @@ COMMENT ON COLUMN optim.jurisdiction.lex_urn                 IS 'Housenumber sys
 COMMENT ON COLUMN optim.jurisdiction.info                    IS 'Others information.';
 COMMENT ON COLUMN optim.jurisdiction.name_en                 IS 'City name in english.';
 COMMENT ON COLUMN optim.jurisdiction.isolevel                IS '1=country, 2=state, 3=mun';
+COMMENT ON COLUMN optim.jurisdiction.ne_country_id           IS 'NaturalEarthData country gid.';
 
 COMMENT ON TABLE optim.jurisdiction IS 'Information about jurisdictions without geometry.';
 
