@@ -1413,35 +1413,19 @@ COMMENT ON VIEW optim.jurisdiction_lexlabel
 ;
 
 CREATE VIEW optim.vwjurisdiction_synonym AS
-SELECT DISTINCT lower(synonym) AS synonym, isolabel_ext
+SELECT DISTINCT synonym, isolabel_ext
 FROM
 (
   (
-    -- identidade
-    SELECT isolabel_ext AS synonym, isolabel_ext AS isolabel_ext
-    FROM optim.jurisdiction
-    WHERE isolevel > 1 AND osm_id NOT IN (SELECT parent_id FROM optim.jurisdiction WHERE (info->'is_capital_isolevel')::int = 1)
-  )
-  UNION ALL
-  (
-    -- não deve retornar abbrev repetidos
-    SELECT abbrev, MAX(isolabel_ext)
-    FROM optim.jurisdiction_abbrev_option
-    WHERE selected IS TRUE
-    GROUP BY abbrev
-    HAVING count(*) = 1
-  )
-  UNION ALL
-  (
     -- CO state abbrev, mun abbrev.
     -- e.g.: CO-A-IGI
-    SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| split_part(abbrev,'-',3), MAX(isolabel_ext)
+    SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| split_part(abbrev,'-',3) AS synonym, MAX(isolabel_ext) AS isolabel_ext
     FROM
     (
         -- não deve retornar abbrev repetidos
         SELECT abbrev, MAX(isolabel_ext) AS isolabel_ext
         FROM optim.jurisdiction_abbrev_option
-        WHERE selected IS TRUE
+        WHERE selected IS TRUE AND isolabel_ext LIKE 'CO-%-%'
         GROUP BY abbrev
         HAVING count(*) = 1
     ) j

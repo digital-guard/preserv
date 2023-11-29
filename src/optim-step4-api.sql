@@ -230,7 +230,29 @@ COMMENT ON VIEW api.jurisdiction_lexlabel
 DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym;
 CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
 SELECT DISTINCT synonym, isolabel_ext
-FROM optim.vwjurisdiction_synonym
+FROM
+(
+  (
+    -- identidade
+    SELECT lower(isolabel_ext) AS synonym, isolabel_ext AS isolabel_ext
+    FROM optim.jurisdiction
+    WHERE isolevel > 1 AND osm_id NOT IN (SELECT parent_id FROM optim.jurisdiction WHERE (info->'is_capital_isolevel')::int = 1)
+  )
+  UNION ALL
+  (
+    -- não deve retornar abbrev repetidos
+    SELECT lower(abbrev), MAX(isolabel_ext)
+    FROM optim.jurisdiction_abbrev_option
+    WHERE selected IS TRUE
+    GROUP BY abbrev
+    HAVING count(*) = 1
+  )
+  UNION ALL
+  (
+    SELECT lower(synonym), isolabel_ext
+    FROM optim.vwjurisdiction_synonym
+  )
+) z
 ;
 COMMENT ON COLUMN mvwjurisdiction_synonym.synonym      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
 COMMENT ON COLUMN mvwjurisdiction_synonym.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
