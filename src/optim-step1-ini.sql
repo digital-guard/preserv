@@ -185,6 +185,7 @@ CREATE TABLE optim.jurisdiction_abbrev_option (
  isolabel_ext text NOT NULL,
  abbrev text NOT NULL,
  insert_date date NOT NULL default now(),
+ default_abbrev boolean NOT NULL DEFAULT false,
  PRIMARY KEY (abbrevref_id,isolabel_ext,insert_date)
 );
 
@@ -192,10 +193,10 @@ COMMENT ON COLUMN optim.jurisdiction_abbrev_option.selected     IS 'Standard jur
 COMMENT ON COLUMN optim.jurisdiction_abbrev_option.abbrevref_id IS 'optim.jurisdiction_abbrev_ref primary key referencek.';
 COMMENT ON COLUMN optim.jurisdiction_abbrev_option.isolabel_ext IS 'ISO and name (camel case), e.g. BR-SP-SaoPaulo.';
 COMMENT ON COLUMN optim.jurisdiction_abbrev_option.abbrev       IS 'Abbreviation.';
+COMMENT ON COLUMN optim.jurisdiction_abbrev_option.default_abbrev IS 'Abbreviation.';
 COMMENT ON COLUMN optim.jurisdiction_abbrev_option.insert_date  IS 'Date the abbreviation was added.';
 
 COMMENT ON TABLE optim.jurisdiction_abbrev_option IS 'Stores abbreviations for a jurisdiction.';
-
 
 CREATE TABLE optim.auth_user (
   username text NOT NULL PRIMARY KEY,
@@ -1412,6 +1413,7 @@ COMMENT ON VIEW optim.jurisdiction_lexlabel
   IS 'Jurisdictions in lex format.'
 ;
 
+--DROP VIEW optim.vwjurisdiction_synonym CASCADE;
 CREATE VIEW optim.vwjurisdiction_synonym AS
 SELECT DISTINCT synonym, isolabel_ext
 FROM
@@ -1533,6 +1535,16 @@ FROM
     FROM optim.jurisdiction j
     WHERE (info->'is_capital_isolevel')::int = 1 AND isolevel::int = 3
   )
+  -- UNION ALL
+  -- (
+  --   -- CM-abbrev (municipios)
+  --   SELECT 'CM-' || abbrev, MAX(isolabel_ext)
+  --   FROM optim.jurisdiction
+  --   WHERE isolabel_ext LIKE 'CM-%-%'
+  --   GROUP BY 1
+  --   HAVING count(*)=1
+  --   ORDER BY 1
+  -- )
 ) z
 ;
 -- CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON optim.vwjurisdiction_synonym (synonym);
@@ -1542,7 +1554,6 @@ COMMENT ON COLUMN optim.vwjurisdiction_synonym.isolabel_ext IS 'ISO and name (ca
 COMMENT ON VIEW optim.vwjurisdiction_synonym
  IS 'Synonymous names of jurisdictions.'
 ;
-
 
 CREATE or replace FUNCTION optim.generate_synonym_csv(
   p_isolabel_ext text,
