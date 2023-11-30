@@ -186,15 +186,15 @@ CREATE TABLE optim.jurisdiction_abbrev_option (
  abbrev text NOT NULL,
  insert_date date NOT NULL default now(),
  default_abbrev boolean NOT NULL DEFAULT false,
- PRIMARY KEY (abbrevref_id,isolabel_ext,insert_date)
+ PRIMARY KEY (abbrevref_id,isolabel_ext,abbrev)
 );
 
-COMMENT ON COLUMN optim.jurisdiction_abbrev_option.selected     IS 'Standard jurisdiction abbreviation.';
-COMMENT ON COLUMN optim.jurisdiction_abbrev_option.abbrevref_id IS 'optim.jurisdiction_abbrev_ref primary key referencek.';
-COMMENT ON COLUMN optim.jurisdiction_abbrev_option.isolabel_ext IS 'ISO and name (camel case), e.g. BR-SP-SaoPaulo.';
-COMMENT ON COLUMN optim.jurisdiction_abbrev_option.abbrev       IS 'Abbreviation.';
+COMMENT ON COLUMN optim.jurisdiction_abbrev_option.selected       IS 'Standard jurisdiction abbreviation.';
+COMMENT ON COLUMN optim.jurisdiction_abbrev_option.abbrevref_id   IS 'optim.jurisdiction_abbrev_ref primary key referencek.';
+COMMENT ON COLUMN optim.jurisdiction_abbrev_option.isolabel_ext   IS 'ISO and name (camel case), e.g. BR-SP-SaoPaulo.';
+COMMENT ON COLUMN optim.jurisdiction_abbrev_option.abbrev         IS 'Abbreviation.';
 COMMENT ON COLUMN optim.jurisdiction_abbrev_option.default_abbrev IS 'Abbreviation.';
-COMMENT ON COLUMN optim.jurisdiction_abbrev_option.insert_date  IS 'Date the abbreviation was added.';
+COMMENT ON COLUMN optim.jurisdiction_abbrev_option.insert_date    IS 'Date the abbreviation was added.';
 
 COMMENT ON TABLE optim.jurisdiction_abbrev_option IS 'Stores abbreviations for a jurisdiction.';
 
@@ -1547,7 +1547,6 @@ FROM
   -- )
 ) z
 ;
--- CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON optim.vwjurisdiction_synonym (synonym);
 COMMENT ON COLUMN optim.vwjurisdiction_synonym.synonym      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
 COMMENT ON COLUMN optim.vwjurisdiction_synonym.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
 
@@ -1583,37 +1582,6 @@ COMMENT ON FUNCTION optim.generate_synonym_csv(text,text)
 SELECT optim.generate_synonym_csv('BR','/tmp/pg_io/synonymbr.csv');
 SELECT optim.generate_synonym_csv('CO','/tmp/pg_io/synonymco.csv');
 SELECT optim.generate_synonym_csv('UY','/tmp/pg_io/synonymuy.csv');
-*/
-
-CREATE or replace FUNCTION optim.generate_synonym_a4a_csv(
-  p_isolabel_ext text,
-  p_path text
-) RETURNS text AS $f$
-DECLARE
-    q_copy text;
-BEGIN
-  q_copy := $$
-    COPY (
-      -- SELECT true, 5, isolabel_ext, synonym, '2022-01-01'
-      SELECT isolabel_ext, synonym
-      FROM optim.vwjurisdiction_synonym
-      WHERE isolabel_ext %s
-      ORDER BY isolabel_ext
-    ) TO '%s' CSV HEADER
-  $$;
-
-  EXECUTE format(q_copy,'LIKE ''' || p_isolabel_ext || '%''',p_path);
-
-  RETURN 'Ok.';
-END
-$f$ LANGUAGE PLpgSQL;
-COMMENT ON FUNCTION optim.generate_synonym_a4a_csv(text,text)
-  IS 'Generate csv with isolevel=3 coverage and overlay in separate array.'
-;
-/*
-SELECT optim.generate_synonym_a4a_csv('BR','/tmp/pg_io/synonym_a4abr.csv');
-SELECT optim.generate_synonym_a4a_csv('CO','/tmp/pg_io/synonym_a4aco.csv');
-SELECT optim.generate_synonym_a4a_csv('UY','/tmp/pg_io/synonym_a4auy.csv');
 */
 
 CREATE or replace FUNCTION optim.generate_synonym_ref_csv(
