@@ -1336,10 +1336,12 @@ COMMENT ON FUNCTION download.insert_dldg_csv
 -- SELECT download.insert_dldg_csv();
 
 ----------------------
-
-CREATE TABLE IF NOT EXISTS optim.consolidated_data (
+CREATE TABLE IF NOT EXISTS optim.consolidated_data_pre (
   isolabel_ext        text,
-  -- isocountry          text,
+  iso1                text,
+  iso2                text,
+  city_name           text,
+  via_type            text,
   via_name            text,
   house_number        text,
   postcode            text,
@@ -1356,22 +1358,47 @@ CREATE TABLE IF NOT EXISTS optim.consolidated_data (
   geom                geometry(Geometry,4326)
 );
 
-COMMENT ON COLUMN optim.consolidated_data.isolabel_ext     IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
--- COMMENT ON COLUMN optim.consolidated_data.isocountry    IS '';
-COMMENT ON COLUMN optim.consolidated_data.via_name         IS 'Via name.';
-COMMENT ON COLUMN optim.consolidated_data.house_number     IS 'House number.';
-COMMENT ON COLUMN optim.consolidated_data.postcode         IS 'Postal code.';
-COMMENT ON COLUMN optim.consolidated_data.license_family   IS 'License family.';
-COMMENT ON COLUMN optim.consolidated_data.latitude         IS 'Feature latitude.';
-COMMENT ON COLUMN optim.consolidated_data.longitude        IS 'Feature longitude.';
+CREATE TABLE IF NOT EXISTS optim.consolidated_data (
+  isolabel_ext        text,
+  iso1                text,
+  iso2                text,
+  city_name           text,
+  via_type            text,
+  via_name            text,
+  house_number        text,
+  postcode            text,
+  license_family      text,
+  latitude            float,
+  longitude           float,
+  afa_id              text,
+  afacodes_scientific text,
+  afacodes_logistic   text,
+  geom_frontparcel    boolean,
+  score               text,
+  packvers_id         bigint   NOT NULL REFERENCES optim.donated_PackFileVers(id),
+  ftid                smallint NOT NULL REFERENCES optim.feature_type(ftid),
+  geom                geometry(Geometry,4326)
+);
+
+COMMENT ON COLUMN optim.consolidated_data.isolabel_ext        IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
+COMMENT ON COLUMN optim.consolidated_data.iso1                IS 'ISO 3166-1 country code.';
+COMMENT ON COLUMN optim.consolidated_data.iso2                IS 'ISO 3166-2 country subdivision code.';
+COMMENT ON COLUMN optim.consolidated_data.city_name           IS 'City name';
+COMMENT ON COLUMN optim.consolidated_data.via_type            IS 'Via type.';
+COMMENT ON COLUMN optim.consolidated_data.via_name            IS 'Via name.';
+COMMENT ON COLUMN optim.consolidated_data.house_number        IS 'House number.';
+COMMENT ON COLUMN optim.consolidated_data.postcode            IS 'Postal code.';
+COMMENT ON COLUMN optim.consolidated_data.license_family      IS 'License family.';
+COMMENT ON COLUMN optim.consolidated_data.latitude            IS 'Feature latitude.';
+COMMENT ON COLUMN optim.consolidated_data.longitude           IS 'Feature longitude.';
 COMMENT ON COLUMN optim.consolidated_data.afa_id              IS 'AFAcodes scientific. 64bits format.';
 COMMENT ON COLUMN optim.consolidated_data.afacodes_scientific IS 'AFAcodes scientific.';
 COMMENT ON COLUMN optim.consolidated_data.afacodes_logistic   IS 'AFAcodes logistic.';
-COMMENT ON COLUMN optim.consolidated_data.geom_frontparcel IS 'Flag. Indicates if geometry is in front of the parcel.';
-COMMENT ON COLUMN optim.consolidated_data.score            IS '...';
-COMMENT ON COLUMN optim.consolidated_data.packvers_id      IS 'Donated_PackFileVers identifier.';
-COMMENT ON COLUMN optim.consolidated_data.ftid             IS 'Feature type identifier.';
-COMMENT ON COLUMN optim.consolidated_data.geom             IS 'Feature geometry.';
+COMMENT ON COLUMN optim.consolidated_data.geom_frontparcel    IS 'Flag. Indicates if geometry is in front of the parcel.';
+COMMENT ON COLUMN optim.consolidated_data.score               IS '...';
+COMMENT ON COLUMN optim.consolidated_data.packvers_id         IS 'Donated_PackFileVers identifier.';
+COMMENT ON COLUMN optim.consolidated_data.ftid                IS 'Feature type identifier.';
+COMMENT ON COLUMN optim.consolidated_data.geom                IS 'Feature geometry.';
 
 COMMENT ON TABLE  optim.consolidated_data IS 'Consolidated data.';
 

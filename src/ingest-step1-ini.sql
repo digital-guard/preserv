@@ -410,7 +410,7 @@ COMMENT ON VIEW ingest.vw02simple_feature_asis
 
 --DROP VIEW IF EXISTS ingest.vw03full_layer_file CASCADE;
 CREATE VIEW ingest.vw03full_layer_file AS
-  SELECT pf.isolabel_ext, pf.scope_label, pf.pack_id, pc.*, ft.ftname, ft.geomtype, pf.housenumber_system_type, ft.need_join, ft.description, ft.info AS ft_info, pf.license_data AS license_data
+  SELECT pf.isolabel_ext, pf.scope_label, pf.pack_id, pf.name, pc.*, ft.ftname, ft.geomtype, pf.housenumber_system_type, ft.need_join, ft.description, ft.info AS ft_info, pf.license_data AS license_data
   FROM ingest.donated_PackComponent pc
   INNER JOIN ingest.fdw_feature_type ft
     ON pc.ftid=ft.ftid
@@ -484,12 +484,21 @@ COMMENT ON VIEW ingest.vwreport_geometries_discarded
 
 DROP VIEW ingest.vwconsolidated_data;
 CREATE VIEW ingest.vwconsolidated_data AS
-SELECT isolabel_ext, /*split_part(isolabel_ext,'-',1) AS isocountry, */via_name, house_number, postcode, license_family, ST_X(geom) AS latitude, ST_Y(geom) AS longitude, null AS afa_id, null AS afacodes_scientific, null AS afacodes_logistic,
+SELECT isolabel_ext,
+       split_part(isolabel_ext,'-',1) AS iso1,
+       split_part(isolabel_ext,'-',2) AS iso2,
+       city_name,
+       null AS via_type,
+       via_name,
+       house_number,
+       postcode, license_family,
+       ST_X(geom) AS latitude, ST_Y(geom) AS longitude,
+       null AS afa_id, null AS afacodes_scientific, null AS afacodes_logistic,
        null AS geom_frontparcel, null AS score,
        packvers_id, ftid, geom
 FROM
 (
-  SELECT isolabel_ext, packvers_id, ftid, geomtype, fa.kx_ghs9, fa.properties->>'via' AS via_name, vw.license_data->>'family' AS license_family, fa.properties->>'hnum' AS house_number, fa.properties->>'postcode' AS postcode,
+  SELECT isolabel_ext, packvers_id, ftid, geomtype, fa.kx_ghs9, fa.properties->>'via' AS via_name, vw.name AS city_name, vw.license_data->>'family' AS license_family, fa.properties->>'hnum' AS house_number, fa.properties->>'postcode' AS postcode,
   (CASE WHEN geomtype = 'point' THEN 'yes' ELSE 'no' END) AS is_centroid,
   (CASE WHEN geomtype = 'point' THEN fa.geom ELSE ST_Centroid(fa.geom) END) AS geom
   FROM ingest.feature_asis fa
@@ -498,6 +507,7 @@ FROM
   WHERE ftid BETWEEN 20 AND 23 OR ftid BETWEEN 60 AND 63
   ORDER BY file_id, feature_id
 ) a
+ORDER BY isolabel_ext, via_type, via_name, house_number, postcode
 ;
 COMMENT ON VIEW ingest.vwconsolidated_data
   IS ''

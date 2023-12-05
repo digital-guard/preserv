@@ -61,6 +61,19 @@ server {
 } # \server
 
 server {
+    server_name api.digital-guard.org www.api.digital-guard.org;
+    listen 443 ssl http2;
+    include /etc/nginx/ssl.conf;
+    root /var/www/api.digital-guard.org/;
+    index  index.php index.html index.htm;
+    access_log /var/log/nginx/api.digital-guard.org.access_log;
+
+    location ~ ^/?.+ {
+        proxy_pass https://api.afa.codes;
+    }
+} # \server
+
+server {
     server_name lic.digital-guard.org www.lic.digital-guard.org;
     listen 443 ssl http2;
     include /etc/nginx/ssl.conf;
