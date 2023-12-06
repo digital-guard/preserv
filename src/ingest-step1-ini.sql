@@ -498,16 +498,17 @@ SELECT isolabel_ext,
        packvers_id, ftid, geom
 FROM
 (
-  SELECT isolabel_ext, packvers_id, ftid, geomtype, fa.kx_ghs9, fa.properties->>'via' AS via_name, vw.name AS city_name, vw.license_data->>'family' AS license_family, fa.properties->>'hnum' AS house_number, fa.properties->>'postcode' AS postcode,
-  (CASE WHEN geomtype = 'point' THEN 'yes' ELSE 'no' END) AS is_centroid,
-  (CASE WHEN geomtype = 'point' THEN fa.geom ELSE ST_Centroid(fa.geom) END) AS geom
+  SELECT
+    isolabel_ext, packvers_id, ftid, geomtype, fa.kx_ghs9, fa.properties->>'via' AS via_name, vw.name AS city_name, vw.license_data->>'family' AS license_family, fa.properties->>'hnum' AS house_number, fa.properties->>'postcode' AS postcode,
+    (CASE WHEN geomtype = 'point' THEN 'yes' ELSE 'no' END) AS is_centroid,
+    (CASE WHEN geomtype = 'point' THEN fa.geom ELSE ST_Centroid(fa.geom) END) AS geom,
+    file_id, feature_id
   FROM ingest.feature_asis fa
   LEFT JOIN ingest.vw03full_layer_file vw
   ON vw.id = fa.file_id
   WHERE ftid BETWEEN 20 AND 23 OR ftid BETWEEN 60 AND 63
-  ORDER BY file_id, feature_id
 ) a
-ORDER BY isolabel_ext, via_type, via_name, house_number, postcode
+ORDER BY isolabel_ext, file_id, feature_id
 ;
 COMMENT ON VIEW ingest.vwconsolidated_data
   IS ''
