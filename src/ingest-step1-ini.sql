@@ -17,11 +17,11 @@ CREATE SERVER    IF NOT EXISTS files
         FOREIGN DATA WRAPPER file_fdw
 ;
 CREATE EXTENSION IF NOT EXISTS postgres_fdw;
-CREATE SERVER    IF NOT EXISTS foreign_server_dl03
+CREATE SERVER    IF NOT EXISTS foreign_server_production
          FOREIGN DATA WRAPPER postgres_fdw
          OPTIONS (dbname 'dl05s_main')
 ;
-CREATE USER MAPPING FOR PUBLIC SERVER foreign_server_dl03;
+CREATE USER MAPPING FOR PUBLIC SERVER foreign_server_production;
 
 -- -- --
 -- SQL and bash generators (optim-ingest submodule)
@@ -227,7 +227,7 @@ CREATE FOREIGN TABLE ingest.fdw_feature_type (
  need_join boolean,
  description text,
  info jsonb
-) SERVER foreign_server_dl03
+) SERVER foreign_server_production
   OPTIONS (schema_name 'optim', table_name 'vw01info_feature_type');
 
 CREATE FOREIGN TABLE ingest.fdw_codec_type (
@@ -235,7 +235,7 @@ CREATE FOREIGN TABLE ingest.fdw_codec_type (
   variant text,
   descr_mime jsonb,
   descr_encode jsonb
-) SERVER foreign_server_dl03
+) SERVER foreign_server_production
   OPTIONS (schema_name 'optim', table_name 'codec_type');
 
 CREATE FOREIGN TABLE ingest.vw01full_packfilevers (
@@ -290,14 +290,14 @@ CREATE FOREIGN TABLE ingest.vw01full_packfilevers (
   lex_urn                  text,
   jurisdiction_info        jsonb,
   isolevel                 integer
-) SERVER foreign_server_dl03
+) SERVER foreign_server_production
   OPTIONS (schema_name 'optim', table_name 'vw01full_packfilevers');
 
 CREATE FOREIGN TABLE ingest.vw01full_donated_packcomponent (
   id                       bigint,
   ftid                     smallint,
   id_component             bigint
-) SERVER foreign_server_dl03
+) SERVER foreign_server_production
   OPTIONS (schema_name 'optim', table_name 'vw01full_donated_packcomponent');
 
 CREATE FOREIGN TABLE ingest.vw01full_jurisdiction_geom (
@@ -319,7 +319,7 @@ CREATE FOREIGN TABLE ingest.vw01full_jurisdiction_geom (
  name_en         text,
  isolevel        text,
  geom            geometry(Geometry,4326)
-) SERVER foreign_server_dl03
+) SERVER foreign_server_production
   OPTIONS (schema_name 'optim', table_name 'vw01full_jurisdiction_geom')
 ;
 COMMENT ON FOREIGN TABLE ingest.vw01full_jurisdiction_geom
