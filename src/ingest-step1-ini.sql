@@ -293,6 +293,13 @@ CREATE FOREIGN TABLE ingest.vw01full_packfilevers (
 ) SERVER foreign_server_dl03
   OPTIONS (schema_name 'optim', table_name 'vw01full_packfilevers');
 
+CREATE FOREIGN TABLE ingest.vw01full_donated_packcomponent (
+  id                       bigint,
+  ftid                     smallint,
+  id_component             bigint
+) SERVER foreign_server_dl03
+  OPTIONS (schema_name 'optim', table_name 'vw01full_donated_packcomponent');
+
 CREATE FOREIGN TABLE ingest.vw01full_jurisdiction_geom (
  osm_id          bigint,
  jurisd_base_id  integer,
@@ -484,37 +491,25 @@ COMMENT ON VIEW ingest.vwreport_geometries_discarded
 
 DROP VIEW ingest.vwconsolidated_data;
 CREATE VIEW ingest.vwconsolidated_data AS
-SELECT isolabel_ext,
-       split_part(isolabel_ext,'-',1) AS iso1,
-       split_part(isolabel_ext,'-',2) AS iso2,
-       city_name,
-       null AS via_type,
-       via_name,
-       house_number,
-       postcode, license_family,
-       ST_X(geom) AS latitude, ST_Y(geom) AS longitude,
-       null AS afa_id, null AS afacodes_scientific, null AS afacodes_logistic,
-       null AS geom_frontparcel, null AS score,
-       packvers_id, ftid, geom
-FROM
-(
   SELECT
-    isolabel_ext, packvers_id, ftid, geomtype, fa.kx_ghs9, fa.properties->>'via' AS via_name, vw.name AS city_name, vw.license_data->>'family' AS license_family, fa.properties->>'hnum' AS house_number, fa.properties->>'postcode' AS postcode,
-    (CASE WHEN geomtype = 'point' THEN 'yes' ELSE 'no' END) AS is_centroid,
-    (CASE WHEN geomtype = 'point' THEN fa.geom ELSE ST_Centroid(fa.geom) END) AS geom,
-    file_id, feature_id
+    id_component AS id, /*packvers_id, vw.ftid,*/ fa.properties->>'via' AS via_name, fa.properties->>'hnum' AS house_number, fa.properties->>'postcode' AS postcode,
+    null AS geom_frontparcel,null AS score, (CASE WHEN geomtype = 'point' THEN fa.geom ELSE ST_Centroid(fa.geom) END) AS geom
   FROM ingest.feature_asis fa
+
   LEFT JOIN ingest.vw03full_layer_file vw
   ON vw.id = fa.file_id
-  WHERE ftid BETWEEN 20 AND 23 OR ftid BETWEEN 60 AND 63
-) a
-ORDER BY isolabel_ext, file_id, feature_id
+
+  LEFT JOIN ingest.vw01full_donated_packcomponent vwp
+  ON vwp.id = vw.packvers_id AND vwp.ftid = vw.ftid
+
+  WHERE vw.ftid BETWEEN 20 AND 23 OR vw.ftid BETWEEN 60 AND 63
+  ORDER BY file_id, feature_id
 ;
 COMMENT ON VIEW ingest.vwconsolidated_data
-  IS ''
+  IS 'Ingestion data for consolidation (in optim.consolidated_data_pre).'
 ;
 -- COPY ( SELECT * FROM ingest.vwconsolidated_data) TO '/tmp/pg_io/consolidated_data.csv' CSV HEADER;
--- COPY optim.consolidated_data FROM '/tmp/pg_io/consolidated_data.csv' WITH CSV HEADER;
+-- COPY optim.consolidated_data_pre FROM '/tmp/pg_io/consolidated_data.csv' WITH CSV HEADER;
 
 /*
 DROP VIEW IF EXISTS ingest.vw06simple_layer CASCADE;
@@ -598,7 +593,7 @@ BEGIN
             round(size_mdn::numeric,3) AS size_mdn
             FROM (
                 SELECT count(*) n,
-                CASE 
+                CASE
                     WHEN (SELECT COUNT(*) FROM ingest.feature_asis WHERE file_id=p_file_id ) > 1000000  THEN (SELECT geom FROM ingest.vw01full_jurisdiction_geom WHERE isolabel_ext=(SELECT isolabel_ext FROM ingest.vw03full_layer_file WHERE id=p_file_id))
                     ELSE ST_Collect(ST_Force2D(geom))
                 END geom,
@@ -898,9 +893,9 @@ CREATE or replace FUNCTION ingest.feature_asis_similarity(
   SELECT to_jsonb(t)
   FROM (
       SELECT (SELECT array_agg(ST_Equals(p_geom, n)) FROM unnest(p_geoms) AS n) AS geom_cmp_equals,
-        CASE (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype) 
+        CASE (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype)
         WHEN 'line' THEN (SELECT array_agg(ST_FrechetDistance(p_geom, n)) FROM unnest(p_geoms) AS n) END AS geom_cmp_frechet,
-        CASE (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype) 
+        CASE (SELECT (ingest.donated_PackComponent_geomtype(p_file_id))[1] AS gtype)
         WHEN 'poly' THEN (SELECT array_agg( 2*ST_Area(ST_INTERSECTION(p_geom, n),true)/(ST_Area(p_geom,true)+ST_Area(n,true))) FROM unnest(p_geoms) AS n) END AS geom_cmp_intersec
   ) t;
 $f$ LANGUAGE SQL;
@@ -980,7 +975,7 @@ CREATE or replace FUNCTION ingest.any_load(
     stats_dup bigint[];
   BEGIN
   q_file_id := ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id,p_pck_fileref_sha256,p_id_profile_params); -- not null when proc_step=1. Ideal retornar array.
-  
+
   IF q_file_id IS NULL AND p_check_file_id_exist THEN
     RETURN format(E'ERROR: file-read problem or data ingested before.\nSee %s\nor use make delete_file id=%s to delete data.\nSee ingest.vw03full_layer_file.',p_fileref,ingest.getmeta_to_file(p_fileref,p_ftname,p_pck_id));
   END IF;
@@ -1060,7 +1055,7 @@ CREATE or replace FUNCTION ingest.any_load(
                   properties,
                   CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1])
                     WHEN 'point' THEN ST_ReducePrecision( geom, 0.000001 )
-                    ELSE ST_SimplifyPreserveTopology( -- remove collinear points 
+                    ELSE ST_SimplifyPreserveTopology( -- remove collinear points
 			    ST_ReducePrecision( -- round decimal degrees of SRID 4326, ~1 meter
 			      geom
 			      ,0.000001
@@ -1142,16 +1137,16 @@ CREATE or replace FUNCTION ingest.any_load(
         WHEN lower(p_geom_name)= 'geom' AND p_method= 'geojson2sql' THEN 'ST_GeomFromGeoJSON(geom) AS geom'
         WHEN lower(p_geom_name)= 'geom' AND p_method<>'geojson2sql' THEN 'geom'
         WHEN lower(p_geom_name)<>'geom' AND p_method= 'geojson2sql' THEN 'ST_GeomFromGeoJSON(' || p_geom_name ||') AS geom'
-        WHEN lower(p_geom_name)<>'geom' AND p_method<>'geojson2sql' THEN p_geom_name ||' AS geom'   
+        WHEN lower(p_geom_name)<>'geom' AND p_method<>'geojson2sql' THEN p_geom_name ||' AS geom'
     END,
     CASE WHEN p_partition_name IS NOT NULL THEN ' (SELECT * FROM ' || p_tabname || ' WHERE '|| p_partition_name || ' = $$' || p_partition_value || '$$::text) zx ' ELSE p_tabname END,
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
     buffer_type,
     p_pck_id,
     q_file_id,
-        (CASE (SELECT (ingest.donated_PackComponent_geomtype(q_file_id))[1]) 
-        WHEN 'point' THEN $$('POINT')$$ 
-        WHEN 'poly'  THEN $$('POLYGON'   ,'MULTIPOLYGON')$$ 
+        (CASE (SELECT (ingest.donated_PackComponent_geomtype(q_file_id))[1])
+        WHEN 'point' THEN $$('POINT')$$
+        WHEN 'poly'  THEN $$('POLYGON'   ,'MULTIPOLYGON')$$
         WHEN 'line'  THEN $$('LINESTRING','MULTILINESTRING','LINESTRINGM','MULTILINESTRINGM')$$
         END),
     q_file_id,
@@ -1475,7 +1470,7 @@ CREATE or replace FUNCTION ingest.osm_load(
                   properties,
                   CASE (SELECT (ingest.donated_PackComponent_geomtype(%s))[1])
                     WHEN 'point' THEN ST_ReducePrecision( geom, 0.000001 )
-                    ELSE ST_SimplifyPreserveTopology( -- remove collinear points 
+                    ELSE ST_SimplifyPreserveTopology( -- remove collinear points
 			    ST_ReducePrecision( -- round decimal degrees of SRID 4326, ~1 meter
 			      geom
 			      ,0.000001
@@ -1540,7 +1535,7 @@ CREATE or replace FUNCTION ingest.osm_load(
     iIF( use_tabcols, ', LATERAL (SELECT '|| array_to_string(p_tabcols,',') ||') subq',  ''::text ),
     p_pck_id,
         (CASE (SELECT (ingest.donated_PackComponent_geomtype(q_file_id))[1])
-        WHEN 'point' THEN $$('POINT')$$ 
+        WHEN 'point' THEN $$('POINT')$$
         WHEN 'poly'  THEN $$('POLYGON'   ,'MULTIPOLYGON')$$
         WHEN 'line'  THEN $$('LINESTRING','MULTILINESTRING')$$
         END),
@@ -1647,7 +1642,7 @@ CREATE or replace FUNCTION ingest.osm_load(
 
     UPDATE ingest.donated_PackComponent
     SET proc_step=2,   -- if insert process occurs after q_query.
-        lineage = lineage || ingest.feature_asis_assign(q_file_id) || 
+        lineage = lineage || ingest.feature_asis_assign(q_file_id) ||
         jsonb_build_object('statistics',(stats || stats_dup || ARRAY[num_items-stats_dup[1]+stats_dup[3]]) )
     WHERE id=q_file_id;
   END IF;
@@ -1658,7 +1653,7 @@ CREATE or replace FUNCTION ingest.osm_load(
         lineage =  lineage || ingest.feature_asis_assign_signature(q_file_id)
     WHERE id=q_file_id;
   END IF;
-  
+
   RETURN msg_ret;
   END;
 $f$ LANGUAGE PLpgSQL;
@@ -2313,7 +2308,7 @@ BEGIN
     ON p3.kx_ghs9 = p2.kx_ghs9;
 
     UPDATE ingest.donated_PackComponent
-    SET proc_step=4, 
+    SET proc_step=4,
         kx_profile = coalesce(kx_profile,'{}'::jsonb) || jsonb_build_object('ghs_distrib_mosaic', (SELECT jsonb_object_agg(hcode, n_keys) FROM ingest.publicating_geojsons_p2distrib))
     WHERE id= p_file_id
     ;
@@ -2524,7 +2519,7 @@ BEGIN
         PERFORM write_geojsonb_features(
             format('SELECT * FROM ingest.publicating_geojsons_p5distrib'),
             format('%s/geohashes.geojson',p_fileref),
-            't1.geom', 
+            't1.geom',
             'ghs, (info->''ghs_items'')::int AS ghs_items, (info->''ghs_len'')::int AS ghs_len, round((info->''ghs_itemsDensity'')::float,0.01) AS ghs_itemsDensity, round((info->''ghs_area'')::float,0.01) AS ghs_area, round((info->''size'')::float,0.01) AS size, (info->''size_unit'') AS size_unit, round((info->''size_unitDensity'')::float,0.01) AS size_unitDensity, (info->''ghs_bytes'') AS ghs_bytes, (info->''ghsval_unit'') AS ghsval_unit',
             NULL,
             NULL,

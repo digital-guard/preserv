@@ -634,7 +634,7 @@ COMMENT ON VIEW optim.vw01full_packfilevers_ftype
 ;
 
 CREATE or replace VIEW optim.vw01full_donated_PackComponent AS
-    SELECT pf.*, pc.proc_step, pc.lineage , pc.lineage_md5 , pc.kx_profile,
+    SELECT pf.*, pc.id AS id_component, pc.proc_step, pc.lineage , pc.lineage_md5 , pc.kx_profile,
 
     'a4a_' || replace(lower(pf.isolabel_ext),'-','_') || '_' || (pf.ftype_info->>'class_ftname') || '_' || pf.id || '.zip' AS filtered_name,
     lower(pf.isolabel_ext) || '_pk' || pf.pack_number || '_' ||  (pf.ftype_info->>'class_ftname') || '.html' AS url_page
@@ -1336,71 +1336,121 @@ COMMENT ON FUNCTION download.insert_dldg_csv
 -- SELECT download.insert_dldg_csv();
 
 ----------------------
+
 CREATE TABLE IF NOT EXISTS optim.consolidated_data_pre (
-  isolabel_ext        text,
-  iso1                text,
-  iso2                text,
-  city_name           text,
-  via_type            text,
-  via_name            text,
-  house_number        text,
-  postcode            text,
-  license_family      text,
-  latitude            float,
-  longitude           float,
-  afa_id              text,
-  afacodes_scientific text,
-  afacodes_logistic   text,
-  geom_frontparcel    boolean,
-  score               text,
-  packvers_id         bigint   NOT NULL REFERENCES optim.donated_PackFileVers(id),
-  ftid                smallint NOT NULL REFERENCES optim.feature_type(ftid),
-  geom                geometry(Geometry,4326)
+  id               bigint   NOT NULL REFERENCES optim.donated_PackComponent(id),
+  via_name         text,
+  house_number     text,
+  postcode         text,
+  geom_frontparcel boolean,
+  score            text,
+  geom             geometry(Geometry,4326)
 );
+
+COMMENT ON COLUMN optim.consolidated_data_pre.id               IS 'donated_PackComponent identifier.';
+COMMENT ON COLUMN optim.consolidated_data_pre.via_name         IS 'Via name.';
+COMMENT ON COLUMN optim.consolidated_data_pre.house_number     IS 'House number.';
+COMMENT ON COLUMN optim.consolidated_data_pre.postcode         IS 'Postal code.';
+COMMENT ON COLUMN optim.consolidated_data_pre.geom_frontparcel IS 'Flag. Indicates if geometry is in front of the parcel.';
+COMMENT ON COLUMN optim.consolidated_data_pre.score            IS '...';
+COMMENT ON COLUMN optim.consolidated_data_pre.geom             IS 'Feature geometry.';
+
+COMMENT ON TABLE  optim.consolidated_data_pre IS 'Data from ingestion (ingest.vwconsolidated_data) to be consolidated.';
 
 CREATE TABLE IF NOT EXISTS optim.consolidated_data (
-  isolabel_ext        text,
-  iso1                text,
-  iso2                text,
-  city_name           text,
+  id                  bigint NOT NULL REFERENCES optim.donated_PackComponent(id),
+  afa_id              bigint,
   via_type            text,
   via_name            text,
   house_number        text,
   postcode            text,
-  license_family      text,
-  latitude            float,
-  longitude           float,
-  afa_id              text,
-  afacodes_scientific text,
-  afacodes_logistic   text,
   geom_frontparcel    boolean,
   score               text,
-  packvers_id         bigint   NOT NULL REFERENCES optim.donated_PackFileVers(id),
-  ftid                smallint NOT NULL REFERENCES optim.feature_type(ftid),
   geom                geometry(Geometry,4326)
 );
 
-COMMENT ON COLUMN optim.consolidated_data.isolabel_ext        IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
-COMMENT ON COLUMN optim.consolidated_data.iso1                IS 'ISO 3166-1 country code.';
-COMMENT ON COLUMN optim.consolidated_data.iso2                IS 'ISO 3166-2 country subdivision code.';
-COMMENT ON COLUMN optim.consolidated_data.city_name           IS 'City name';
-COMMENT ON COLUMN optim.consolidated_data.via_type            IS 'Via type.';
-COMMENT ON COLUMN optim.consolidated_data.via_name            IS 'Via name.';
-COMMENT ON COLUMN optim.consolidated_data.house_number        IS 'House number.';
-COMMENT ON COLUMN optim.consolidated_data.postcode            IS 'Postal code.';
-COMMENT ON COLUMN optim.consolidated_data.license_family      IS 'License family.';
-COMMENT ON COLUMN optim.consolidated_data.latitude            IS 'Feature latitude.';
-COMMENT ON COLUMN optim.consolidated_data.longitude           IS 'Feature longitude.';
-COMMENT ON COLUMN optim.consolidated_data.afa_id              IS 'AFAcodes scientific. 64bits format.';
-COMMENT ON COLUMN optim.consolidated_data.afacodes_scientific IS 'AFAcodes scientific.';
-COMMENT ON COLUMN optim.consolidated_data.afacodes_logistic   IS 'AFAcodes logistic.';
-COMMENT ON COLUMN optim.consolidated_data.geom_frontparcel    IS 'Flag. Indicates if geometry is in front of the parcel.';
-COMMENT ON COLUMN optim.consolidated_data.score               IS '...';
-COMMENT ON COLUMN optim.consolidated_data.packvers_id         IS 'Donated_PackFileVers identifier.';
-COMMENT ON COLUMN optim.consolidated_data.ftid                IS 'Feature type identifier.';
-COMMENT ON COLUMN optim.consolidated_data.geom                IS 'Feature geometry.';
+COMMENT ON COLUMN optim.consolidated_data.id               IS 'donated_PackComponent identifier.';
+COMMENT ON COLUMN optim.consolidated_data.afa_id           IS 'AFAcodes scientific. 64bits format.';
+COMMENT ON COLUMN optim.consolidated_data.via_type         IS 'Via type.';
+COMMENT ON COLUMN optim.consolidated_data.via_name         IS 'Via name.';
+COMMENT ON COLUMN optim.consolidated_data.house_number     IS 'House number.';
+COMMENT ON COLUMN optim.consolidated_data.postcode         IS 'Postal code.';
+COMMENT ON COLUMN optim.consolidated_data.geom_frontparcel IS 'Flag. Indicates if geometry is in front of the parcel.';
+COMMENT ON COLUMN optim.consolidated_data.score            IS '...';
+COMMENT ON COLUMN optim.consolidated_data.geom             IS 'Feature geometry.';
 
-COMMENT ON TABLE  optim.consolidated_data IS 'Consolidated data.';
+COMMENT ON TABLE  optim.consolidated_data IS 'Data from ingestion (ingest.vwconsolidated_data) to be consolidated.';
+
+CREATE or replace FUNCTION optim.consolidated_data_ins(
+  p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
+) RETURNS text  AS $f$
+
+  INSERT INTO optim.consolidated_data
+  SELECT id,
+        natcod.vBit_to_hBig
+        (
+          CASE jurisd_base_id
+            WHEN 76 THEN natcod.baseh_to_vbit(osmc.decode_16h1c(afacodes_scientific,'BR'),16)
+            ELSE         natcod.baseh_to_vbit(                  afacodes_scientific      ,16)
+          END
+        ) AS afa_id,
+        arr[1] AS via_type, arr[2] AS via_name,
+        house_number, postcode, geom_frontparcel, score, geom
+  FROM
+  (
+    SELECT
+      p.id, jurisd_base_id, split_via_name(clean_via(via_name,(q.ftype_info->>'class_ftname')::text,q.isolabel_ext),q.isolabel_ext) AS arr,
+      clean_hnum(house_number) AS house_number,
+
+      CASE jurisd_base_id
+        WHEN 76 THEN postcode_maskBR(postcode)
+        -- WHEN 'CM' THEN
+      END AS postcode,
+
+      (((
+      CASE jurisd_base_id
+        WHEN 76 THEN osmc.encode_scientific_br(ST_Transform(geom,952019),0.0,0)
+        -- WHEN 'CM' THEN
+      END
+      )->'features')[0]->'properties'->>'code')::text AS afacodes_scientific,
+
+      geom_frontparcel,score,geom,
+
+        CASE housenumber_system_type
+        -- address: [via], [hnum]
+        WHEN 'metric' THEN
+          ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(house_number))
+        WHEN 'bh-metric' THEN
+          ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(regexp_replace(house_number, '\D', '', 'g')), regexp_replace(house_number, '[^[:alpha:]]', '', 'g') )
+        WHEN 'street-metric' THEN
+          ROW_NUMBER() OVER(ORDER BY via_name, regexp_replace(house_number, '[^[:alnum:]]', '', 'g'))
+        WHEN 'block-metric' THEN
+          ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(split_part(replace(house_number,' ',''), '-', 1)), to_bigint(split_part(replace(house_number,' ',''), '-', 2)))
+
+          -- address: [via], [hnum], [sup     ]
+          --          [via], [hnum], [[quadra], [lote]]
+        WHEN 'ago-block' THEN
+          ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(house_number), to_bigint(split_part(postcode, ',', 1)), to_bigint(split_part(postcode, ',', 2)) )
+
+        -- address: [via], [sup]
+        --          [[quadra], [lote]], [sup]
+        WHEN 'df-block' THEN
+          ROW_NUMBER() OVER(ORDER BY split_part(via_name, ',', 1),split_part(via_name, ',', 2),postcode)
+
+        ELSE
+          ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(house_number))
+        END AS address_order
+
+    FROM optim.consolidated_data_pre p
+    LEFT JOIN optim.vw01full_donated_packcomponent q
+    ON p.id = q.id_component
+    -- LIMIT 100
+  ) m
+  ORDER BY 2
+  ;
+
+  SELECT 'ins';
+$f$ language SQL VOLATILE;
 
 ----------------------
 

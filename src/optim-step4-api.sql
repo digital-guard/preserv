@@ -735,9 +735,16 @@ COMMENT ON VIEW api.full_packfilevers
 ----------------------
 
 CREATE or replace VIEW api.consolidated_data AS
-SELECT iso1, iso2, city_name, via_type, via_name, house_number, postcode, license_family, latitude, longitude, afa_id, afacodes_scientific, geom_frontparcel, score
-FROM optim.consolidated_data
+SELECT afa_id, split_part(isolabel_ext,'-',1) AS iso1, split_part(isolabel_ext,'-',2) AS iso2, name AS city_name, via_type, via_name, house_number, postcode,
+       license_data->>'family' AS license_family,
+       ST_X(geom) AS latitude, ST_Y(geom) AS longitude,
+       NULL AS afacodes_scientific,
+       geom_frontparcel, score
+FROM optim.consolidated_data p
+LEFT JOIN optim.vw01full_donated_packcomponent q
+ON p.id = q.id_component
 ;
+COMMENT ON COLUMN api.consolidated_data.afa_id              IS 'AFAcodes scientific. 64bits format.';
 COMMENT ON COLUMN api.consolidated_data.iso1                IS 'ISO 3166-1 country code.';
 COMMENT ON COLUMN api.consolidated_data.iso2                IS 'ISO 3166-2 country subdivision code.';
 COMMENT ON COLUMN api.consolidated_data.city_name           IS 'City name';
@@ -748,7 +755,6 @@ COMMENT ON COLUMN api.consolidated_data.postcode            IS 'Postal code.';
 COMMENT ON COLUMN api.consolidated_data.license_family      IS 'License family.';
 COMMENT ON COLUMN api.consolidated_data.latitude            IS 'Feature latitude.';
 COMMENT ON COLUMN api.consolidated_data.longitude           IS 'Feature longitude.';
-COMMENT ON COLUMN api.consolidated_data.afa_id              IS 'AFAcodes scientific. 64bits format.';
 COMMENT ON COLUMN api.consolidated_data.afacodes_scientific IS 'AFAcodes scientific.';
 COMMENT ON COLUMN api.consolidated_data.geom_frontparcel    IS 'Flag. Indicates if geometry is in front of the parcel.';
 COMMENT ON COLUMN api.consolidated_data.score               IS '...';
