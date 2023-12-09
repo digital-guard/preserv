@@ -1390,8 +1390,8 @@ CREATE or replace FUNCTION optim.consolidated_data_ins(
         natcod.vBit_to_hBig
         (
           CASE jurisd_base_id
-            WHEN 76 THEN natcod.baseh_to_vbit(osmc.decode_16h1c(afacodes_scientific,'BR'),16)
-            ELSE         natcod.baseh_to_vbit(                  afacodes_scientific      ,16)
+            WHEN 76 THEN 1::bit(8)||natcod.baseh_to_vbit(osmc.decode_16h1c(afacodes_scientific,split_part(isolabel_ext,'-',1)),16)
+            -- ELSE         natcod.baseh_to_vbit(                  afacodes_scientific      ,16)
           END
         ) AS afa_id,
         arr[1] AS via_type, arr[2] AS via_name,
@@ -1400,7 +1400,7 @@ CREATE or replace FUNCTION optim.consolidated_data_ins(
   (
     SELECT
       p.id, jurisd_base_id, split_via_name(clean_via(via_name,(q.ftype_info->>'class_ftname')::text,q.isolabel_ext),q.isolabel_ext) AS arr,
-      clean_hnum(house_number) AS house_number,
+      clean_hnum(house_number) AS house_number, q.isolabel_ext,
 
       CASE jurisd_base_id
         WHEN 76 THEN postcode_maskBR(postcode)
