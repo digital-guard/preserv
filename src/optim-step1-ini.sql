@@ -1359,7 +1359,7 @@ COMMENT ON TABLE  optim.consolidated_data_pre IS 'Data from ingestion (ingest.vw
 
 CREATE TABLE IF NOT EXISTS optim.consolidated_data (
   id                  bigint NOT NULL REFERENCES optim.donated_PackComponent(id),
-  afa_id              bigint,
+  afa_id              bigint PRIMARY KEY,
   via_type            text,
   via_name            text,
   house_number        text,
@@ -1368,6 +1368,7 @@ CREATE TABLE IF NOT EXISTS optim.consolidated_data (
   score               text,
   geom                geometry(Geometry,4326)
 );
+CREATE INDEX idx_geom_consolidated_data ON optim.consolidated_data USING gist (geom);
 
 COMMENT ON COLUMN optim.consolidated_data.id               IS 'donated_PackComponent identifier.';
 COMMENT ON COLUMN optim.consolidated_data.afa_id           IS 'AFAcodes scientific. 64bits format.';
@@ -1381,74 +1382,84 @@ COMMENT ON COLUMN optim.consolidated_data.geom             IS 'Feature geometry.
 
 COMMENT ON TABLE  optim.consolidated_data IS 'Data from ingestion (ingest.vwconsolidated_data) to be consolidated.';
 
+
+
 CREATE or replace FUNCTION optim.consolidated_data_ins(
   p_isolabel_ext  text  -- e.g. 'BR-MG-BeloHorizonte', see jurisdiction_geom
 ) RETURNS text  AS $f$
 
   INSERT INTO optim.consolidated_data
-  SELECT id,
-        natcod.vBit_to_hBig
-        (
-          CASE jurisd_base_id
-            WHEN 76 THEN 1::bit(8)||natcod.baseh_to_vbit(osmc.decode_16h1c(afacodes_scientific,split_part(isolabel_ext,'-',1)),16)
-            -- ELSE         natcod.baseh_to_vbit(                  afacodes_scientific      ,16)
-          END
-        ) AS afa_id,
-        arr[1] AS via_type, arr[2] AS via_name,
-        house_number, postcode, geom_frontparcel, score, geom
+  SELECT id, afa_id, via_name, via_type, house_number, postcode, geom_frontparcel, score, geom
   FROM
   (
-    SELECT
-      p.id, jurisd_base_id, split_via_name(clean_via(via_name,(q.ftype_info->>'class_ftname')::text,q.isolabel_ext),q.isolabel_ext) AS arr,
-      clean_hnum(house_number) AS house_number, q.isolabel_ext,
+    SELECT rank() OVER (PARTITION BY afa_id ORDER BY house_number DESC, geom) AS id_rank, *
+    FROM
+    (
+      SELECT id,
+            natcod.vBit_to_hBig
+            (
+              CASE jurisd_base_id
+                WHEN 76 THEN 1::bit(8)||natcod.baseh_to_vbit(osmc.decode_16h1c(afacodes_scientific,split_part(isolabel_ext,'-',1)),16)
+                -- ELSE         natcod.baseh_to_vbit(                  afacodes_scientific      ,16)
+              END
+            ) AS afa_id,
+            arr[1] AS via_type, arr[2] AS via_name,
+            house_number, postcode, geom_frontparcel, score, geom
+      FROM
+      (
+        SELECT
+          p.id, jurisd_base_id, split_via_name(clean_via(via_name,(q.ftype_info->>'class_ftname')::text,q.isolabel_ext),q.isolabel_ext) AS arr,
+          clean_hnum(house_number) AS house_number, q.isolabel_ext,
 
-      CASE jurisd_base_id
-        WHEN 76 THEN postcode_maskBR(postcode)
-        -- WHEN 'CM' THEN
-      END AS postcode,
+          CASE jurisd_base_id
+            WHEN 76 THEN postcode_maskBR(postcode)
+            -- WHEN 'CM' THEN
+          END AS postcode,
 
-      (((
-      CASE jurisd_base_id
-        WHEN 76 THEN osmc.encode_scientific_br(ST_Transform(geom,952019),0.0,0)
-        -- WHEN 'CM' THEN
-      END
-      )->'features')[0]->'properties'->>'code')::text AS afacodes_scientific,
+          (((
+          CASE jurisd_base_id
+            WHEN 76 THEN osmc.encode_scientific_br(ST_Transform(geom,952019),0.0,0)
+            -- WHEN 'CM' THEN
+          END
+          )->'features')[0]->'properties'->>'code')::text AS afacodes_scientific,
 
-      geom_frontparcel,score,geom,
+          geom_frontparcel,score,geom,
 
-        CASE housenumber_system_type
-        -- address: [via], [hnum]
-        WHEN 'metric' THEN
-          ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(house_number))
-        WHEN 'bh-metric' THEN
-          ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(regexp_replace(house_number, '\D', '', 'g')), regexp_replace(house_number, '[^[:alpha:]]', '', 'g') )
-        WHEN 'street-metric' THEN
-          ROW_NUMBER() OVER(ORDER BY via_name, regexp_replace(house_number, '[^[:alnum:]]', '', 'g'))
-        WHEN 'block-metric' THEN
-          ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(split_part(replace(house_number,' ',''), '-', 1)), to_bigint(split_part(replace(house_number,' ',''), '-', 2)))
+            CASE housenumber_system_type
+            -- address: [via], [hnum]
+            WHEN 'metric' THEN
+              ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(house_number))
+            WHEN 'bh-metric' THEN
+              ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(regexp_replace(house_number, '\D', '', 'g')), regexp_replace(house_number, '[^[:alpha:]]', '', 'g') )
+            WHEN 'street-metric' THEN
+              ROW_NUMBER() OVER(ORDER BY via_name, regexp_replace(house_number, '[^[:alnum:]]', '', 'g'))
+            WHEN 'block-metric' THEN
+              ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(split_part(replace(house_number,' ',''), '-', 1)), to_bigint(split_part(replace(house_number,' ',''), '-', 2)))
 
-          -- address: [via], [hnum], [sup     ]
-          --          [via], [hnum], [[quadra], [lote]]
-        WHEN 'ago-block' THEN
-          ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(house_number), to_bigint(split_part(postcode, ',', 1)), to_bigint(split_part(postcode, ',', 2)) )
+              -- address: [via], [hnum], [sup     ]
+              --          [via], [hnum], [[quadra], [lote]]
+            WHEN 'ago-block' THEN
+              ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(house_number), to_bigint(split_part(postcode, ',', 1)), to_bigint(split_part(postcode, ',', 2)) )
 
-        -- address: [via], [sup]
-        --          [[quadra], [lote]], [sup]
-        WHEN 'df-block' THEN
-          ROW_NUMBER() OVER(ORDER BY split_part(via_name, ',', 1),split_part(via_name, ',', 2),postcode)
+            -- address: [via], [sup]
+            --          [[quadra], [lote]], [sup]
+            WHEN 'df-block' THEN
+              ROW_NUMBER() OVER(ORDER BY split_part(via_name, ',', 1),split_part(via_name, ',', 2),postcode)
 
-        ELSE
-          ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(house_number))
-        END AS address_order
+            ELSE
+              ROW_NUMBER() OVER(ORDER BY via_name, to_bigint(house_number))
+            END AS address_order
 
-    FROM optim.consolidated_data_pre p
-    LEFT JOIN optim.vw01full_donated_packcomponent q
-    ON p.id = q.id_component
-    -- LIMIT 100
-  ) m
+        FROM optim.consolidated_data_pre p
+        LEFT JOIN optim.vw01full_donated_packcomponent q
+        ON p.id = q.id_component
+        WHERE q.isolabel_ext= p_isolabel_ext
+      ) m
+    ) x
+  ) y
+  WHERE id_rank = 1
   ORDER BY 2
   ;
-
   SELECT 'ins';
 $f$ language SQL VOLATILE;
 
