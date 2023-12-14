@@ -30,8 +30,9 @@ CREATE TABLE IF NOT EXISTS optim.jurisdiction ( -- only current
   info            JSONb,                -- creation, extinction, postalCode_ranges, notes, etc.
   name_en         text,
   isolevel        integer,
-  ne_country_id   int                   -- NaturalEarthData country gid.
+  ne_country_id   int,                  -- NaturalEarthData country gid.
                                         -- https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_0_countries.zip
+  int_country_id  int                   -- Id
   ,UNIQUE(isolabel_ext)
   ,UNIQUE(wikidata_id)
   ,UNIQUE(jurisd_base_id,jurisd_local_id)
@@ -58,7 +59,6 @@ COMMENT ON COLUMN optim.jurisdiction.name_en                 IS 'City name in en
 COMMENT ON COLUMN optim.jurisdiction.isolevel                IS '1=country, 2=state, 3=mun';
 COMMENT ON COLUMN optim.jurisdiction.ne_country_id           IS 'NaturalEarthData country gid.';
 COMMENT ON COLUMN optim.jurisdiction.int_country_id          IS 'Internal country id.';
-
 
 COMMENT ON TABLE optim.jurisdiction IS 'Information about jurisdictions without geometry.';
 
