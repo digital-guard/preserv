@@ -107,7 +107,7 @@ AS $function$
 $function$
 ;
 
-DROP VIEW IF EXISTS optim.vw03prepare_jurisdiction_metrics1;
+-- DROP VIEW IF EXISTS optim.vw03prepare_jurisdiction_metrics1;
 CREATE VIEW optim.vw03prepare_jurisdiction_metrics1 AS
  SELECT osm_id, isolabel_ext,   round(area_m/1000000.0)::int as area_km2,
        round( area_sr, 5)::float as area_sr,
@@ -140,7 +140,7 @@ WHERE t.osm_id=jurisdiction.osm_id
 */
 
 
-DROP VIEW IF EXISTS optim.vw04prepare_jurisdiction_shapemetrics;
+-- DROP VIEW IF EXISTS optim.vw04prepare_jurisdiction_shapemetrics;
 CREATE VIEW optim.vw04prepare_jurisdiction_shapemetrics AS
 SELECT *, round( (rectang_factor_deg + 1.5*elongation_factor_deg)/2.5 , 2)::float AS elong_deg_mixfactor
 FROM (

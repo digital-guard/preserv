@@ -227,7 +227,7 @@ COMMENT ON VIEW api.jurisdiction_lexlabel
   IS 'Jurisdictions in lex format.'
 ;
 
-DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym;
+-- DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym;
 CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
 SELECT DISTINCT synonym, isolabel_ext
 FROM
@@ -258,7 +258,7 @@ COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
 CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON mvwjurisdiction_synonym (synonym);
 
 
-DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym_default_abbrev;
+-- DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym_default_abbrev;
 CREATE MATERIALIZED VIEW mvwjurisdiction_synonym_default_abbrev AS
 SELECT DISTINCT abbrev, isolabel_ext
 FROM optim.jurisdiction_abbrev_option x
@@ -633,7 +633,7 @@ COMMENT ON FUNCTION api.download_list
 
 ----------------------
 
-DROP MATERIALIZED VIEW IF EXISTS optim.mvwjurisdiction_geomeez;
+-- DROP MATERIALIZED VIEW IF EXISTS optim.mvwjurisdiction_geomeez;
 CREATE MATERIALIZED VIEW optim.mvwjurisdiction_geomeez AS
   SELECT *
   FROM optim.jurisdiction_geom
