@@ -57,6 +57,8 @@ COMMENT ON COLUMN optim.jurisdiction.info                    IS 'Others informat
 COMMENT ON COLUMN optim.jurisdiction.name_en                 IS 'City name in english.';
 COMMENT ON COLUMN optim.jurisdiction.isolevel                IS '1=country, 2=state, 3=mun';
 COMMENT ON COLUMN optim.jurisdiction.ne_country_id           IS 'NaturalEarthData country gid.';
+COMMENT ON COLUMN optim.jurisdiction.int_country_id          IS 'Internal country id.';
+
 
 COMMENT ON TABLE optim.jurisdiction IS 'Information about jurisdictions without geometry.';
 
