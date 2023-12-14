@@ -516,7 +516,7 @@ COMMENT ON COLUMN optim.donated_PackComponent_not_approved.kx_profile  IS 'Other
 COMMENT ON TABLE optim.donated_PackComponent_not_approved IS 'Stores descriptive summaries of each feature type awaiting publication approval.';
 ------------------------
 
-DROP VIEW IF EXISTS optim.vw01info_feature_type CASCADE;
+-- DROP VIEW IF EXISTS optim.vw01info_feature_type CASCADE;
 CREATE VIEW optim.vw01info_feature_type AS
   SELECT ftid, ftname, geomtype, need_join, description,
        COALESCE(f.info,'{}'::jsonb) || (
