@@ -489,7 +489,7 @@ COMMENT ON VIEW ingest.vwreport_geometries_discarded
   IS 'Reason report for geometries discarded from ingested layers.'
 ;
 
-DROP VIEW ingest.vwconsolidated_data;
+DROP VIEW IF EXISTS ingest.vwconsolidated_data;
 CREATE VIEW ingest.vwconsolidated_data AS
   SELECT
     id_component AS id, /*packvers_id, vw.ftid,*/ fa.properties->>'via' AS via_name, fa.properties->>'hnum' AS house_number, fa.properties->>'postcode' AS postcode,
