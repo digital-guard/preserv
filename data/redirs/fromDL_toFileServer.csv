@@ -1,4 +1,5 @@
 donor_id,filename_original,package_path,de_sha256,para_url
+29,url,BR/data/SP/Santos/_pk0154.01,df031fa60edcf6f7de4e6f83a2c880d94f401a2922df174afc4322a0704ebe1a.geojson,https://egov1.santos.sp.gov.br/geoserver/santos/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=santos:lotes&outputFormat=application%2Fjson&srsName=EPSG:4326
 ,,,0c72ec1c4dc9ab95f4bbb3eba0e227dac0725ebae5ba0306f4f5de67e7a6cb04.zip,https://addressforall-my.sharepoint.com/personal/operacao_addressforall_org/_layouts/15/download.aspx?share=EUmBqwlCb4dFnluk2tkrZWoB5eCPf5I-0_8eRhcuCAyPjw
 ,,,137dc416e70776ac57c37a4fb0cb9bedb1468e91ed73eaa656ddee91011daed7.zip,https://addressforall-my.sharepoint.com/personal/operacao_addressforall_org/_layouts/15/download.aspx?share=EbF9HyFI40JKm0ErDWGRT9gBPRf7Dy6gw31toGkPB-TEPw
 ,,,44a4c74ad768a9c4a91ff9fb168ebcd555dc0ea4b6eb1c405cc6c3fa993f8514.zip,https://addressforall-my.sharepoint.com/personal/operacao_addressforall_org/_layouts/15/download.aspx?share=EWg-05TKO85Mmw5RbFtJWWoBYWrCkrECtjyafuqcGCLotA
