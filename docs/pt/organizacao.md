@@ -1,3 +1,4 @@
+Migrou para a Wiki, deletar
 # Preservação de dados no Digital-guard
 
 O **Projeto Digital-guard**, de curadoria e [preservação digital](https://en.wikipedia.org/wiki/Digital_preservation), é mantido pelo [ITGS](http://itgs.org.br). A curadoria seleciona dados relevantes (fontes primárias) doados para o domínio público pelos seus autores ou entidades responsáveis. Dados brutos são mantidos em discos de preservação, e seus metadados descritivos são mantigos em repositórios *git*.
