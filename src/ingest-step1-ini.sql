@@ -2039,7 +2039,7 @@ BEGIN
   ) t
   ORDER BY address_order;
 
-  WHEN ( p_ftname IN ('block','via','genericvia','nsvia') ) OR ( p_ftname IN ('building') AND NOT ( (jproperties ?| ARRAY['via','hnum','sup']) ) ) THEN
+  WHEN ( p_ftname IN ('block','via','genericvia','nsvia','blockface') ) OR ( p_ftname IN ('building') AND NOT ( (jproperties ?| ARRAY['via','hnum','sup']) ) ) THEN
   RETURN QUERY
   SELECT
         t.ghs,
