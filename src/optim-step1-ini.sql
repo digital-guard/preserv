@@ -1542,16 +1542,16 @@ FROM
     FROM optim.jurisdiction j
     WHERE (info->'is_capital_isolevel')::int = 1 AND isolevel::int = 3
   )
-  -- UNION ALL
-  -- (
-  --   -- CM-abbrev (municipios)
-  --   SELECT 'CM-' || abbrev, MAX(isolabel_ext)
-  --   FROM optim.jurisdiction
-  --   WHERE isolabel_ext LIKE 'CM-%-%'
-  --   GROUP BY 1
-  --   HAVING count(*)=1
-  --   ORDER BY 1
-  -- )
+  UNION ALL
+  (
+    -- CM-abbrev (municipios)
+    SELECT 'CM-' || abbrev, MAX(isolabel_ext)
+    FROM optim.jurisdiction
+    WHERE isolabel_ext LIKE 'CM-%-%'
+    GROUP BY 1
+    HAVING count(*)=1
+    ORDER BY 1
+  )
 ) z
 ;
 COMMENT ON COLUMN optim.vwjurisdiction_synonym.synonym      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
