@@ -452,7 +452,12 @@ INSERT INTO optim.feature_type VALUES
   (90,'datagrid',        'class', null, 'Grid of cells.', '{"shortname_pt":"grid","description_pt":".","synonymous_pt":["bairro","loteamento"]}'::jsonb),
   (91,'datagrid_full',   'point', false, 'Grid with metadata', NULL),
   (92,'datagrid_ext',    'point', true,  'Grid with external metadata', NULL),
-  (93,'datagrid_none',   'point', true,  'Cell center only, no metadata', NULL)
+  (93,'datagrid_none',   'point', true,  'Cell center only, no metadata', NULL),
+
+  (100,'blockface',           'class', null,  'Block Face line.', '{"shortname_pt":"face de quadra","description_pt":"Face de quadra.","synonymous_pt":["face de quadra","quadras"]}'::jsonb),
+  (101,'blockface_full',       'line', false, 'Block Face line, with all metadata (official name, optional code and others)', NULL),
+  (102,'blockface_ext',        'line', true,  'Block Face line, with external metadata at cadvia_cmpl', NULL),
+  (103,'blockface_none',       'line', false, 'Block Face line with no metadata', NULL)
 ;
 -- Para a iconografia do site:
 -- SELECT f.ftname as "feature type", t.geomtype as "geometry type", f.description from optim.feature_type f inner JOIN (select  substring(ftname from '^[^_]+') as ftgroup, geomtype  from optim.feature_type where geomtype!='class' group by 1,2) t ON t.ftgroup=f.ftname ;--where t.geomtype='class';
