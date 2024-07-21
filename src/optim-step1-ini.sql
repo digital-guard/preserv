@@ -127,15 +127,6 @@ COMMENT ON COLUMN optim.jurisdiction_bbox_border.geom           IS 'Geometry of 
 
 COMMENT ON TABLE optim.jurisdiction_bbox_border IS 'Polygon for optim.jurisdiction_bbox, where jurisd_base_id is null.';
 
--- DELETE FROM optim.jurisdiction_bbox_border;
-INSERT INTO optim.jurisdiction_bbox_border
-SELECT ROW_NUMBER() OVER() as id, b.id AS bbox_id, g.jurisd_base_id AS jurisd_base_id, g.isolabel_ext AS isolabel_ext, ST_Intersection(ST_SetSRID(b.geom,4326),g.geom)
-FROM optim.jurisdiction_bbox b
-LEFT JOIN optim.vw01full_jurisdiction_geom g
-ON ST_Intersects(ST_SetSRID(b.geom,4326),g.geom) IS TRUE
-WHERE b.jurisd_base_id IS NULL AND g.isolabel_ext IN ('CO','BR','UY','EC')
-;
-
 CREATE TABLE optim.jurisdiction_geom_point (
   osm_id bigint PRIMARY KEY,
   isolabel_ext text,
@@ -546,6 +537,15 @@ CREATE VIEW optim.vw01full_jurisdiction_geom AS
 ;
 COMMENT ON VIEW optim.vw01full_jurisdiction_geom
   IS 'Add geom to optim.jurisdiction.'
+;
+
+-- DELETE FROM optim.jurisdiction_bbox_border;
+INSERT INTO optim.jurisdiction_bbox_border
+SELECT ROW_NUMBER() OVER() as id, b.id AS bbox_id, g.jurisd_base_id AS jurisd_base_id, g.isolabel_ext AS isolabel_ext, ST_Intersection(ST_SetSRID(b.geom,4326),g.geom)
+FROM optim.jurisdiction_bbox b
+LEFT JOIN optim.vw01full_jurisdiction_geom g
+ON ST_Intersects(ST_SetSRID(b.geom,4326),g.geom) IS TRUE
+WHERE b.jurisd_base_id IS NULL AND g.isolabel_ext IN ('CO','BR','UY','EC')
 ;
 
 CREATE VIEW optim.vw01full_jurisdiction_geom_point AS
