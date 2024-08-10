@@ -31,10 +31,16 @@ endif
 
 	psql $(pg_uri_db) -c "DROP {{#isCsv}}FOREIGN {{/isCsv}}TABLE IF EXISTS {{tabname}} CASCADE"
 {{^isOsm}}
-	@tput bold
-	@echo Extracting ....
-	@tput sgr0
-	cd $(sandbox); 7z {{7z_opts}} x -y $(orig)/{{file_data.file}} {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}"*{{orig_filename}}*"{{/orig_filename_string_extract}} ; chmod -R a+rwx . > /dev/null
+        {{^file_data.uncompacted}}
+	    @tput bold
+	    @echo Extracting ....
+	    @tput sgr0
+	    cd $(sandbox); 7z {{7z_opts}} x -y $(orig)/{{file_data.file}} {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}"*{{orig_filename}}*"{{/orig_filename_string_extract}} ; chmod -R a+rwx . > /dev/null
+        {{/file_data.uncompacted}}
+        {{#file_data.uncompacted}}
+            #patch para geojson, se precisar implementar outros formatos egitar: /var/gits/_dg/preserv/src/maketemplates/common002_layerHeader.mustache
+	    cd $(sandbox); cp $(orig)/{{file_data.file}} {{orig_filename}}.geojson ; chmod -R a+rwx . > /dev/null
+        {{/file_data.uncompacted}}
 {{/isOsm}}
 {{#isOsm}}
 	@tput bold
