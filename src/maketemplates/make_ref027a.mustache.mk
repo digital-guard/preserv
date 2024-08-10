@@ -53,6 +53,9 @@ all:
 {{#via}}
 	@printf "\tpublicating_geojsons_via audit-geojsons_via change_parameters_via\n"
 {{/via}}
+{{#blockface}}
+	@printf "\tpublicating_geojsons_blockface audit-geojsons_blockface change_parameters_blockface\n"
+{{/blockface}}
 	@printf "EXPERIMENTAL: target para publicar todos layers não cadastrais no cutGeo:\n\tall_publications\n"
 	@printf "EXPERIMENTAL: target para gerar e subir na nuvem os filtrados de todos layers não cadastrais:\n\tall_filtered\n"
 {{/layers}}
@@ -232,6 +235,20 @@ datagrid-clean:
 
 {{>common008_publicating_geojsons}}
 {{/datagrid}}
+
+{{#blockface}}
+blockface: tabname = {{tabname}}
+blockface: makedirs
+{{>common002_layerHeader}}
+{{>common003_shp2pgsql}}
+{{>common001_pgAny_load}}
+{{>common007_layerFooter}}
+
+blockface-clean:
+{{>common006_clean}}
+
+{{>common008_publicating_geojsons}}
+{{/blockface}}
 
 {{#geopoint}}
 geopoint: tabname = {{tabname}}
