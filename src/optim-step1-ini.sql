@@ -98,20 +98,6 @@ COMMENT ON COLUMN optim.jurisdiction_bbox.geom           IS 'Box2D for id identi
 
 COMMENT ON TABLE optim.jurisdiction_bbox IS 'Box2D geometries for optim.jurisdiction.';
 
-INSERT INTO optim.jurisdiction_bbox(id,jurisd_base_id,isolabel_ext,geom) VALUES
-( 1,  1, 'BR', ST_MakeBox2D(ST_POINT(-53.0755833,-33.8689056), ST_POINT(-28.6289646,  5.2695808))),
-( 2,  1, 'BR', ST_MakeBox2D(ST_POINT(-66.8511571,-30.0853962), ST_POINT(-53.0755833,  5.2695808))),
-( 3,  1, 'BR', ST_MakeBox2D(ST_POINT(-73.9830625,-11.1473716), ST_POINT(-66.8511571, -4.2316872))),
-( 4,null, null, ST_MakeBox2D(ST_POINT(-70.8479308, -4.2316872), ST_POINT(-66.8511571,  2.23011  ))), -- bbox BR/CO
-( 5,null, null, ST_MakeBox2D(ST_POINT(-57.6489299,-33.8689056), ST_POINT(-53.0755833,-30.0853962))), -- bbox BR/UY
-
-( 6, 2, 'CO', ST_MakeBox2D(ST_POINT(-84.8098028,  1.4683015), ST_POINT(-70.8479308, 16.1694444))),
-( 7, 2, 'CO', ST_MakeBox2D(ST_POINT(-75.192504,  -4.2316872), ST_POINT(-70.8479308,  1.4695853))),
-( 8, 2, 'CO', ST_MakeBox2D(ST_POINT(-70.8479308,  2.23011  ), ST_POINT(-66.8511571, 16.1694444))),
-( 9,null, null, ST_MakeBox2D(ST_POINT(-79.2430285, -0.1251374), ST_POINT(-75.192504 ,  1.4695853))),  -- bbox CO/EC
-
-(10, 3,  'CM', ST_MakeBox2D(ST_POINT(  8.4994544,  1.6522670), ST_POINT( 16.1910457, 13.0773906)));  -- bbox CM
-
 CREATE TABLE optim.jurisdiction_bbox_border (
   id int PRIMARY KEY,
   bbox_id int NOT NULL REFERENCES optim.jurisdiction_bbox(id),
@@ -537,15 +523,6 @@ CREATE VIEW optim.vw01full_jurisdiction_geom AS
 ;
 COMMENT ON VIEW optim.vw01full_jurisdiction_geom
   IS 'Add geom to optim.jurisdiction.'
-;
-
--- DELETE FROM optim.jurisdiction_bbox_border;
-INSERT INTO optim.jurisdiction_bbox_border
-SELECT ROW_NUMBER() OVER() as id, b.id AS bbox_id, g.jurisd_base_id AS jurisd_base_id, g.isolabel_ext AS isolabel_ext, ST_Intersection(ST_SetSRID(b.geom,4326),g.geom)
-FROM optim.jurisdiction_bbox b
-LEFT JOIN optim.vw01full_jurisdiction_geom g
-ON ST_Intersects(ST_SetSRID(b.geom,4326),g.geom) IS TRUE
-WHERE b.jurisd_base_id IS NULL AND g.isolabel_ext IN ('CO','BR','UY','EC')
 ;
 
 CREATE VIEW optim.vw01full_jurisdiction_geom_point AS
