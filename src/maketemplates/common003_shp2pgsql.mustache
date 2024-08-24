@@ -42,21 +42,6 @@ endif
 	@echo "Confira os resultados nas tabelas ingest.donated_packcomponent e ingest.feature_asis".
 {{/isShpParalell}}
 {{#isCsv}}
-{{#isXlsx}}
-	@echo Convertendo de {{orig_filename}}.xlsx para {{orig_filename}}.csv em UTF8 com LF ...
-	xlsx2csv -i {{{method_opts}}} "$(sandbox)/{{orig_filename}}.xlsx" "$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}"
-{{/isXlsx}}
-{{^isXlsx}}
-{{#charset}}
-	@echo Alterando codificação para UTF8 e o tipo de quebra de linha de CRLF para LF ...
-	iconv -f {{charset}} -t UTF-8 $(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}} | dos2unix > $(sandbox)/{{orig_filename}}.unix_utf8.csv
-{{/charset}}
-	@echo Executando csv2sql ...
-{{#charset}}
-	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{orig_filename}}.unix_utf8.csv', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
-{{/charset}}
-{{/isXlsx}}
-{{^charset}}
 {{#multiple_files}}
 {{#multiple_files_array}}
 {{/multiple_files_array}}
@@ -66,9 +51,19 @@ endif
 {{/multiple_files_array}}
 {{/multiple_files}}
 {{^multiple_files}}
-	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+{{#isXlsx}}
+	@echo Convertendo de {{orig_filename}}.xlsx para {{orig_filename}}.csv em UTF8 com LF ...
+	xlsx2csv -i {{{method_opts}}} "$(sandbox)/{{orig_filename}}.xlsx" "$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}"
+{{/isXlsx}}
+{{^isXlsx}}
+{{^isUtf8}}
+	@echo Alterando codificação para UTF8 e o tipo de quebra de linha de CRLF para LF ...
+	iconv -f {{charset}} -t UTF-8 $(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}} | dos2unix > $(sandbox)/{{orig_filename}}.unix_utf8.csv
+{{/isUtf8}}
+{{/isXlsx}}
+	@echo Executando csv2sql ...
+	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}{{#isUtf8}}.csv{{/isUtf8}}{{^isUtf8}}.unix_utf8.csv{{/isUtf8}}{{/orig_filename_with_extension}}', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
 {{/multiple_files}}
-{{/charset}}
 {{/isCsv}}
 {{#isOgr}}
 	@echo Executando ogr2ogr ...
