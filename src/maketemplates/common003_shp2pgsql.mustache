@@ -57,7 +57,17 @@ endif
 {{/charset}}
 {{/isXlsx}}
 {{^charset}}
+{{#multiple_files}}
+{{#multiple_files_array}}
+{{/multiple_files_array}}
+{{^multiple_files_array}}
+	cd $(sandbox); find $(sandbox) -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.csv" -exec sh -c "psql $(pg_uri_db) -c 'DROP TABLE IF EXISTS {{tabname}} CASCADE'; psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} ) ; {{#sql_view}}psql $(pg_uri_db) -c \"CREATE VIEW vw{{file}}_{{tabname}} AS {{{.}}}\" ; psql $(pg_uri_db) -c \"SELECT ingest.any_load('{{method}}','$$(find $(sandbox) -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.csv" | head -n 1)','{{layername}}','vw{{file}}_{{tabname}}','{{packvers_id}}','{{file_data.file}}',array[]::text[],{{id_profile_params}},{{buffer_type}},false)\" ; psql $(pg_uri_db) -c \"DROP VIEW vw{{file}}_{{tabname}}\"{{/sql_view}}{{^sql_view}}psql $(pg_uri_db) -c \"SELECT ingest.any_load('{{method}}','$$(find $(sandbox) -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.csv" | head -n 1)','{{layername}}','{{tabname}}','{{packvers_id}}','{{file_data.file}}',array{{{sql_select}}},{{id_profile_params}},{{buffer_type}},false)\"{{/sql_view}} " \;
+	psql $(pg_uri_db) -c "SELECT ingest.any_load_assign('$$(find $(sandbox) -path "*{{#orig_subfilename}}{{orig_subfilename}}{{/orig_subfilename}}*.csv" | head -n 1)','{{layername}}','{{packvers_id}}' )"
+{{/multiple_files_array}}
+{{/multiple_files}}
+{{^multiple_files}}
 	psql $(pg_uri_db) -c "SELECT ingest.fdw_generate_direct_csv( '$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}', '{{tabname}}'{{#delimiter}},'{{delimiter}}'{{/delimiter}} )"
+{{/multiple_files}}
 {{/charset}}
 {{/isCsv}}
 {{#isOgr}}
