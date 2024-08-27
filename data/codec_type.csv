@@ -7,6 +7,7 @@ CSV,ASCII,text/csv,charset=us-ascii;srid=4326
 CSV,semicolon,text/csv,charset=UTF-8;delimiter=%3B;srid=4326
 CSV,Latin1semicolon,text/csv,charset=ISO-8859-1;delimiter=%3B;srid=4326
 CSV.ZIP,,application/zip;content=text/csv,charset=UTF-8;srid=4326
+CSV.ZIP,semicolon,application/zip;content=text/csv,charset=UTF-8;delimiter=%3B;srid=4326
 CSV.GZ,,application/gzip;content=text/csv,charset=UTF-8;srid=4326
 GeoJSON,,application/geo+json,charset=UTF-8;srid=4326
 GeoJSON.GZ,,application/gzip;content=application/geo+json,charset=UTF-8;srid=4326
