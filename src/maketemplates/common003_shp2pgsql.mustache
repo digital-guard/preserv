@@ -56,6 +56,11 @@ endif
 	xlsx2csv -i {{{method_opts}}} "$(sandbox)/{{orig_filename}}.xlsx" "$(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}"
 {{/isXlsx}}
 {{^isXlsx}}
+{{#isUtf8}}
+{{#lineending}}
+dos2unix > $(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}
+{{/lineending}}
+{{/isUtf8}}
 {{^isUtf8}}
 	@echo Alterando codificação para UTF8 e o tipo de quebra de linha de CRLF para LF ...
 	iconv -f {{charset}} -t UTF-8 $(sandbox)/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}} | dos2unix > $(sandbox)/{{orig_filename}}.unix_utf8.csv

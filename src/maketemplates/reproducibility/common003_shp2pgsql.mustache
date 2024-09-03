@@ -44,6 +44,11 @@ psql {{pg_uri}}/{{pg_db}} -c "SELECT ingest.any_load_assign('$$(find {{sandbox}}
 xlsx2csv -i {{{method_opts}}} "{{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}/{{orig_filename}}.xlsx" "{{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}"
 {{/isXlsx}}
 {{^isXlsx}}
+{{#isUtf8}}
+{{#lineending}}
+dos2unix > {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}
+{{/lineending}}
+{{/isUtf8}}
 {{^isUtf8}}
 iconv -f {{charset}} -t UTF-8 {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}} | dos2unix > {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}/{{orig_filename}}.unix_utf8.csv
 {{/isUtf8}}
