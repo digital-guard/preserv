@@ -5,6 +5,7 @@ CSV,Latin9,text/csv,charset=ISO-8859-15;srid=4326
 CSV,MS-Windows,text/csv,charset=Windows-1252;srid=4326
 CSV,ASCII,text/csv,charset=us-ascii;srid=4326
 CSV,semicolon,text/csv,charset=UTF-8;delimiter=%3B;srid=4326
+CSV,semicolonCRLF,text/csv,charset=UTF-8;delimiter=%3B;srid=4326;lineending=crlf
 CSV,Latin1semicolon,text/csv,charset=ISO-8859-1;delimiter=%3B;srid=4326
 CSV.ZIP,,application/zip;content=text/csv,charset=UTF-8;srid=4326
 CSV.ZIP,semicolon,application/zip;content=text/csv,charset=UTF-8;delimiter=%3B;srid=4326
