@@ -46,7 +46,7 @@ xlsx2csv -i {{{method_opts}}} "{{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}/{{ori
 {{^isXlsx}}
 {{#isUtf8}}
 {{#lineending}}
-dos2unix > {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}
+dos2unix {{sandbox}}/_pk{{packtpl_id}}_{{pkversion}}/{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}.csv{{/orig_filename_with_extension}}
 {{/lineending}}
 {{/isUtf8}}
 {{^isUtf8}}
