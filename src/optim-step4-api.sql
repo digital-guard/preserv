@@ -627,7 +627,18 @@ CREATE or replace FUNCTION api.download_list(
     ;
 $f$ language SQL VOLATILE;
 COMMENT ON FUNCTION api.download_list
-  IS 'Returns the json for the site''s download list template.'
+  IS 'Returns the json for the site''s download list. Include filtered files.'
+;
+
+CREATE or replace FUNCTION api.download_list_hash(
+
+) RETURNS jsonb  AS $f$
+    SELECT *
+    FROM optim.vw03generate_list_hash
+    ;
+$f$ language SQL VOLATILE;
+COMMENT ON FUNCTION api.download_list_hash
+  IS 'Returns the json for the site''s download list hash. Not include filtered files.'
 ;
 
 ----------------------
