@@ -379,41 +379,75 @@ LEFT JOIN optim.vw01filtered_files s
 ON r.pack_id = s.pack_id
 ;
 
-
+--DROP VIEW optim.vw02generate_list;
 CREATE or replace VIEW optim.vw02generate_list AS
-SELECT jsonb_build_object('paises',jsonb_agg(jsonb_build_object('scope_label', scope_label, 'iso1', iso1, 'iso3', iso3, 'jurisd', jurisd))) AS y
-FROM
+WITH
+scope_iso3 AS
 (
-    SELECT COALESCE(s.scope_label,r.scope_label) AS scope_label, iso3, iso1, jurisd
+    SELECT scope_label, jsonb_agg(iso3) AS iso3
     FROM
     (
-      SELECT scope_label, jsonb_agg(iso3) AS iso3
-      FROM
-      (
-        SELECT split_part(scope_label,'-',1)  AS scope_label, jsonb_build_object('jurisd',scope_label,'doadores',jsonb_agg(pacotes)) AS iso3
-        FROM optim.vw01generate_list
-        WHERE scope_label LIKE '%-%-%'
-        GROUP BY scope_label
-        ORDER BY scope_label
-      ) m
-      GROUP BY scope_label
-    ) s
-    FULL OUTER JOIN
-    (
-      SELECT scope_label, jsonb_agg(pacotes) AS iso1
+      SELECT split_part(scope_label,'-',1)  AS scope_label, jsonb_build_object('jurisd',scope_label,'doadores',jsonb_agg(pacotes)) AS iso3
       FROM optim.vw01generate_list
-      WHERE isolevel = 1
+      WHERE scope_label LIKE '%-%-%'
       GROUP BY scope_label
-    ) r
-    ON s.scope_label = r.scope_label,
+      ORDER BY scope_label
+    ) m
+    GROUP BY scope_label
+),
+scope_iso2 AS (
+    SELECT split_part(scope_label,'-',1)  AS scope_label, jsonb_agg(pacotes) AS iso2
+    FROM optim.vw01generate_list
+    WHERE isolevel = 2
+    GROUP BY split_part(scope_label,'-',1)
+),
+scope_iso1 AS
+(
+    SELECT scope_label, jsonb_agg(pacotes) AS iso1
+    FROM optim.vw01generate_list
+    WHERE isolevel = 1
+    GROUP BY scope_label
+),
+
+jurisdiction AS (
+    SELECT
+        abbrev AS scope_label,
+        jsonb_agg(h.*)->0 AS jurisd
+    FROM optim.jurisdiction h
+    WHERE isolevel = 1
+    GROUP BY abbrev
+),
+combined AS (
+    SELECT
+        COALESCE(s.scope_label,r.scope_label,t.scope_label) AS scope_label,
+        s.iso3,
+        t.iso2,
+        r.iso1,
+        v.jurisd
+    FROM scope_iso3 s
+    FULL OUTER JOIN scope_iso1 r ON s.scope_label = r.scope_label
+    FULL OUTER JOIN scope_iso2 t ON s.scope_label = t.scope_label,
     LATERAL
     (
       SELECT jsonb_agg(h.*)->0 AS jurisd
       FROM optim.jurisdiction h
-      WHERE  abbrev = COALESCE(s.scope_label,r.scope_label) AND isolevel=1
+      WHERE  abbrev = COALESCE(s.scope_label,r.scope_label,t.scope_label) AND isolevel=1
     ) v
-) t
-;
+)
+SELECT
+    jsonb_build_object(
+      'paises',
+      jsonb_agg(
+        jsonb_build_object(
+          'scope_label', c.scope_label,
+          'iso1', c.iso1,
+          'iso2', c.iso2,
+          'iso3', c.iso3,
+          'jurisd', c.jurisd
+        )
+      )
+    ) AS y
+FROM combined c;
 
 CREATE or replace VIEW optim.vw03generate_list_hash AS
 SELECT jsonb_build_object('pacotes',jsonb_agg(r.*)) AS y
