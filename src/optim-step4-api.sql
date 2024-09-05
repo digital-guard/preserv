@@ -677,11 +677,13 @@ COMMENT ON MATERIALIZED VIEW optim.mvwjurisdiction_geomeez
 
 CREATE or replace VIEW api.metadata_viz AS
 SELECT *
+-- FROM optim.metadata_viz
 FROM optim.vw03_metadata_viz
 ;
 COMMENT ON VIEW api.metadata_viz
   IS 'Redirects the viz canonical  hyperlink to external provider.'
 ;
+
 ----------------------
 
 CREATE or replace VIEW api.licenses AS

@@ -147,64 +147,88 @@ COMMENT ON VIEW optim.vw03publication_viz
   IS 'Generate json for mustache template for Viz.'
 ;
 
+--DROP TABLE optim.templates;
+CREATE TABLE optim.templates (
+    template_name TEXT PRIMARY KEY,
+    template_content TEXT
+);
+COMMENT ON TABLE optim.templates
+  IS 'vw03_metadata_viz uses pg_read_file. Table to avoid the error on api.metadata_viz:  permission denied for function pg_read_file. Recreate the table if the templates change.'
+;
+INSERT INTO optim.templates (template_name, template_content)
+VALUES
+    ('title', pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache')),
+    ('snippet', pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache')),
+    ('description', pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache')),
+    ('description-pt-br', pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-pt-br.mustache')),
+    ('description-es', pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-es.mustache')),
+    ('licenseinfo', pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache')),
+    ('accessinformation', pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'));
+
 CREATE or replace VIEW optim.vw03_metadata_viz AS
+WITH template_data AS (
+    SELECT
+        template_name,
+        template_content
+    FROM optim.templates
+)
 SELECT
   viz_id, viz_id2, isolabel_ext, conf->'viz_summary'->'info'->>'shp_id' AS shp_id, conf->'viz_summary'->'info'->>'pub_id' AS pub_id, conf->'viz_summary'->'info'->>'view_id' AS view_id, conf->>'class_ftname' AS class_ftname,
 
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache'), conf)                   AS title,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf)                 AS snippet,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf)
+  jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'title'), conf)                   AS title,
+  jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'snippet'), conf)                 AS snippet,
+  jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'description'), conf)
   ||
   (
     CASE (conf->'jurisd1'->'jurisd_base_id')::int
-    WHEN 76 THEN jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-pt-br.mustache'), conf)
-    ELSE jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-es.mustache'), conf)
+    WHEN 76 THEN jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'description-pt-br'), conf)
+    ELSE jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'description-es'), conf)
     END
   )
   AS description,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf)             AS licenseinfo,
-  jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf)       AS accessinformation,
+  jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'licenseinfo'), conf)             AS licenseinfo,
+  jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'accessinformation'), conf)       AS accessinformation,
   replace(conf->>'ftnameviz',' ', '_') || (CASE WHEN (conf->>'with_address')::BOOLEAN IS TRUE THEN ', address' ELSE '' END) || ', ' || isolabel_ext || ', ' || (conf->'jurisd1'->>'name_en')::text AS tags,
 
   ARRAY['/Categories/Country/' || (conf->'jurisd1'->>'name_en')::text , '/Categories/Feature type/' || (conf->>'initcap_ftnameviz')::text] AS categories,
 
   jsonb_build_object(
-  'title',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache'), conf),
-  'snippet',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf),
-  'description',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf)
+  'title',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'title'), conf),
+  'snippet',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'snippet'), conf),
+  'description',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'description'), conf)
   ||
   (
     CASE (conf->'jurisd1'->'jurisd_base_id')::int
-    WHEN 76 THEN jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-pt-br.mustache'), conf)
-    ELSE jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-es.mustache'), conf)
+    WHEN 76 THEN jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'description-pt-br'), conf)
+    ELSE jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'description-es'), conf)
     END
   ),
-  'licenseinfo',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf),
-  'accessinformation',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf),
+  'licenseinfo',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'licenseinfo'), conf),
+  'accessinformation',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'accessinformation'), conf),
   'tags',replace(conf->>'ftnameviz',' ', '_') || (CASE WHEN (conf->>'with_address')::BOOLEAN IS TRUE THEN ', address' ELSE '' END) || ', ' || isolabel_ext || ', ' || (conf->'jurisd1'->>'name_en')::text
   ) AS properties_fl,
 
   jsonb_build_object(
-  'title',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/title.mustache'), conf || jsonb_build_object('foropenstreetmap', true)),
-  'snippet',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf || jsonb_build_object('foropenstreetmap', true)),
-  'description',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description.mustache'), conf || jsonb_build_object('foropenstreetmap', true))
+  'title',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'title'), conf || jsonb_build_object('foropenstreetmap', true)),
+  'snippet',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'snippet'), conf || jsonb_build_object('foropenstreetmap', true)),
+  'description',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'description'), conf || jsonb_build_object('foropenstreetmap', true))
   ||
   (
     CASE (conf->'jurisd1'->'jurisd_base_id')::int
-    WHEN 76 THEN jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-pt-br.mustache'), conf || jsonb_build_object('foropenstreetmap', true))
-    ELSE jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/description-es.mustache'), conf || jsonb_build_object('foropenstreetmap', true))
+    WHEN 76 THEN jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'description-pt-br'), conf || jsonb_build_object('foropenstreetmap', true))
+    ELSE jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'description-es'), conf || jsonb_build_object('foropenstreetmap', true))
     END
   ),
-  'licenseinfo',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/licenseinfo.mustache'), conf || jsonb_build_object('foropenstreetmap', true)),
-  'accessinformation',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf || jsonb_build_object('foropenstreetmap', true)),
+  'licenseinfo',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'licenseinfo'), conf || jsonb_build_object('foropenstreetmap', true)),
+  'accessinformation',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'accessinformation'), conf || jsonb_build_object('foropenstreetmap', true)),
   'tags',replace(conf->>'ftnameviz',' ', '_') || (CASE WHEN (conf->>'with_address')::BOOLEAN IS TRUE THEN ', address' ELSE '' END) || ', OpenStreetMap' || ', ' || isolabel_ext || ', ' || (conf->'jurisd1'->>'name_en')::text
   ) AS properties_flw,
 
   jsonb_build_object(
   'displayField', '',
   'name',replace(conf->>'ftnameviz',' ', '_'),
-  'description',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/snippet.mustache'), conf),
-  'copyrightText',jsonb_mustache_render(pg_read_file('/var/gits/_dg/preserv/src/maketemplates/viz/accessinformation.mustache'), conf)
+  'description',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'snippet'), conf),
+  'copyrightText',jsonb_mustache_render((SELECT template_content FROM template_data WHERE template_name = 'accessinformation'), conf)
   ) AS properties_l,
 
   CASE conf->>'class_ftname'
