@@ -140,6 +140,8 @@ gen_all(){
 
 ######
 
+export PYTHONPATH=/var/gits/_dg/preserv/src:$PYTHONPATH
+
 # shp2arcgis 271
 shp2arcgis(){
     filtered_id=$1
@@ -150,7 +152,7 @@ shp2arcgis(){
     viz_uri_default=$(cut -d'|' -f2 <<< ${viz})
 
     echo "Upload shapefile to Arcgis..."
-    source /home/claiton/pgarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; upload_file('${viz_uri_default}','filtered','$viz_id2')") && deactivate
+    source /var/gits/_dg/envarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; upload_file('${viz_uri_default}','filtered','$viz_id2')") && deactivate
 
     if [ "${id_shapefile}" = "1" ]
     then
@@ -204,7 +206,7 @@ publish_esri_files(){
     viz_id2=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT info->'shp_id' FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
 
     echo "Publish shapefile $viz_id2..."
-    source /home/claiton/pgarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; publish_file(${viz_id2})") && deactivate
+    source /var/gits/_dg/envarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; publish_file(${viz_id2})") && deactivate
 
     if [ "${id_shapefile}" = "1" ]
     then
@@ -223,7 +225,7 @@ create_view(){
     viz_id2=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT info->'pub_id' FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
 
     echo "Create view of feature layer $viz_id2..."
-    source /home/claiton/pgarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; create_view(${viz_id2},'filtered2osm')") && deactivate
+    source /var/gits/_dg/envarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; create_view(${viz_id2},'filtered2osm')") && deactivate
 
     if [ "${id_shapefile}" = "1" ]
     then
@@ -242,5 +244,5 @@ tr_esri_files(){
     viz_id2=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT info->'pub_id' FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
 
     echo "Translate fields names from A4A to OpenStreetMap... $viz_id2"
-    source /home/claiton/pgarcgis/bin/activate && python -c "from viz import *; tr_fields('${viz_id2}')" && deactivate
+    source /var/gits/_dg/envarcgis/bin/activate && python -c "from viz import *; tr_fields('${viz_id2}')" && deactivate
 }

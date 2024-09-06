@@ -7,7 +7,7 @@ from arcgis     import features
 from dotenv     import load_dotenv
 from copy       import deepcopy
 
-load_dotenv()
+load_dotenv(dotenv_path='/var/gits/_dg/.env')
 
 username = os.getenv("ARCGIS_USERNAME")
 password = os.getenv("ARCGIS_PASSWORD")
