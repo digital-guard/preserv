@@ -152,14 +152,19 @@ shp2arcgis(){
     viz_uri_default=$(cut -d'|' -f2 <<< ${viz})
 
     echo "Upload shapefile to Arcgis..."
-    source /var/gits/_dg/envarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; upload_file('${viz_uri_default}','filtered','$viz_id2')") && deactivate
+    #output=$(source /var/gits/_dg/envarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; upload_file('${viz_uri_default}','filtered','$viz_id2')") && deactivate)
+    output=$(source /var/gits/_dg/envarcgis/bin/activate && python -c "from viz import *; upload_file('${viz_uri_default}','filtered','$viz_id2');" && deactivate)
 
-    if [ "${id_shapefile}" = "1" ]
+    # Extract the return code and shapefile ID from the output
+    result_code=$(cut -d' ' -f1 <<< ${output})
+    shp_item_id=$(cut -d' ' -f2 <<< ${output})
+
+    if [ "$result_code" -eq "1" ]
     then
         echo "Error. Not loaded."
     else
-        echo "Set shp_id=${id_shapefile} in donated_PackComponent_cloudControl..."
-        psql postgres://postgres@localhost/dl05s_main -c"SELECT optim.update_shp_id_cloudControl('${filtered_id}','${id_shapefile}');"
+        echo "Set shp_id=${shp_item_id} in donated_PackComponent_cloudControl..."
+        psql postgres://postgres@localhost/dl05s_main -c"SELECT optim.update_shp_id_cloudControl('${filtered_id}','${shp_item_id}');"
         echo "End. Loaded."
     fi
 }
@@ -206,14 +211,18 @@ publish_esri_files(){
     viz_id2=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT info->'shp_id' FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
 
     echo "Publish shapefile $viz_id2..."
-    source /var/gits/_dg/envarcgis/bin/activate && id_shapefile=$(python -c "from viz import *; publish_file(${viz_id2})") && deactivate
+    output=$(source /var/gits/_dg/envarcgis/bin/activate && python -c "from viz import *; publish_file(${viz_id2});" && deactivate)
 
-    if [ "${id_shapefile}" = "1" ]
+    # Extract the return code and shapefile ID from the output
+    result_code=$(cut -d' ' -f1 <<< ${output})
+    item_id=$(cut -d' ' -f2 <<< ${output})
+
+    if [ "$result_code" -eq "1" ]
     then
         echo "Error. Not published."
     else
-        echo "Set pub_id=${id_shapefile} in donated_PackComponent_cloudControl..."
-        psql postgres://postgres@localhost/dl05s_main -c"SELECT optim.update_pub_id_cloudControl('${filtered_id}','${id_shapefile}');"
+        echo "Set pub_id=${item_id} in donated_PackComponent_cloudControl..."
+        psql postgres://postgres@localhost/dl05s_main -c"SELECT optim.update_pub_id_cloudControl('${filtered_id}','${item_id}');"
         echo "End. Published."
     fi
 }
@@ -244,5 +253,5 @@ tr_esri_files(){
     viz_id2=$(psql postgres://postgres@localhost/dl05s_main -qtAX -c "SELECT info->'pub_id' FROM optim.vw01fromCutLayer_toVizLayer WHERE id='${filtered_id}' AND hashedfnametype='shp'")
 
     echo "Translate fields names from A4A to OpenStreetMap... $viz_id2"
-    source /var/gits/_dg/envarcgis/bin/activate && python -c "from viz import *; tr_fields('${viz_id2}')" && deactivate
+    source /var/gits/_dg/envarcgis/bin/activate && python -c "from viz import *; tr_fields(${viz_id2})" && deactivate
 }

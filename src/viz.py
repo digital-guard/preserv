@@ -40,12 +40,20 @@ def create_folder(folder,gis):
     else:
         print(f"Folder {folder} created.")
 
-def upload_file(url_file,folder_up,viz_id2,url=url_api,gis=get_gis(),session=get_session(),headers=None):
+def upload_file(url_file, folder_up, viz_id2, url=url_api, gis=get_gis(), session=get_session(), headers=None):
     try:
-        # Get metadata from api
+        # Get metadata from API
         query = '?viz_id2=eq."' + viz_id2 + '"'
         data = get_data(session,url,query,headers)
+
+        if not data:
+            raise ValueError("No data returned from the API.")
+
         metadata = data[0]
+
+        # Ensure metadata has the expected structure
+        if 'properties_fl' not in metadata:
+            raise KeyError("Metadata does not contain 'properties_fl'.")
 
         # Set type
         metadata['properties_fl']['type'] = "Shapefile"
@@ -53,20 +61,31 @@ def upload_file(url_file,folder_up,viz_id2,url=url_api,gis=get_gis(),session=get
         # Upload ESRI
         shp_item = gis.content.add(item_properties = metadata['properties_fl'], data=url_file, folder=folder_up)
 
-        # Cria thumbnail
+        # Check if the upload was successful
+        if not shp_item:
+            raise RuntimeError("Failed to upload the shapefile.")
+
+        # Create thumbnail
         shp_item.create_thumbnail(True)
 
-        # Atualiza permissões
-        shp_item.share(org = True, allow_members_to_edit = True)
+        # Update sharing permissions
+        shp_item.share(org = True, allow_members_to_edit=True)
 
-        # ID do shapefile na ESRI
+        # ID of the shapefile in ESRI
         shp_item_id = shp_item.id
 
-        gis.content.categories.assign_to_items(items = [{shp_item_id : {"categories" : metadata['categories']}}])
+        # Assign categories to the item
+        if 'categories' in metadata:
+            gis.content.categories.assign_to_items(items=[{shp_item_id: {"categories": metadata['categories']}}])
+        else:
+            raise KeyError("Metadata does not contain 'categories'.")
+
+        # Return success code and item ID
+        print(f"0 {shp_item_id}")
     except Exception as error:
-        print('1')
-    else:
-        print(f"{shp_item_id}")
+        # Return error code and item ID
+        # print(f"An error occurred: {error}", file=sys.stderr)
+        print(f"1 None")  # Failure and no item ID
 
 def publish_file(id,url=url_api,gis=get_gis(),session=get_session()):
     try:
@@ -82,22 +101,22 @@ def publish_file(id,url=url_api,gis=get_gis(),session=get_session()):
         publish_item = shp_item.publish()
 
         # Atualiza permissões
-        # publish_item.share(org = True, groups = ["82b5c771d36f47a6939b95f1a8ae8f81"])
         publish_item.share(org = True)
 
         # ID do feature service
         item_publish_id = publish_item.id
 
-        # Categoriza o feature service
-        gis.content.categories.assign_to_items(items = [{item_publish_id : {"categories" : metadata['categories']}}])
-
         # Atualiza metadata do layer
         feature_layer = publish_item.layers[0]
         feature_layer.manager.update_definition(metadata['properties_l'])
+
+        # Categoriza o feature service
+        gis.content.categories.assign_to_items(items = [{item_publish_id : {"categories" : metadata['categories']}}])
+
+        # Return success code and item ID
+        print(f"0 {item_publish_id}")
     except Exception as error:
-        print('1')
-    else:
-        print(f"{item_publish_id}")
+        print(f"1 None")  # Failure and no item ID
 
 def create_view(id,folder,url=url_api,gis=get_gis(),session=get_session()):
     try:
@@ -145,6 +164,8 @@ def tr_fields(id,idvw=None,url=url_api,gis=get_gis(),session=get_session()):
         # query = '?pub_id=eq.' + id
         query = '?or=(pub_id.eq.' + id + ',view_id.eq.' + id + ')'
         data = get_data(session,url,query,headers)
+        if not data:
+            raise ValueError("No data returned from API")
         metadata = data[0]
 
         if metadata['pub_id'] == id:
