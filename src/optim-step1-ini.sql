@@ -1426,17 +1426,6 @@ FROM
   )
   UNION ALL
   (
-    -- CO unique names
-    -- eg.: CO-Medellin
-    SELECT 'CO-' || split_part(isolabel_ext,'-',3), MAX(isolabel_ext)
-    FROM optim.jurisdiction j
-    WHERE isolevel::int >2 AND isolabel_ext LIKE 'CO%'
-    GROUP BY 1
-    HAVING count(*)=1
-    ORDER BY 1
-  )
-  UNION ALL
-  (
     -- CO state abbrev.
     SELECT  'CO-' || substring(isolabel_ext,4,1) ||'-'|| split_part(isolabel_ext,'-',3), MAX(isolabel_ext)
     FROM optim.jurisdiction j
@@ -1447,24 +1436,40 @@ FROM
   )
   UNION ALL
   (
-    -- CO-divipola (municipios)
-    SELECT 'CO-' || jurisd_local_id, isolabel_ext
-    FROM optim.jurisdiction
-    WHERE isolabel_ext LIKE 'CO-%-%'
-  )
-  UNION ALL
-  (
     -- BR-ibgegeocodigo (municipios e estados)
-    SELECT 'BR-' || jurisd_local_id, isolabel_ext
+    -- CM-codigo (municipios)
+    -- CO-divipola (municipios)
+    -- UY-codigo (municipios)
+    SELECT split_part(isolabel_ext,'-',1) || '-' || jurisd_local_id, isolabel_ext
     FROM optim.jurisdiction
-    WHERE isolabel_ext LIKE 'BR-%'
+    WHERE jurisd_base_id IN (76,120,170,858)
+      AND
+      CASE
+      WHEN jurisd_base_id IN (120,170) THEN isolevel IN (3) -- (municipios)
+      WHEN jurisd_base_id IN (76,858) THEN isolevel IN (2,3) -- (municipios e estados)
+      END
   )
   UNION ALL
   (
-    -- UY-codigo (municipios)
-    SELECT 'UY-' || jurisd_local_id, isolabel_ext
+    -- unique names
+    -- eg.: iso_alpha2-name
+    -- razão do uso do lower: BR-PI-SantaLuz, BR-BA-Santaluz, BR-RS-Montenegro, BR-RO-MonteNegro
+    SELECT lower(split_part(isolabel_ext,'-',1) || '-' || split_part(isolabel_ext,'-',3)), MAX(isolabel_ext)
+    FROM optim.jurisdiction j
+    WHERE isolevel::int >2 AND jurisd_base_id IN (76,120,170)
+    GROUP BY 1
+    HAVING count(*)=1
+    ORDER BY 1
+  )
+  UNION ALL
+  (
+    -- CM-abbrev (municipios)
+    SELECT split_part(isolabel_ext,'-',1) || '-' || abbrev, MAX(isolabel_ext)
     FROM optim.jurisdiction
-    WHERE isolabel_ext LIKE 'UY-%'
+    WHERE isolevel::int >2 AND jurisd_base_id IN (120)
+    GROUP BY 1
+    HAVING count(*)=1
+    ORDER BY 1
   )
   UNION ALL
   (
@@ -1501,17 +1506,6 @@ FROM
   )
   UNION ALL
   (
-    -- br unique names
-    -- eg.: BR-Zortea
-    SELECT lower('BR-' || split_part(isolabel_ext,'-',3)), MAX(isolabel_ext) AS isolabel_ext
-    FROM optim.jurisdiction j
-    WHERE isolevel::int >2 AND isolabel_ext LIKE 'BR%'
-    GROUP BY 1
-    HAVING count(*)=1
-    ORDER BY 1
-  )
-  UNION ALL
-  (
     -- br-uf-uf para capitais de isolevel = 2
     SELECT lower('BR-' || parent_abbrev || '-' || parent_abbrev), isolabel_ext
     FROM optim.jurisdiction j
@@ -1523,16 +1517,6 @@ FROM
     SELECT lower(split_part(isolabel_ext,'-',1) || '-' || split_part(isolabel_ext,'-',2)), isolabel_ext
     FROM optim.jurisdiction j
     WHERE (info->'is_capital_isolevel')::int = 1 AND isolevel::int = 3
-  )
-  UNION ALL
-  (
-    -- CM-abbrev (municipios)
-    SELECT 'CM-' || abbrev, MAX(isolabel_ext)
-    FROM optim.jurisdiction
-    WHERE isolabel_ext LIKE 'CM-%-%'
-    GROUP BY 1
-    HAVING count(*)=1
-    ORDER BY 1
   )
 ) z
 ;
