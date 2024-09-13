@@ -1454,12 +1454,16 @@ FROM
     -- unique names
     -- eg.: iso_alpha2-name
     -- razão do uso do lower: BR-PI-SantaLuz, BR-BA-Santaluz, BR-RS-Montenegro, BR-RO-MonteNegro
-    SELECT lower(split_part(isolabel_ext,'-',1) || '-' || split_part(isolabel_ext,'-',3)), MAX(isolabel_ext)
-    FROM optim.jurisdiction j
-    WHERE isolevel::int >2 AND jurisd_base_id IN (76,120,170)
-    GROUP BY 1
-    HAVING count(*)=1
-    ORDER BY 1
+    SELECT split_part(isolabel_ext,'-',1) || '-' || split_part(isolabel_ext,'-',3), isolabel_ext
+    FROM
+    (
+      SELECT lower(split_part(isolabel_ext,'-',1) || '-' || split_part(isolabel_ext,'-',3)), MAX(isolabel_ext) AS isolabel_ext
+      FROM optim.jurisdiction j
+      WHERE isolevel::int >2 AND jurisd_base_id IN (76,120,170)
+      GROUP BY 1
+      HAVING count(*)=1
+      ORDER BY 1
+    ) a
   )
   UNION ALL
   (
@@ -1539,7 +1543,7 @@ BEGIN
       SELECT *
       FROM optim.jurisdiction_abbrev_option
       WHERE isolabel_ext %s
-      ORDER BY isolabel_ext
+      ORDER BY isolabel_ext, abbrev
     ) TO '%s' CSV HEADER
   $$;
 
@@ -1553,6 +1557,7 @@ COMMENT ON FUNCTION optim.generate_synonym_csv(text,text)
 ;
 /*
 SELECT optim.generate_synonym_csv('BR','/tmp/pg_io/synonymbr.csv');
+SELECT optim.generate_synonym_csv('CM','/tmp/pg_io/synonymcm.csv');
 SELECT optim.generate_synonym_csv('CO','/tmp/pg_io/synonymco.csv');
 SELECT optim.generate_synonym_csv('UY','/tmp/pg_io/synonymuy.csv');
 */
