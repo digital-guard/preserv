@@ -1267,7 +1267,7 @@ BEGIN
       format('SELECT * FROM optim.vw01full_jurisdiction_geom WHERE isolabel_ext = ''%s''',p_isolabel_ext),
       format('%s/%s_jurisd.geojson',p_fileref,lower(replace(p_isolabel_ext,'-','_'))),
       't1.geom',
-      'osm_id,jurisd_base_id,jurisd_local_id,parent_id,admin_level,name,abbrev,wikidata_id,lexlabel,isolabel_ext,ddd,name_en,isolevel',
+      'osm_id,jurisd_base_id,jurisd_local_id,parent_id,admin_level,name,parent_abbrev,abbrev,wikidata_id,lexlabel,isolabel_ext,ddd,housenumber_system_type,lex_urn,info,name_en,isolevel,ne_country_id,int_country_id',
       NULL,NULL,$3,5);
 
     RETURN (SELECT 'Publicado em ' || p_fileref::text)
