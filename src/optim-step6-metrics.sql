@@ -145,8 +145,9 @@ WHERE t.osm_id=jurisdiction.osm_id AND t.elongation_factor_deg>0
 */
 
 
-CREATE VIEW optim.vw_jurisdiction_border AS
---CREATE TABLE optim.vw_jurisdiction_border AS
+/*
+--CREATE VIEW optim.vw_jurisdiction_border AS
+CREATE TABLE optim.vw_jurisdiction_border AS
  SELECT *
  FROM
  (
@@ -160,9 +161,9 @@ CREATE VIEW optim.vw_jurisdiction_border AS
   ) t
   WHERE score > 0.01;
 
-COPY (SELECT * FROM prod.vw_br_jurisdiction_border) TO '/tmp/BR-borders.csv' csv header;
+-- COPY (SELECT * FROM prod.vw_br_jurisdiction_border) TO '/tmp/BR-borders.csv' csv header;
 -- 31797 rows (31804 sem o where)
-
+*/
 /*
 ----- PERIGO!
 UPDATE  optim.jurisdiction
