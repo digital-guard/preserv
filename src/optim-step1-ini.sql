@@ -85,6 +85,30 @@ CREATE INDEX optim_jurisdiction_geom_isolabel_ext_idx1 ON optim.jurisdiction_geo
 
 COMMENT ON TABLE optim.jurisdiction_geom IS 'OpenStreetMap geometries for optim.jurisdiction.';
 
+CREATE TABLE optim.jurisdiction_geom_buffer (
+  osm_id bigint PRIMARY KEY,
+  isolabel_ext text NOT NULL,
+  geom geometry(Geometry,4326),
+  UNIQUE(isolabel_ext)
+);
+COMMENT ON COLUMN optim.jurisdiction_geom_buffer.osm_id             IS 'Relation identifier in OpenStreetMap.';
+COMMENT ON COLUMN optim.jurisdiction_geom_buffer.isolabel_ext       IS 'ISO 3166-1 alpha-2 code and name (camel case); e.g. BR-SP-SaoPaulo.';
+COMMENT ON COLUMN optim.jurisdiction_geom_buffer.geom               IS 'Geometry for osm_id identifier';
+CREATE INDEX optim_jurisdiction_geom_buffer_idx1     ON optim.jurisdiction_geom_buffer USING gist (geom);
+CREATE INDEX optim_jurisdiction_geom_buffer_isolabel_ext_idx1 ON optim.jurisdiction_geom_buffer USING btree (isolabel_ext);
+CREATE INDEX optim_jurisdiction_geom_buffer_osm_id_idx1 ON optim.jurisdiction_geom_buffer USING btree (osm_id);
+
+COMMENT ON TABLE optim.jurisdiction_geom_buffer IS 'OpenStreetMap geometries for optim.jurisdiction.';
+
+/*
+--TRUNCATE optim.jurisdiction_geom_buffer;
+INSERT INTO optim.jurisdiction_geom_buffer
+SELECT osm_id, isolabel_ext, ST_Transform(ST_SimplifyPreserveTopology(ST_Buffer(ST_Transform(geom, 3395), 50),5),4326) AS geom
+FROM optim.jurisdiction_geom
+WHERE isolabel_ext like 'CO%'
+;
+*/
+
 CREATE TABLE optim.jurisdiction_bbox (
   id int PRIMARY KEY,
   jurisd_base_id int,
@@ -1267,7 +1291,7 @@ BEGIN
       format('SELECT * FROM optim.vw01full_jurisdiction_geom WHERE isolabel_ext = ''%s''',p_isolabel_ext),
       format('%s/%s_jurisd.geojson',p_fileref,lower(replace(p_isolabel_ext,'-','_'))),
       't1.geom',
-      'osm_id,jurisd_base_id,jurisd_local_id,parent_id,admin_level,name,abbrev,wikidata_id,lexlabel,isolabel_ext,ddd,name_en,isolevel',
+      'osm_id,jurisd_base_id,jurisd_local_id,parent_id,admin_level,name,parent_abbrev,abbrev,wikidata_id,lexlabel,isolabel_ext,ddd,housenumber_system_type,lex_urn,info,name_en,isolevel,ne_country_id,int_country_id',
       NULL,NULL,$3,5);
 
     RETURN (SELECT 'Publicado em ' || p_fileref::text)

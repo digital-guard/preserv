@@ -140,6 +140,46 @@ WHERE isolabel_ext LIKE 'CO-%-%' AND  elongation_factor_deg>0
 UPDATE  optim.jurisdiction
 SET info = COALESCE (info,'{}'::JSONB) || jsonb_build_object('elongation_factor',t.elong_deg_mixfactor)
 FROM  optim.vw04prepare_jurisdiction_shapemetrics t
-WHERE t.osm_id=jurisdiction.osm_id  AND t.elongation_factor_deg>0
+WHERE t.osm_id=jurisdiction.osm_id AND t.elongation_factor_deg>0
 ;  -- UPDATE 9203
+*/
+
+
+/*
+--CREATE VIEW optim.vw_jurisdiction_border AS
+CREATE TABLE optim.vw_jurisdiction_border AS
+ SELECT *
+ FROM
+ (
+  SELECT DISTINCT d.isolabel_ext, round(100.0*ST_Area(ST_Intersection(ST_Buffer(d.geom,1),r.geom))/ST_Perimeter(d.geom),2) AS score, r.isolabel_ext AS shares_border_with
+  FROM optim.vw01full_jurisdiction_geom d
+  INNER JOIN optim.vw01full_jurisdiction_geom r
+  ON d.isolevel=3 AND r.isolevel=3 AND d.jurisd_local_id != r.jurisd_local_id
+      AND d.geom && r.geom AND ST_Intersects(d.geom,r.geom)
+  WHERE ST_Relate(d.geom,r.geom) != 'FF2F01212'
+  ORDER BY 1, 2
+  ) t
+  WHERE score > 0.01;
+
+-- COPY (SELECT * FROM prod.vw_br_jurisdiction_border) TO '/tmp/BR-borders.csv' csv header;
+-- 31797 rows (31804 sem o where)
+*/
+/*
+----- PERIGO!
+UPDATE  optim.jurisdiction
+SET info = COALESCE (info,'{}'::JSONB) || jsonb_build_object('shares_border_with',t.shares_border_with)
+FROM
+(
+  SELECT isolabel_ext, array_agg(shares_border_with) AS shares_border_with
+  FROM
+  (
+    SELECT isolabel_ext, shares_border_with
+    FROM optim.vw_jurisdiction_border
+    ORDER BY isolabel_ext,shares_border_with
+  ) a
+  GROUP BY isolabel_ext
+  ORDER BY isolabel_ext
+) t
+WHERE t.isolabel_ext=jurisdiction.isolabel_ext
+;  -- UPDATE 11171
 */
