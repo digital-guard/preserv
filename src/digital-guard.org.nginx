@@ -29,7 +29,7 @@ server {
     index index.php index.html index.htm;
     access_log /var/log/nginx/digital-guard.org.access_log;
 
-    location ~* "^/(?<hash>[a-f0-9]{6,64}([.a-z0-9]+)?)$" {
+    location ~* "^/(?<hash>[a-f0-9]{6,64})(\.[a-z0-9]+)*$" {
         try_files /dl.php?$uri /dl.php;
     }
 
@@ -43,7 +43,7 @@ server {
         fastcgi_pass unix:/run/php/php-fpm.sock;
     }
 
-    location ~* "^/download/[a-f0-9]{64}([.a-z0-9]+)$" {
+    location ~* "^/download/[a-f0-9]{64}(\.[a-z0-9]+)*$" {
         root /var/www/dl.digital-guard.org;
         try_files $uri $uri;
     }
