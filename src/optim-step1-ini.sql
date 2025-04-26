@@ -1313,7 +1313,7 @@ CREATE TABLE download.redirects (
     donor_id          text,
     filename_original text,
     package_path      text,
-    hashedfname       text NOT NULL PRIMARY KEY CHECK( hashedfname ~ '^[0-9a-f]{64,64}\.[a-z0-9]+$' ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
+    hashedfname       text NOT NULL PRIMARY KEY CHECK( hashedfname ~ '^[0-9a-f]{64,64}(\.[a-z0-9]+)+$'::text ), -- formato "sha256.ext". Hashed filename. Futuro "size~sha256"
     hashedfnameuri    text,                      -- para_url
     UNIQUE (hashedfname,hashedfnameuri)
 );
