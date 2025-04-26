@@ -1029,7 +1029,7 @@ BEGIN
         license
     FROM tmp_orig.fdw_donatedpack%s t
     WHERE file_exists(optim.format_filepath(scope, donor_id, pack_count)) -- verificar make_conf.yaml ausentes
-          AND lst_vers=(select MAX(lst_vers) from tmp_orig.fdw_donatedpack%s where donor_id=t.donor_id )
+          AND lst_vers=(select MAX(lst_vers) from tmp_orig.fdw_donatedpack%s where pack_id=t.pack_id )
     ON CONFLICT (donor_id,pk_count)
     DO UPDATE 
     SET original_tpl=EXCLUDED.original_tpl, make_conf_tpl=EXCLUDED.make_conf_tpl, kx_num_files=EXCLUDED.kx_num_files, info=EXCLUDED.info, license=EXCLUDED.license;
