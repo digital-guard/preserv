@@ -768,7 +768,9 @@ INSERT INTO optim.jurisdiction_bbox(id,jurisd_base_id,isolabel_ext,geom) VALUES
 
 (13, 5,   'EC', ST_MakeBox2D(ST_POINT(-92.2072392, -1.6122316), ST_POINT(-89.038249, 1.8835964))),
 (14, 5,   'EC', ST_MakeBox2D(ST_POINT(-81.3443465, -5.0159314), ST_POINT(-75.192504, -0.1251374))),
-(15, 5,   'EC', ST_MakeBox2D(ST_POINT(-81.3443465, -0.1251374), ST_POINT(-79.2430285, 1.4695853)));
+(15, 5,   'EC', ST_MakeBox2D(ST_POINT(-81.3443465, -0.1251374), ST_POINT(-79.2430285, 1.4695853))),
+
+(16, 6,   'SV', ST_MakeBox2D(ST_POINT(-90.2209042, 12.9518017), ST_POINT(-87.5971467, 14.4510488)));
 
 -- DELETE FROM optim.jurisdiction_bbox_border;
 INSERT INTO optim.jurisdiction_bbox_border
