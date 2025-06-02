@@ -46,6 +46,221 @@ COMMENT ON VIEW api.jurisdiction
 --curl "http://localhost:3103/jurisdiction?jurisd_base_id=eq.76&parent_abbrev=eq.CE" -H "Accept: text/csv"
 -- https://osm.codes/_sql.csv/jurisdiction?jurisd_base_id=eq.76&parent_abbrev=eq.CE
 
+----------------------
+
+DROP MATERIALIZED VIEW IF EXISTS optim.mvwjurisdiction_geomeez;
+CREATE MATERIALIZED VIEW optim.mvwjurisdiction_geomeez AS
+  SELECT *
+  FROM optim.jurisdiction_geom
+  WHERE osm_id IN
+    (
+        SELECT osm_id
+        FROM optim.jurisdiction
+        WHERE isolevel=1 AND COALESCE( (info->>'use_jurisdiction_eez')::boolean,false) IS FALSE
+    )
+
+  UNION
+
+  SELECT g.osm_id, g.isolabel_ext, ST_UNION(g.geom,e.geom), ST_UNION(g.geom_svg,e.geom_svg), g.kx_ghs1_intersects, g.kx_ghs2_intersects
+  FROM optim.jurisdiction_geom g
+  LEFT JOIN optim.jurisdiction_eez e
+  ON g.osm_id = e.osm_id
+  WHERE g.osm_id IN
+    (
+        SELECT osm_id
+        FROM optim.jurisdiction
+        WHERE isolevel=1 AND (info->>'use_jurisdiction_eez')::boolean IS TRUE
+    )
+;
+CREATE INDEX optim_mvwjurisdiction_geomeez_idx1              ON optim.mvwjurisdiction_geomeez USING gist (geom);
+CREATE INDEX optim_mvwjurisdiction_geomeez_isolabel_ext_idx1 ON optim.mvwjurisdiction_geomeez USING btree (isolabel_ext);
+
+COMMENT ON MATERIALIZED VIEW optim.mvwjurisdiction_geomeez
+ IS 'Merge geom and eez geometries when ''info->use_jurisdiction_eez'' is true'
+;
+
+
+CREATE or replace VIEW api.jurisdiction_lexlabel AS
+SELECT *
+FROM optim.jurisdiction_lexlabel
+;
+COMMENT ON COLUMN api.jurisdiction_lexlabel.isolabel_ext           IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
+COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel1        IS 'isolabel_ext in lex format, e.g. br;sao.paulo;sao.paulo.';
+COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel2        IS 'isolabel_ext in lex format, e.g. br;sp;sao.paulo.';
+COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel2_abbrev IS 'isolabel_ext in lex format, e.g. br;sp;spa.';
+
+COMMENT ON VIEW api.jurisdiction_lexlabel
+  IS 'Jurisdictions in lex format.'
+;
+
+DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym;
+CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
+SELECT DISTINCT synonym, isolabel_ext
+FROM
+(
+  (
+    -- identidade
+    SELECT lower(isolabel_ext) AS synonym, isolabel_ext AS isolabel_ext
+    FROM optim.jurisdiction
+    WHERE isolevel > 1 AND osm_id NOT IN (SELECT parent_id FROM optim.jurisdiction WHERE (info->'is_capital_isolevel')::int = 1)
+  )
+  UNION ALL
+  (
+    -- não deve retornar abbrev repetidos
+    SELECT lower(abbrev), MAX(isolabel_ext)
+    FROM optim.jurisdiction_abbrev_option
+    WHERE selected IS TRUE
+    GROUP BY abbrev
+    HAVING count(*) = 1
+  )
+) z
+;
+COMMENT ON COLUMN mvwjurisdiction_synonym.synonym      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
+COMMENT ON COLUMN mvwjurisdiction_synonym.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
+
+COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
+ IS 'Synonymous names of jurisdictions.'
+;
+CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON mvwjurisdiction_synonym (synonym);
+
+
+DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym_default_abbrev;
+CREATE MATERIALIZED VIEW mvwjurisdiction_synonym_default_abbrev AS
+SELECT DISTINCT abbrev, isolabel_ext
+FROM optim.jurisdiction_abbrev_option x
+WHERE default_abbrev IS TRUE
+;
+COMMENT ON COLUMN mvwjurisdiction_synonym_default_abbrev.abbrev      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
+COMMENT ON COLUMN mvwjurisdiction_synonym_default_abbrev.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
+
+COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym_default_abbrev
+ IS 'Synonymous default abbrev names of jurisdictions.'
+;
+CREATE UNIQUE INDEX mvwjurisdiction_synonym_default_abbrev_synonym ON mvwjurisdiction_synonym_default_abbrev (isolabel_ext);
+
+
+CREATE or replace FUNCTION str_geocodeiso_decode(iso text)
+RETURNS text[] as $f$
+  SELECT isolabel_ext || array[split_part(isolabel_ext,'-',1)]
+  FROM mvwjurisdiction_synonym
+  WHERE synonym = lower((
+    SELECT
+      CASE
+        WHEN cardinality(u)=2 AND u[2] ~ '^\d+?$'
+        THEN u[1]::text || '-' || ((u[2])::integer)::text
+        ELSE iso
+      END
+    FROM (SELECT regexp_split_to_array(iso,'(-)')::text[] AS u ) r
+  ))
+$f$ LANGUAGE SQL IMMUTABLE;
+COMMENT ON FUNCTION str_geocodeiso_decode(text)
+  IS 'Decode abbrev isolabel_ext.'
+;
+
+CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
+   p_code text
+) RETURNS jsonb AS $f$
+    SELECT jsonb_build_object(
+        'type', 'FeatureCollection',
+        'features',
+            (
+                jsonb_agg(ST_AsGeoJSONb(
+                    geom,
+                    8,0,null,
+                    jsonb_build_object(
+                        'osm_id', osm_id,
+                        'jurisd_base_id', jurisd_base_id,
+                        'jurisd_local_id', jurisd_local_id,
+                        'parent_id', parent_id,
+                        'admin_level', admin_level,
+                        'name', name,
+                        'parent_abbrev', parent_abbrev,
+                        'abbrev', abbrev,
+                        'wikidata_id', wikidata_id,
+                        'lexlabel', lexlabel,
+                        'isolabel_ext', isolabel_ext,
+                        'lex_urn', lex_urn,
+                        'name_en', name_en,
+                        'isolevel', isolevel,
+                        'area', info->'area_km2',
+                        'shares_border_with', info->'shares_border_with',
+                        -- 'size_shortestprefix', size_shortestprefix,
+                        'canonical_pathname', CASE WHEN jurisd_base_id=170 THEN 'CO-'|| jurisd_local_id ELSE isolabel_ext END
+                        )
+                    )::jsonb)
+            )
+        )
+    FROM optim.vw01full_jurisdiction_geom g/*,
+
+    LATERAL
+    (
+      SELECT MIN(LENGTH(kx_prefix)) AS size_shortestprefix
+      FROM osmc.coverage
+      WHERE isolabel_ext = g.isolabel_ext AND is_overlay IS FALSE
+    ) s*/
+
+    WHERE g.isolabel_ext = (SELECT (str_geocodeiso_decode(p_code))[1])
+$f$ LANGUAGE SQL IMMUTABLE;
+COMMENT ON FUNCTION api.jurisdiction_geojson_from_isolabel(text)
+  IS 'Return jurisdiction geojson from isolabel_ext.'
+;
+/*
+SELECT api.jurisdiction_geojson_from_isolabel('BR-SP-Campinas');
+SELECT api.jurisdiction_geojson_from_isolabel('CO-ANT-Itagui');
+SELECT api.jurisdiction_geojson_from_isolabel('CO-A-Itagui');
+SELECT api.jurisdiction_geojson_from_isolabel('CO-Itagui');
+*/
+
+CREATE or replace FUNCTION api.jurisdiction_autocomplete(
+   p_code text DEFAULT NULL
+) RETURNS jsonb AS $f$
+SELECT
+CASE
+WHEN cardinality(u)=2 AND u[1] ~*  '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] NOT IN ('ES','EN','PT','FR','')       THEN jsonb_build_object('error', 'Unsupported language.')
+WHEN cardinality(u)=2 AND u[1] !~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2]     IN ('ES','EN','PT','FR'   )       THEN jsonb_build_object('error', 'Isocode wrong format.')
+WHEN cardinality(u)=2 AND u[1] !~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] NOT IN ('ES','EN','PT','FR','')       THEN jsonb_build_object('error', 'Isocode wrong format and unsupported language.')
+WHEN cardinality(u)=1 AND u[1] !~* '^[A-Z]{2}(-[A-Z]{1,3})?$'                                                THEN jsonb_build_object('error', 'Isocode wrong format.')
+WHEN (cardinality(u)=1 OR (cardinality(u)=2 AND u[2] IN ('') ))
+                 AND u[1] NOT IN (SELECT isolabel_ext FROM optim.jurisdiction WHERE isolevel IN (1,2))       THEN jsonb_build_object('error', 'Isocode does not exist.')
+WHEN (SELECT count(isolabel_ext) FROM optim.jurisdiction WHERE isolabel_ext = u[1]) = 0 AND u[1] NOT IN ('') THEN jsonb_build_object('error', 'No information for this jurisdiction.')
+
+WHEN (cardinality(u)=2 AND u[1] ~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] IN ('ES','EN','PT','FR','')) OR
+     (cardinality(u)=1 AND u[1] ~* '^[A-Z]{2}(-[A-Z]{1,3})?$') OR
+     p_code IS NULL OR p_code = ''
+THEN
+(
+    SELECT jsonb_agg(jsonb_build_object(
+                        'name', name, -- currently no multilingual support.
+                        'abbreviation', lower(abbrev),
+                        'synonymous',
+                            CASE
+                            WHEN isolevel IN (1,2) THEN ARRAY []::text[]
+                            -- WHEN isolevel = 2 THEN ARRAY [ lexname_to_unix(lexlabel,true,true,true) ]::text[]
+                            WHEN isolevel = 3      THEN ARRAY [ split_part(isolabel_ext,'-',3) ]::text[]
+                            ELSE ARRAY []::text[]
+                            END
+                        ))
+    FROM optim.jurisdiction j
+    WHERE
+
+    CASE
+    WHEN p_code IS NULL OR p_code = ''  THEN isolevel = 1
+    WHEN cardinality(v)=1               THEN isolabel_ext LIKE u[1] || '%' AND isolevel = 2
+    WHEN cardinality(v)=2               THEN isolabel_ext LIKE u[1] || '%' AND isolevel = 3
+    END
+)
+ELSE jsonb_build_object('error', 'Unknown.')
+END
+FROM (SELECT string_to_array(upper(p_code),'/')::text[] AS u ) r, LATERAL (SELECT string_to_array(u[1],'-')::text[] AS v) s
+$f$ LANGUAGE SQL IMMUTABLE;
+COMMENT ON FUNCTION api.jurisdiction_autocomplete(text)
+  IS 'Jurisdictions to autocomplete.'
+;
+/*
+SELECT api.jurisdiction_autocomplete();
+SELECT api.jurisdiction_autocomplete('CO-ANT');
+*/
+
 ---------
 -- Union de fdw_donor de todas as jurisdições
 CREATE or replace VIEW api.donors AS
@@ -211,191 +426,6 @@ COMMENT ON COLUMN api.stats_donated_pack_licensegrouped.data_amount         IS '
 COMMENT ON VIEW api.stats_donated_pack_licensegrouped
   IS 'Amount of data per license considering layers geoaddress_full and parcel_full on the raw data provided by stats_donated_packcomponent.'
 ;
-
----------
-
-CREATE or replace VIEW api.jurisdiction_lexlabel AS
-SELECT *
-FROM optim.jurisdiction_lexlabel
-;
-COMMENT ON COLUMN api.jurisdiction_lexlabel.isolabel_ext           IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
-COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel1        IS 'isolabel_ext in lex format, e.g. br;sao.paulo;sao.paulo.';
-COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel2        IS 'isolabel_ext in lex format, e.g. br;sp;sao.paulo.';
-COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel2_abbrev IS 'isolabel_ext in lex format, e.g. br;sp;spa.';
-
-COMMENT ON VIEW api.jurisdiction_lexlabel
-  IS 'Jurisdictions in lex format.'
-;
-
-DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym;
-CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
-SELECT DISTINCT synonym, isolabel_ext
-FROM
-(
-  (
-    -- identidade
-    SELECT lower(isolabel_ext) AS synonym, isolabel_ext AS isolabel_ext
-    FROM optim.jurisdiction
-    WHERE isolevel > 1 AND osm_id NOT IN (SELECT parent_id FROM optim.jurisdiction WHERE (info->'is_capital_isolevel')::int = 1)
-  )
-  UNION ALL
-  (
-    -- não deve retornar abbrev repetidos
-    SELECT lower(abbrev), MAX(isolabel_ext)
-    FROM optim.jurisdiction_abbrev_option
-    WHERE selected IS TRUE
-    GROUP BY abbrev
-    HAVING count(*) = 1
-  )
-) z
-;
-COMMENT ON COLUMN mvwjurisdiction_synonym.synonym      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
-COMMENT ON COLUMN mvwjurisdiction_synonym.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
-
-COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
- IS 'Synonymous names of jurisdictions.'
-;
-CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON mvwjurisdiction_synonym (synonym);
-
-
-DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym_default_abbrev;
-CREATE MATERIALIZED VIEW mvwjurisdiction_synonym_default_abbrev AS
-SELECT DISTINCT abbrev, isolabel_ext
-FROM optim.jurisdiction_abbrev_option x
-WHERE default_abbrev IS TRUE
-;
-COMMENT ON COLUMN mvwjurisdiction_synonym_default_abbrev.abbrev      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
-COMMENT ON COLUMN mvwjurisdiction_synonym_default_abbrev.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
-
-COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym_default_abbrev
- IS 'Synonymous default abbrev names of jurisdictions.'
-;
-CREATE UNIQUE INDEX mvwjurisdiction_synonym_default_abbrev_synonym ON mvwjurisdiction_synonym_default_abbrev (isolabel_ext);
-
-
-CREATE or replace FUNCTION str_geocodeiso_decode(iso text)
-RETURNS text[] as $f$
-  SELECT isolabel_ext || array[split_part(isolabel_ext,'-',1)]
-  FROM mvwjurisdiction_synonym
-  WHERE synonym = lower((
-    SELECT
-      CASE
-        WHEN cardinality(u)=2 AND u[2] ~ '^\d+?$'
-        THEN u[1]::text || '-' || ((u[2])::integer)::text
-        ELSE iso
-      END
-    FROM (SELECT regexp_split_to_array(iso,'(-)')::text[] AS u ) r
-  ))
-$f$ LANGUAGE SQL IMMUTABLE;
-COMMENT ON FUNCTION str_geocodeiso_decode(text)
-  IS 'Decode abbrev isolabel_ext.'
-;
-
-CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
-   p_code text
-) RETURNS jsonb AS $f$
-    SELECT jsonb_build_object(
-        'type', 'FeatureCollection',
-        'features',
-            (
-                jsonb_agg(ST_AsGeoJSONb(
-                    geom,
-                    8,0,null,
-                    jsonb_build_object(
-                        'osm_id', osm_id,
-                        'jurisd_base_id', jurisd_base_id,
-                        'jurisd_local_id', jurisd_local_id,
-                        'parent_id', parent_id,
-                        'admin_level', admin_level,
-                        'name', name,
-                        'parent_abbrev', parent_abbrev,
-                        'abbrev', abbrev,
-                        'wikidata_id', wikidata_id,
-                        'lexlabel', lexlabel,
-                        'isolabel_ext', isolabel_ext,
-                        'lex_urn', lex_urn,
-                        'name_en', name_en,
-                        'isolevel', isolevel,
-                        --'area', ST_Area(geom,true),
-                        'area', info->'area_km2',
-                        'shares_border_with', info->'shares_border_with',
-                        -- 'is_multipolygon', CASE WHEN GeometryType(geom) IN ('MULTIPOLYGON') THEN TRUE ELSE FALSE END,
-                        -- 'size_shortestprefix', size_shortestprefix,
-                        'canonical_pathname', CASE WHEN jurisd_base_id=170 THEN 'CO-'|| jurisd_local_id ELSE isolabel_ext END
-                        )
-                    )::jsonb)
-            )
-        )
-    FROM optim.vw01full_jurisdiction_geom g/*,
-
-    LATERAL
-    (
-      SELECT MIN(LENGTH(kx_prefix)) AS size_shortestprefix
-      FROM osmc.coverage
-      WHERE isolabel_ext = g.isolabel_ext AND is_overlay IS FALSE
-    ) s*/
-
-    WHERE g.isolabel_ext = (SELECT (str_geocodeiso_decode(p_code))[1])
-$f$ LANGUAGE SQL IMMUTABLE;
-COMMENT ON FUNCTION api.jurisdiction_geojson_from_isolabel(text)
-  IS 'Return jurisdiction geojson from isolabel_ext.'
-;
-/*
-SELECT api.jurisdiction_geojson_from_isolabel('BR-SP-Campinas');
-SELECT api.jurisdiction_geojson_from_isolabel('CO-ANT-Itagui');
-SELECT api.jurisdiction_geojson_from_isolabel('CO-A-Itagui');
-SELECT api.jurisdiction_geojson_from_isolabel('CO-Itagui');
-*/
-
-CREATE or replace FUNCTION api.jurisdiction_autocomplete(
-   p_code text DEFAULT NULL
-) RETURNS jsonb AS $f$
-SELECT
-CASE
-WHEN cardinality(u)=2 AND u[1] ~*  '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] NOT IN ('ES','EN','PT','FR','')       THEN jsonb_build_object('error', 'Unsupported language.')
-WHEN cardinality(u)=2 AND u[1] !~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2]     IN ('ES','EN','PT','FR'   )       THEN jsonb_build_object('error', 'Isocode wrong format.')
-WHEN cardinality(u)=2 AND u[1] !~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] NOT IN ('ES','EN','PT','FR','')       THEN jsonb_build_object('error', 'Isocode wrong format and unsupported language.')
-WHEN cardinality(u)=1 AND u[1] !~* '^[A-Z]{2}(-[A-Z]{1,3})?$'                                                THEN jsonb_build_object('error', 'Isocode wrong format.')
-WHEN (cardinality(u)=1 OR (cardinality(u)=2 AND u[2] IN ('') ))
-                 AND u[1] NOT IN (SELECT isolabel_ext FROM optim.jurisdiction WHERE isolevel IN (1,2))       THEN jsonb_build_object('error', 'Isocode does not exist.')
-WHEN (SELECT count(isolabel_ext) FROM optim.jurisdiction WHERE isolabel_ext = u[1]) = 0 AND u[1] NOT IN ('') THEN jsonb_build_object('error', 'No information for this jurisdiction.')
-
-WHEN (cardinality(u)=2 AND u[1] ~* '^[A-Z]{2}(-[A-Z]{1,3})?$' AND u[2] IN ('ES','EN','PT','FR','')) OR
-     (cardinality(u)=1 AND u[1] ~* '^[A-Z]{2}(-[A-Z]{1,3})?$') OR
-     p_code IS NULL OR p_code = ''
-THEN
-(
-    SELECT jsonb_agg(jsonb_build_object(
-                        'name', name, -- currently no multilingual support.
-                        'abbreviation', lower(abbrev),
-                        'synonymous',
-                            CASE
-                            WHEN isolevel IN (1,2) THEN ARRAY []::text[]
-                            -- WHEN isolevel = 2 THEN ARRAY [ lexname_to_unix(lexlabel,true,true,true) ]::text[]
-                            WHEN isolevel = 3      THEN ARRAY [ split_part(isolabel_ext,'-',3) ]::text[]
-                            ELSE ARRAY []::text[]
-                            END
-                        ))
-    FROM optim.jurisdiction j
-    WHERE
-
-    CASE
-    WHEN p_code IS NULL OR p_code = ''  THEN isolevel = 1
-    WHEN cardinality(v)=1               THEN isolabel_ext LIKE u[1] || '%' AND isolevel = 2
-    WHEN cardinality(v)=2               THEN isolabel_ext LIKE u[1] || '%' AND isolevel = 3
-    END
-)
-ELSE jsonb_build_object('error', 'Unknown.')
-END
-FROM (SELECT string_to_array(upper(p_code),'/')::text[] AS u ) r, LATERAL (SELECT string_to_array(u[1],'-')::text[] AS v) s
-$f$ LANGUAGE SQL IMMUTABLE;
-COMMENT ON FUNCTION api.jurisdiction_autocomplete(text)
-  IS 'Jurisdictions to autocomplete.'
-;
-/*
-SELECT api.jurisdiction_autocomplete();
-SELECT api.jurisdiction_autocomplete('CO-ANT');
-*/
 
 ----------------------
 
@@ -645,38 +675,6 @@ COMMENT ON FUNCTION api.download_list_hash
 
 ----------------------
 
-DROP MATERIALIZED VIEW IF EXISTS optim.mvwjurisdiction_geomeez;
-CREATE MATERIALIZED VIEW optim.mvwjurisdiction_geomeez AS
-  SELECT *
-  FROM optim.jurisdiction_geom
-  WHERE osm_id IN
-    (
-        SELECT osm_id
-        FROM optim.jurisdiction
-        WHERE isolevel=1 AND COALESCE( (info->>'use_jurisdiction_eez')::boolean,false) IS FALSE
-    )
-
-  UNION
-
-  SELECT g.osm_id, g.isolabel_ext, ST_UNION(g.geom,e.geom), ST_UNION(g.geom_svg,e.geom_svg), g.kx_ghs1_intersects, g.kx_ghs2_intersects
-  FROM optim.jurisdiction_geom g
-  LEFT JOIN optim.jurisdiction_eez e
-  ON g.osm_id = e.osm_id
-  WHERE g.osm_id IN
-    (
-        SELECT osm_id
-        FROM optim.jurisdiction
-        WHERE isolevel=1 AND (info->>'use_jurisdiction_eez')::boolean IS TRUE
-    )
-;
-CREATE INDEX optim_mvwjurisdiction_geomeez_idx1              ON optim.mvwjurisdiction_geomeez USING gist (geom);
-CREATE INDEX optim_mvwjurisdiction_geomeez_isolabel_ext_idx1 ON optim.mvwjurisdiction_geomeez USING btree (isolabel_ext);
-
-COMMENT ON MATERIALIZED VIEW optim.mvwjurisdiction_geomeez
- IS 'Merge geom and eez geometries when ''info->use_jurisdiction_eez'' is true'
-;
-----------------------
-
 CREATE or replace VIEW api.metadata_viz AS
 SELECT *
 -- FROM optim.metadata_viz
@@ -744,39 +742,4 @@ FROM optim.vw01full_packfilevers
 ;
 COMMENT ON VIEW api.full_packfilevers
   IS 'Get the latest version of donated packages. Join between donated_packfilevers, donated_PackTpl, jurisdiction, auth_user and licenses_implieds.'
-;
-
-----------------------
-
-DELETE FROM optim.jurisdiction_bbox_border; DELETE FROM optim.jurisdiction_bbox;
-INSERT INTO optim.jurisdiction_bbox(id,jurisd_base_id,isolabel_ext,geom) VALUES
-( 1,  1,  'BR', ST_MakeBox2D(ST_POINT(-53.0755833,-33.8689056), ST_POINT(-28.6289646,  5.2695808))),
-( 2,  1,  'BR', ST_MakeBox2D(ST_POINT(-66.8511571,-30.0853962), ST_POINT(-53.0755833,  5.2695808))),
-( 3,  1,  'BR', ST_MakeBox2D(ST_POINT(-73.9830625,-11.1473716), ST_POINT(-66.8511571, -4.2316872))),
-( 4,null, null, ST_MakeBox2D(ST_POINT(-70.8479308, -4.2316872), ST_POINT(-66.8511571,  2.23011  ))), -- bbox BR/CO
-( 5,null, null, ST_MakeBox2D(ST_POINT(-57.6489299,-33.8689056), ST_POINT(-53.0755833,-30.0853962))), -- bbox BR/UY
-
-( 6, 2,   'CO', ST_MakeBox2D(ST_POINT(-84.8098028,  1.4683015), ST_POINT(-70.8479308, 16.1694444))),
-( 7, 2,   'CO', ST_MakeBox2D(ST_POINT(-75.192504,  -4.2316872), ST_POINT(-70.8479308,  1.4695853))),
-( 8, 2,   'CO', ST_MakeBox2D(ST_POINT(-70.8479308,  2.23011  ), ST_POINT(-66.8511571, 16.1694444))),
-( 9,null, null, ST_MakeBox2D(ST_POINT(-79.2430285, -0.1251374), ST_POINT(-75.192504 ,  1.4695853))),  -- bbox CO/EC
-
-(10, 3,   'CM', ST_MakeBox2D(ST_POINT(  8.4994544,  1.6522670), ST_POINT( 16.1910457, 13.0773906))),  -- bbox CM
-
-(11, 4,   'UY', ST_MakeBox2D(ST_POINT(-58.42871924608347,-35.7824481), ST_POINT(-53.1810897, -33.8689056))),
-(12, 4,   'UY', ST_MakeBox2D(ST_POINT(-58.4947729,-33.8689056), ST_POINT(-57.6489115, -30.1932302))),
-
-(13, 5,   'EC', ST_MakeBox2D(ST_POINT(-92.2072392, -1.6122316), ST_POINT(-89.038249, 1.8835964))),
-(14, 5,   'EC', ST_MakeBox2D(ST_POINT(-81.3443465, -5.0159314), ST_POINT(-75.192504, -0.1251374))),
-(15, 5,   'EC', ST_MakeBox2D(ST_POINT(-81.3443465, -0.1251374), ST_POINT(-79.2430285, 1.4695853))),
-
-(16, 6,   'SV', ST_MakeBox2D(ST_POINT(-90.2209042, 12.9518017), ST_POINT(-87.5971467, 14.4510488)));
-
--- DELETE FROM optim.jurisdiction_bbox_border;
-INSERT INTO optim.jurisdiction_bbox_border
-SELECT ROW_NUMBER() OVER() as id, b.id AS bbox_id, g.jurisd_base_id AS jurisd_base_id, g.isolabel_ext AS isolabel_ext, ST_Intersection(ST_SetSRID(b.geom,4326),g.geom)
-FROM optim.jurisdiction_bbox b
-LEFT JOIN optim.vw01full_jurisdiction_geom g
-ON ST_Intersects(ST_SetSRID(b.geom,4326),g.geom) IS TRUE
-WHERE b.jurisd_base_id IS NULL AND g.isolabel_ext IN ('CO','BR','UY','EC')
 ;

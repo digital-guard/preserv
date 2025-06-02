@@ -109,34 +109,6 @@ WHERE isolabel_ext like 'CO%'
 ;
 */
 
-CREATE TABLE optim.jurisdiction_bbox (
-  id int PRIMARY KEY,
-  jurisd_base_id int,
-  isolabel_ext text,
-  geom Box2D
-);
-COMMENT ON COLUMN optim.jurisdiction_bbox.id             IS 'Gid.';
-COMMENT ON COLUMN optim.jurisdiction_bbox.jurisd_base_id IS 'Numeric official ID.';
-COMMENT ON COLUMN optim.jurisdiction_bbox.isolabel_ext   IS 'ISO code';
-COMMENT ON COLUMN optim.jurisdiction_bbox.geom           IS 'Box2D for id identifier';
-
-COMMENT ON TABLE optim.jurisdiction_bbox IS 'Box2D geometries for optim.jurisdiction.';
-
-CREATE TABLE optim.jurisdiction_bbox_border (
-  id int PRIMARY KEY,
-  bbox_id int NOT NULL REFERENCES optim.jurisdiction_bbox(id),
-  jurisd_base_id int,
-  isolabel_ext text NOT NULL,
-  geom Geometry
-);
-COMMENT ON COLUMN optim.jurisdiction_bbox_border.id             IS 'Gid.';
-COMMENT ON COLUMN optim.jurisdiction_bbox_border.bbox_id        IS 'id of optim.jurisdiction_bbox.';
-COMMENT ON COLUMN optim.jurisdiction_bbox_border.jurisd_base_id IS 'Numeric official ID.';
-COMMENT ON COLUMN optim.jurisdiction_bbox_border.isolabel_ext   IS 'ISO code';
-COMMENT ON COLUMN optim.jurisdiction_bbox_border.geom           IS 'Geometry of intersection of box with country.';
-
-COMMENT ON TABLE optim.jurisdiction_bbox_border IS 'Polygon for optim.jurisdiction_bbox, where jurisd_base_id is null.';
-
 CREATE TABLE optim.jurisdiction_geom_point (
   osm_id bigint PRIMARY KEY,
   isolabel_ext text,
