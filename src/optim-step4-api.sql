@@ -74,10 +74,8 @@ CREATE MATERIALIZED VIEW optim.mvwjurisdiction_geomeez AS
 ;
 CREATE INDEX optim_mvwjurisdiction_geomeez_idx1              ON optim.mvwjurisdiction_geomeez USING gist (geom);
 CREATE INDEX optim_mvwjurisdiction_geomeez_isolabel_ext_idx1 ON optim.mvwjurisdiction_geomeez USING btree (isolabel_ext);
-
 COMMENT ON MATERIALIZED VIEW optim.mvwjurisdiction_geomeez
- IS 'Merge geom and eez geometries when ''info->use_jurisdiction_eez'' is true'
-;
+ IS 'Merge geom and eez geometries when ''info->use_jurisdiction_eez'' is true';
 
 
 CREATE or replace VIEW api.jurisdiction_lexlabel AS
@@ -88,10 +86,8 @@ COMMENT ON COLUMN api.jurisdiction_lexlabel.isolabel_ext           IS 'ISO and n
 COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel1        IS 'isolabel_ext in lex format, e.g. br;sao.paulo;sao.paulo.';
 COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel2        IS 'isolabel_ext in lex format, e.g. br;sp;sao.paulo.';
 COMMENT ON COLUMN api.jurisdiction_lexlabel.lex_isoinlevel2_abbrev IS 'isolabel_ext in lex format, e.g. br;sp;spa.';
-
 COMMENT ON VIEW api.jurisdiction_lexlabel
-  IS 'Jurisdictions in lex format.'
-;
+  IS 'Jurisdictions in lex format.';
 
 DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym;
 CREATE MATERIALIZED VIEW mvwjurisdiction_synonym AS
@@ -117,10 +113,8 @@ FROM
 ;
 COMMENT ON COLUMN mvwjurisdiction_synonym.synonym      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
 COMMENT ON COLUMN mvwjurisdiction_synonym.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
-
 COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
- IS 'Synonymous names of jurisdictions.'
-;
+ IS 'Synonymous names of jurisdictions.';
 CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON mvwjurisdiction_synonym (synonym);
 
 
@@ -132,10 +126,8 @@ WHERE default_abbrev IS TRUE
 ;
 COMMENT ON COLUMN mvwjurisdiction_synonym_default_abbrev.abbrev      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
 COMMENT ON COLUMN mvwjurisdiction_synonym_default_abbrev.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
-
 COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym_default_abbrev
- IS 'Synonymous default abbrev names of jurisdictions.'
-;
+ IS 'Synonymous default abbrev names of jurisdictions.';
 CREATE UNIQUE INDEX mvwjurisdiction_synonym_default_abbrev_synonym ON mvwjurisdiction_synonym_default_abbrev (isolabel_ext);
 
 
@@ -158,38 +150,33 @@ COMMENT ON FUNCTION str_geocodeiso_decode(text)
 ;
 
 CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
-   p_code text
+   p_iso text
 ) RETURNS jsonb AS $f$
-    SELECT jsonb_build_object(
-        'type', 'FeatureCollection',
-        'features',
-            (
-                jsonb_agg(ST_AsGeoJSONb(
-                    geom,
-                    8,0,null,
-                    jsonb_build_object(
-                        'osm_id', osm_id,
-                        'jurisd_base_id', jurisd_base_id,
-                        'jurisd_local_id', jurisd_local_id,
-                        'parent_id', parent_id,
-                        'admin_level', admin_level,
-                        'name', name,
-                        'parent_abbrev', parent_abbrev,
-                        'abbrev', abbrev,
-                        'wikidata_id', wikidata_id,
-                        'lexlabel', lexlabel,
-                        'isolabel_ext', isolabel_ext,
-                        'lex_urn', lex_urn,
-                        'name_en', name_en,
-                        'isolevel', isolevel,
-                        'area', info->'area_km2',
-                        'shares_border_with', info->'shares_border_with',
-                        -- 'size_shortestprefix', size_shortestprefix,
-                        'canonical_pathname', CASE WHEN jurisd_base_id=170 THEN 'CO-'|| jurisd_local_id ELSE isolabel_ext END
-                        )
-                    )::jsonb)
-            )
-        )
+    SELECT
+      jsonb_build_object('type','FeatureCollection','features',jsonb_build_object(
+        'type','Feature',
+        'geometry',ST_AsGeoJSON(g.geom,8,0)::jsonb,
+        'properties',jsonb_build_object(
+                'osm_id', g.osm_id,
+                'jurisd_base_id', jurisd_base_id,
+                'jurisd_local_id', jurisd_local_id,
+                'parent_id', parent_id,
+                'admin_level', admin_level,
+                'name', name,
+                'parent_abbrev', parent_abbrev,
+                'abbrev', abbrev,
+                'wikidata_id', wikidata_id,
+                'lexlabel', lexlabel,
+                'isolabel_ext', g.isolabel_ext,
+                'lex_urn', lex_urn,
+                'name_en', name_en,
+                'isolevel', isolevel,
+                'area', info->'area_km2',
+                'shares_border_with', info->'shares_border_with',
+                'min_level', min_level,
+                'canonical_pathname', CASE WHEN jurisd_base_id=170 THEN 'CO-'|| jurisd_local_id ELSE g.isolabel_ext END
+          )
+      ))::jsonb
     FROM optim.vw01full_jurisdiction_geom g/*,
 
     LATERAL
@@ -199,7 +186,7 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
       WHERE isolabel_ext = g.isolabel_ext AND is_overlay IS FALSE
     ) s*/
 
-    WHERE g.isolabel_ext = (SELECT (str_geocodeiso_decode(p_code))[1])
+    WHERE g.isolabel_ext = (SELECT (str_geocodeiso_decode(p_iso))[1])
 $f$ LANGUAGE SQL IMMUTABLE;
 COMMENT ON FUNCTION api.jurisdiction_geojson_from_isolabel(text)
   IS 'Return jurisdiction geojson from isolabel_ext.'
