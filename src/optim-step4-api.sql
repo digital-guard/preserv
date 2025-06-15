@@ -173,7 +173,7 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
                 'isolevel', isolevel,
                 'area', info->'area_km2',
                 'shares_border_with', info->'shares_border_with',
-                'min_level', min_level,
+                -- 'min_level', min_level,
                 'canonical_pathname', CASE WHEN jurisd_base_id=170 THEN 'CO-'|| jurisd_local_id ELSE g.isolabel_ext END
           )
       ))::jsonb
@@ -181,9 +181,9 @@ CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
 
     LATERAL
     (
-      SELECT MIN(LENGTH(kx_prefix)) AS size_shortestprefix
-      FROM osmc.coverage
-      WHERE isolabel_ext = g.isolabel_ext AND is_overlay IS FALSE
+      SELECT MIN(((cbits)::bit(6))::int - 12) AS min_level
+      FROM osmc.mvwcoverage
+      WHERE isolabel_ext = l[1] AND is_overlay IS FALSE
     ) s*/
 
     WHERE g.isolabel_ext = (SELECT (str_geocodeiso_decode(p_iso))[1])
