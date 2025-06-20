@@ -117,20 +117,6 @@ COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym
  IS 'Synonymous names of jurisdictions.';
 CREATE UNIQUE INDEX jurisdiction_abbrev_synonym ON mvwjurisdiction_synonym (synonym);
 
-
-DROP MATERIALIZED VIEW IF EXISTS mvwjurisdiction_synonym_default_abbrev;
-CREATE MATERIALIZED VIEW mvwjurisdiction_synonym_default_abbrev AS
-SELECT DISTINCT abbrev, isolabel_ext
-FROM optim.jurisdiction_abbrev_option x
-WHERE default_abbrev IS TRUE
-;
-COMMENT ON COLUMN mvwjurisdiction_synonym_default_abbrev.abbrev      IS 'Synonym for isolabel_ext, e.g. br;sao.paulo;sao.paulo br-saopaulo';
-COMMENT ON COLUMN mvwjurisdiction_synonym_default_abbrev.isolabel_ext IS 'ISO and name (camel case); e.g. BR-SP-SaoPaulo.';
-COMMENT ON MATERIALIZED VIEW mvwjurisdiction_synonym_default_abbrev
- IS 'Synonymous default abbrev names of jurisdictions.';
-CREATE UNIQUE INDEX mvwjurisdiction_synonym_default_abbrev_synonym ON mvwjurisdiction_synonym_default_abbrev (isolabel_ext);
-
-
 CREATE or replace FUNCTION str_geocodeiso_decode(iso text)
 RETURNS text[] as $f$
   SELECT isolabel_ext || array[split_part(isolabel_ext,'-',1)]
