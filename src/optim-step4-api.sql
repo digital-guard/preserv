@@ -135,55 +135,6 @@ COMMENT ON FUNCTION str_geocodeiso_decode(text)
   IS 'Decode abbrev isolabel_ext.'
 ;
 
-CREATE or replace FUNCTION api.jurisdiction_geojson_from_isolabel(
-   p_iso text
-) RETURNS jsonb AS $f$
-    SELECT
-      jsonb_build_object('type','FeatureCollection','features',jsonb_build_object(
-        'type','Feature',
-        'geometry',ST_AsGeoJSON(g.geom,8,0)::jsonb,
-        'properties',jsonb_build_object(
-                'osm_id', g.osm_id,
-                'jurisd_base_id', jurisd_base_id,
-                'jurisd_local_id', jurisd_local_id,
-                'parent_id', parent_id,
-                'admin_level', admin_level,
-                'name', name,
-                'parent_abbrev', parent_abbrev,
-                'abbrev', abbrev,
-                'wikidata_id', wikidata_id,
-                'lexlabel', lexlabel,
-                'isolabel_ext', g.isolabel_ext,
-                'lex_urn', lex_urn,
-                'name_en', name_en,
-                'isolevel', isolevel,
-                'area', info->'area_km2',
-                'shares_border_with', info->'shares_border_with',
-                -- 'min_level', min_level,
-                'canonical_pathname', CASE WHEN jurisd_base_id=170 THEN 'CO-'|| jurisd_local_id ELSE g.isolabel_ext END
-          )
-      ))::jsonb
-    FROM optim.vw01full_jurisdiction_geom g/*,
-
-    LATERAL
-    (
-      SELECT MIN(((cbits)::bit(6))::int - 12) AS min_level
-      FROM osmc.mvwcoverage
-      WHERE isolabel_ext = l[1] AND is_overlay IS FALSE
-    ) s*/
-
-    WHERE g.isolabel_ext = (SELECT (str_geocodeiso_decode(p_iso))[1])
-$f$ LANGUAGE SQL IMMUTABLE;
-COMMENT ON FUNCTION api.jurisdiction_geojson_from_isolabel(text)
-  IS 'Return jurisdiction geojson from isolabel_ext.'
-;
-/*
-SELECT api.jurisdiction_geojson_from_isolabel('BR-SP-Campinas');
-SELECT api.jurisdiction_geojson_from_isolabel('CO-ANT-Itagui');
-SELECT api.jurisdiction_geojson_from_isolabel('CO-A-Itagui');
-SELECT api.jurisdiction_geojson_from_isolabel('CO-Itagui');
-*/
-
 CREATE or replace FUNCTION api.jurisdiction_autocomplete(
    p_code text DEFAULT NULL
 ) RETURNS jsonb AS $f$
