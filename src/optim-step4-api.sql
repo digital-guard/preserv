@@ -184,7 +184,7 @@ COMMENT ON FUNCTION api.jurisdiction_autocomplete(text)
 SELECT api.jurisdiction_autocomplete();
 SELECT api.jurisdiction_autocomplete('CO-ANT');
 */
-
+/*
 ---------
 -- Union de fdw_donor de todas as jurisdições
 CREATE or replace VIEW api.donors AS
@@ -253,15 +253,8 @@ FROM (
 ) a
 LEFT JOIN
 (
-    SELECT d.*/*, family AS license_family*/
+    SELECT d.
     FROM api.donatedpacks_donor d
-    --LEFT JOIN
-    --(
-        --SELECT id_label, name, family, url, 'yes' AS license_is_explicit FROM tmp_orig.fdw_licenses
-        --UNION
-        --SELECT id_label, name, family, url_report AS url, 'no' AS license_is_explicit FROM tmp_orig.fdw_implieds
-    --) AS l
-    --ON lower(d.license) = l.id_label AND d.license_is_explicit = l.license_is_explicit
 ) b
 ON substring(to_char(a.packvers_id,'FM00000000000000'),4,8) = to_char(b.pack_id,'FM00000000')
     AND substring(to_char(a.packvers_id,'FM00000000000000'),1,3)::int = (SELECT jurisd_base_id FROM optim.jurisdiction WHERE lower(isolabel_ext)=jurisdiction)
@@ -473,7 +466,7 @@ COMMENT ON COLUMN api.pkindown.url          IS 'Hyperlink to package page in the
 
 COMMENT ON VIEW api.pkindown
   IS 'Returns some information about packages listed on the https://addressforall.org/downloads website.'
-;
+;*/
 
 ----------------------
 
@@ -659,11 +652,11 @@ SELECT api.plicenses('cc0-1.0');
 */
 
 ----------------------
-
+/*
 CREATE or replace VIEW api.full_packfilevers AS
 SELECT *
 FROM optim.vw01full_packfilevers
 ;
 COMMENT ON VIEW api.full_packfilevers
   IS 'Get the latest version of donated packages. Join between donated_packfilevers, donated_PackTpl, jurisdiction, auth_user and licenses_implieds.'
-;
+;*/
