@@ -4,8 +4,9 @@ CREATE SCHEMA IF NOT EXISTS api;
 COMMENT ON SCHEMA "api" IS
 $$AddressForAll API documentation
 
-A RESTful API that serves AddressForAll data.
+For detailed instructions, see the <a href="https://wikifull.addressforall.org/doc/osmc:Swagger">official wiki documentation</a>.
 $$;
+
 
 CREATE ROLE webanon nologin;
 -- https://www.postgresql.org/docs/current/predefined-roles.html
@@ -27,7 +28,7 @@ SELECT osm_id,
       jsonb_strip_nulls(info || jsonb_build_object('sys_housenumbering',housenumber_system_type,'sys_housenumbering_lex',lex_urn)) AS info
 FROM optim.jurisdiction
 ORDER BY jurisd_base_id, isolevel, name
-;
+LIMIT 100000;
 COMMENT ON COLUMN api.jurisdiction.osm_id          IS 'Relation identifier in OpenStreetMap.';
 COMMENT ON COLUMN api.jurisdiction.jurisd_base_id  IS 'ISO3166-1-numeric COUNTRY ID (e.g. Brazil is 76) or negative for non-iso (ex. oceans).';
 COMMENT ON COLUMN api.jurisdiction.jurisd_local_id IS 'NaturalEarthData country gid.';
@@ -606,6 +607,7 @@ COMMENT ON VIEW api.metadata_viz
 CREATE or replace VIEW api.licenses AS
 SELECT *
 FROM license.licenses_implieds
+LIMIT 100000;
 ;
 COMMENT ON VIEW api.licenses
   IS 'Merge implicit and explicit licenses.'
