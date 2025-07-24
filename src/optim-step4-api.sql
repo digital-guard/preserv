@@ -3,8 +3,8 @@ CREATE SCHEMA IF NOT EXISTS api;
 -- https://github.com/PostgREST/postgrest/pull/2624
 COMMENT ON SCHEMA "api" IS
 $$AddressForAll API documentation
-
-For detailed instructions, see the <a href="https://wikifull.addressforall.org/doc/osmc:Swagger">official wiki documentation</a>.
+/*
+For detailed instructions, see the <a href="https://wikifull.addressforall.org/doc/osmc:Swagger">official wiki documentation</a>.*/
 $$;
 
 
