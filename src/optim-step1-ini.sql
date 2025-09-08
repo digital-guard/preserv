@@ -85,6 +85,16 @@ CREATE INDEX optim_jurisdiction_geom_isolabel_ext_idx1 ON optim.jurisdiction_geo
 
 COMMENT ON TABLE optim.jurisdiction_geom IS 'OpenStreetMap geometries for optim.jurisdiction.';
 
+CREATE TABLE optim.jurisdiction_geom_preserved (
+    osm_id bigint PRIMARY KEY,
+    isolabel_ext text NOT NULL,
+    geom geometry(Geometry,4326),
+    geom_svg geometry(Geometry,4326),
+    kx_ghs1_intersects text[],
+    kx_ghs2_intersects text[],
+    UNIQUE(isolabel_ext)
+);
+
 CREATE TABLE optim.jurisdiction_geom_buffer (
   osm_id bigint PRIMARY KEY,
   isolabel_ext text NOT NULL,
