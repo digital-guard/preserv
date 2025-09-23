@@ -49,36 +49,6 @@ COMMENT ON VIEW api.jurisdiction
 
 ----------------------
 
-DROP MATERIALIZED VIEW IF EXISTS optim.mvwjurisdiction_geomeez;
-CREATE MATERIALIZED VIEW optim.mvwjurisdiction_geomeez AS
-  SELECT *
-  FROM optim.jurisdiction_geom
-  WHERE osm_id IN
-    (
-        SELECT osm_id
-        FROM optim.jurisdiction
-        WHERE isolevel=1 AND COALESCE( (info->>'use_jurisdiction_eez')::boolean,false) IS FALSE
-    )
-
-  UNION
-
-  SELECT g.osm_id, g.isolabel_ext, ST_UNION(g.geom,e.geom), ST_UNION(g.geom_svg,e.geom_svg), g.kx_ghs1_intersects, g.kx_ghs2_intersects
-  FROM optim.jurisdiction_geom g
-  LEFT JOIN optim.jurisdiction_eez e
-  ON g.osm_id = e.osm_id
-  WHERE g.osm_id IN
-    (
-        SELECT osm_id
-        FROM optim.jurisdiction
-        WHERE isolevel=1 AND (info->>'use_jurisdiction_eez')::boolean IS TRUE
-    )
-;
-CREATE INDEX optim_mvwjurisdiction_geomeez_idx1              ON optim.mvwjurisdiction_geomeez USING gist (geom);
-CREATE INDEX optim_mvwjurisdiction_geomeez_isolabel_ext_idx1 ON optim.mvwjurisdiction_geomeez USING btree (isolabel_ext);
-COMMENT ON MATERIALIZED VIEW optim.mvwjurisdiction_geomeez
- IS 'Merge geom and eez geometries when ''info->use_jurisdiction_eez'' is true';
-
-
 CREATE or replace VIEW api.jurisdiction_lexlabel AS
 SELECT *
 FROM optim.jurisdiction_lexlabel

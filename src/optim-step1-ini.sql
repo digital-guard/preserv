@@ -85,16 +85,6 @@ CREATE INDEX optim_jurisdiction_geom_isolabel_ext_idx1 ON optim.jurisdiction_geo
 
 COMMENT ON TABLE optim.jurisdiction_geom IS 'OpenStreetMap geometries for optim.jurisdiction.';
 
-CREATE TABLE optim.jurisdiction_geom_preserved (
-    osm_id bigint PRIMARY KEY,
-    isolabel_ext text NOT NULL,
-    geom geometry(Geometry,4326),
-    geom_svg geometry(Geometry,4326),
-    kx_ghs1_intersects text[],
-    kx_ghs2_intersects text[],
-    UNIQUE(isolabel_ext)
-);
-
 CREATE TABLE optim.jurisdiction_geom_buffer (
   osm_id bigint PRIMARY KEY,
   isolabel_ext text NOT NULL,
@@ -521,15 +511,22 @@ COMMENT ON VIEW optim.vw01info_feature_type
   IS 'Adds class_ftname, class_description and class_info to optim.feature_type.info.'
 ;
 
+-- DROP MATERIALIZED VIEW IF EXISTS optim.vw01full_jurisdiction_geom;
 CREATE VIEW optim.vw01full_jurisdiction_geom AS
-    SELECT j.*, g.geom
+    SELECT j.*,
+        CASE
+            WHEN e.geom IS NOT NULL AND isolevel=1 AND (j.info->>'use_jurisdiction_eez')::boolean IS TRUE THEN ST_Union(g.geom,e.geom)
+            ELSE g.geom
+        END as geom
     FROM optim.jurisdiction j
-    LEFT JOIN optim.jurisdiction_geom g
-    ON j.osm_id = g.osm_id
+    LEFT JOIN optim.jurisdiction_geom g ON j.osm_id = g.osm_id
+    LEFT JOIN optim.jurisdiction_eez  e ON j.osm_id = e.osm_id
 ;
 COMMENT ON VIEW optim.vw01full_jurisdiction_geom
-  IS 'Add geom to optim.jurisdiction.'
+  IS 'Add geom to optim.jurisdiction. For countries (isolevel=1) with use_jurisdiction_eez=true, merges land and EEZ geometries using ST_Union.'
 ;
+-- CREATE INDEX optim_vw01full_jurisdiction_geom_idx1              ON optim.vw01full_jurisdiction_geom USING gist (geom);
+-- CREATE INDEX optim_vw01full_jurisdiction_geom_isolabel_ext_idx1 ON optim.vw01full_jurisdiction_geom USING btree (isolabel_ext);
 
 CREATE VIEW optim.vw01full_jurisdiction_geom_point AS
     SELECT j.*, g.geom
