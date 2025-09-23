@@ -104,8 +104,8 @@ COMMENT ON TABLE optim.jurisdiction_geom_buffer IS 'OpenStreetMap geometries for
 --TRUNCATE optim.jurisdiction_geom_buffer;
 INSERT INTO optim.jurisdiction_geom_buffer
 SELECT osm_id, isolabel_ext, ST_Transform(ST_SimplifyPreserveTopology(ST_Buffer(ST_Transform(geom, 3395), 50),5),4326) AS geom
-FROM optim.jurisdiction_geom
-WHERE isolabel_ext like 'CO%'
+FROM optim.vw01full_jurisdiction_geom
+-- WHERE isolabel_ext like 'CO%'
 ;
 */
 
@@ -520,7 +520,7 @@ CREATE VIEW optim.vw01full_jurisdiction_geom AS
         END as geom
     FROM optim.jurisdiction j
     LEFT JOIN optim.jurisdiction_geom g ON j.osm_id = g.osm_id
-    LEFT JOIN optim.jurisdiction_eez  e ON j.osm_id = e.osm_id
+    LEFT JOIN optim.jurisdiction_eez  e ON j.isolabel_ext = e.isolabel_ext
 ;
 COMMENT ON VIEW optim.vw01full_jurisdiction_geom
   IS 'Add geom to optim.jurisdiction. For countries (isolevel=1) with use_jurisdiction_eez=true, merges land and EEZ geometries using ST_Union.'
