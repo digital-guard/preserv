@@ -103,7 +103,7 @@ COMMENT ON TABLE optim.jurisdiction_geom_buffer IS 'OpenStreetMap geometries for
 /*
 --TRUNCATE optim.jurisdiction_geom_buffer;
 INSERT INTO optim.jurisdiction_geom_buffer
-SELECT osm_id, isolabel_ext, ST_Transform(ST_SimplifyPreserveTopology(ST_Buffer(ST_Transform(geom, 3395), 50),5),4326) AS geom
+SELECT osm_id, isolabel_ext, ST_Transform(ST_SimplifyPreserveTopology(ST_Buffer(ST_Transform(geom, 3395), CASE WHEN isolevel=1 THEN 500 ELSE 50 END),5),4326) AS geom
 FROM optim.vw01full_jurisdiction_geom
 -- WHERE isolabel_ext like 'CO%'
 ;
