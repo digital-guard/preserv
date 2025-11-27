@@ -142,6 +142,24 @@ endif
 	touch $(lockpath)/digitalPreservation-makeSQL.~feito
 	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
 
+ini_datalake_cepbr: pgio lck $(gits_basepath)/_a4a/pg_pubLib-v1/src/makefile
+ifeq ($(DL_TEST),$(pg_datalake))
+	@echo "... DROP old database $(pg_datalake)?"
+	@read -p "[Press ENTER to drop or Ctrl+C to quit]" _press_enter_
+	psql $(pg_uri_root) -c "DROP DATABASE $(pg_datalake)"
+endif
+	psql $(pg_uri_root) -c "CREATE DATABASE $(pg_datalake);"
+	psql $(pg_uri_root) -c "COMMENT ON DATABASE $(pg_datalake) IS 'TEST database.';"
+	@echo "--- Preparing filesystem... ---"
+	rm -f $(lockpath)/digitalPreservation-makeSQL.~feito
+	@echo "--- Preparing databses... ---"
+	@echo "--- Running SQL pubLib ---"
+	cd $(gits_basepath)/_a4a/pg_pubLib-v1/src; make all pg_db=$(pg_datalake)
+	@echo "Creating optim schema at $(pg_datalake) database"
+	psql $(pg_datalake_uri) < $(gits_basepath)/_dg/preserv/src/optim-step1-ini.sql
+	touch $(lockpath)/digitalPreservation-makeSQL.~feito
+	chmod 666 $(lockpath)/digitalPreservation-makeSQL.~feito
+
 generate_pages:
 	@echo "--- Save html pages in $(folder) ---"
 	@echo "--- Create $(folder)"
