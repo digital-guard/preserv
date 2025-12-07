@@ -18,6 +18,8 @@ Sistema moderno para importação de limites administrativos (boundaries) do Ope
 
 ```bash
 ./modern_osm_ingest.sh ingest1 postgres localhost brazil-latest.osm.pbf boundaries_only.lua
+
+#./modern_osm_ingest.sh ingest1 postgres localhost brazil-latest.osm.pbf boundaries_maritime_only.lua # Para zona contígua e econômica exclusiva
 ```
 
 ## Parâmetros
