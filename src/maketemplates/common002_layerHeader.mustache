@@ -38,8 +38,11 @@ endif
 	    cd $(sandbox); 7z {{7z_opts}} x -y $(orig)/{{file_data.file}} {{#orig_filename_string_extract}}{{orig_filename_string_extract}}{{/orig_filename_string_extract}}{{^orig_filename_string_extract}}"*{{orig_filename}}*"{{/orig_filename_string_extract}} ; chmod -R a+rwx . > /dev/null
         {{/file_data.uncompacted}}
         {{#file_data.uncompacted}}
-            #patch para geojson, se precisar implementar outros formatos egitar: /var/gits/_dg/preserv/src/maketemplates/common002_layerHeader.mustache
-	    cd $(sandbox); cp $(orig)/{{file_data.file}} {{orig_filename}}.geojson ; chmod -R a+rwx . > /dev/null
+	    @tput bold
+	    @echo Copying uncompacted file ....
+	    @tput sgr0
+	    @# Arquivo preservado ja e o dado (csv, geojson, txt, xlsx, ...), sem 7z. Extensao conforme o method do layer.
+	    cd $(sandbox); cp $(orig)/{{file_data.file}} "{{#orig_filename_with_extension}}{{orig_filename}}{{/orig_filename_with_extension}}{{^orig_filename_with_extension}}{{orig_filename}}{{#isXlsx}}.xlsx{{/isXlsx}}{{^isXlsx}}{{#isCsv}}.csv{{/isCsv}}{{/isXlsx}}{{#isGeojson}}.geojson{{/isGeojson}}{{#isTxt2sql}}.txt{{/isTxt2sql}}{{#isOgr}}.{{extension}}{{/isOgr}}{{/orig_filename_with_extension}}" ; chmod -R a+rwx . > /dev/null
         {{/file_data.uncompacted}}
 {{/isOsm}}
 {{#isOsm}}

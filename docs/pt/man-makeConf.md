@@ -43,6 +43,8 @@ Cada item da lista de arquivos é especificado da seguinte maneira:
 
   * `name:` nome livre, sugerindo conteúdos do arquivo.
 
+  * `uncompacted:` [OPCIONAL] `true` quando o arquivo preservado **não** é um compactado (zip/7z/gz), mas já é o próprio dado (ex. um `.csv` ou `.geojson` grande). Nesse caso o *makefile* não roda `7z x`, apenas copia o arquivo para o *sandbox* com o nome `orig_filename` do layer e a extensão do `method` (csv2sql → `.csv`, geojson2sql → `.geojson`, txt2sql → `.txt`, xlsx → `.xlsx`). Sem essa chave um arquivo `.csv` puro gera o erro `Cannot open the file as archive` no 7z e, em seguida, `zero-length delimited identifier` no `ingest.fdw_generate_direct_csv`.
+
 ...
 
 ### layers

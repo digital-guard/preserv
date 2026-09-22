@@ -50,6 +50,10 @@ DECLARE
 BEGIN
  sepcols := iIF(p_addtxtype, '" text,"'::text, '","'::text);
  cols := pg_csv_head(p_file, replace(p_delimiter,'|','\|'));
+ IF cols IS NULL OR cardinality(cols)=0 OR (cardinality(cols)=1 AND coalesce(cols[1],'')='') THEN
+   RAISE EXCEPTION 'fdw_generate_direct_csv: no header columns read from file %', p_file
+     USING HINT = format('Check that the file exists in the sandbox, is readable by the postgres user and is a plain (uncompacted) CSV with delimiter %L. If the preserved file is itself the CSV (not a zip/7z), set "uncompacted: true" in its "files" item of make_conf.yaml and run "make me".', p_delimiter);
+ END IF;
  EXECUTE
     format(
       'DROP FOREIGN TABLE IF EXISTS %s; CREATE FOREIGN TABLE %s    (%s%s%s)',
@@ -79,6 +83,10 @@ DECLARE
 BEGIN
  sepcols := iIF(p_addtxtype, '" text,"'::text, '","'::text);
  cols := pg_csv_head(p_file, replace(p_delimiter,'|','\|'));
+ IF cols IS NULL OR cardinality(cols)=0 OR (cardinality(cols)=1 AND coalesce(cols[1],'')='') THEN
+   RAISE EXCEPTION 'copy_tabular_data: no header columns read from file %', p_file
+     USING HINT = format('Check that the file exists in the sandbox, is readable by the postgres user and uses delimiter %L.', p_delimiter);
+ END IF;
  EXECUTE
     format(
       'DROP TABLE IF EXISTS %s; CREATE TABLE %s (%s%s%s);
