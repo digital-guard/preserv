@@ -2673,7 +2673,12 @@ AS $$
 DECLARE
   x int;
 BEGIN
-  x := ( SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1) AND right(pack_id::text,6) = regexp_replace(split_part($3,'/',7),'[\_pk\.]','','g') );
+  -- Localiza o segmento "_pkNNNN.NN" em qualquer posicao do path (pacotes nacionais: data/_pk0147.01; municipais: data/MG/Contagem/_pk0009.01).
+  x := ( SELECT id FROM ingest.vw03full_layer_file WHERE isolabel_ext = $2 AND lower(ft_info->>'class_ftname') = lower($1) AND right(pack_id::text,6) = regexp_replace(substring($3 from '_pk[0-9]+\.[0-9]+'),'[^0-9]','','g') );
+  IF x IS NULL THEN
+    RAISE EXCEPTION 'ppublicating_geojsons: layer % of % not found in ingest.vw03full_layer_file for path %', $1, $2, $3
+      USING HINT = 'Check that the layer was ingested in this database (SELECT id, isolabel_ext, ft_info->>''class_ftname'', pack_id FROM ingest.vw03full_layer_file) and that the folder path contains the _pkNNNN.NN segment.';
+  END IF;
   CALL ingest.ppublicating_geojsons(x,$2,$3,$4,$5,$6);
 END;
 $$;
