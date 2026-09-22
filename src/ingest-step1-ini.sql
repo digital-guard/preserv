@@ -1282,7 +1282,7 @@ CREATE or replace FUNCTION ingest.any_load(
                             (
                               CASE
                               WHEN lineage ?| ARRAY['statistics']
-                              THEN jsonb_array_to_text_array(lineage->'statistics')::bigint[]
+                              THEN ARRAY(SELECT jsonb_array_elements_text(lineage->'statistics'))::bigint[] -- sem depender de pg_pubLib (overloads ambiguos)
                               ELSE (ARRAY[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])::bigint[]
                               END
                             )
