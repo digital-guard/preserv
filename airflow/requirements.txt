@@ -1,0 +1,5 @@
+# scripts (pk21 ja tem python3.14 + estes pacotes do sistema)
+PyYAML>=6.0
+psycopg2-binary>=2.9
+# orquestracao (opcional; so na maquina do Airflow)
+# apache-airflow>=2.9

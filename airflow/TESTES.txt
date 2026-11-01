@@ -1,0 +1,95 @@
+PLANO DE VALIDACAO: INGESTOES FORA DO PADRAO
+============================================
+
+Padrao (ja validado byte a byte contra o CutGeo publicado): shapefile em zip, sql_view,
+um layer por arquivo, SRID numerico via codec:descr_encode.
+  - BR-RS-PortoAlegre _pk0018.01 (3 layers; usa srid_proj, excecao ja coberta)
+  - BR-MG-Contagem    _pk0009.01 layer via (gdb2sql com orig_tabname)
+
+Cada linha abaixo exercita um caminho diferente do python01/python02.
+"zip: sim" = arquivo ja em /var/www/dl.digital-guard.org; "baixar" = o python01 baixa de dl.digital-guard.org.
+
+Comando de teste de cada linha:
+  cd /var/gits/_dg/preserv/airflow
+  python3 python01_ingest.py  /var/gits/_dg/<pacote> --pg-db ingest20 --layer <layer> --no-mail
+  python3 python02_publish.py /var/gits/_dg/<pacote> --pg-db ingest20 --layer <layer> --out-root /dados/carlos/cutgeo_test --no-mail
+  (comparar com /var/gits/_dg/preservCutGeo-<PAIS>2021/data/... quando houver publicacao anterior)
+
+Criterio de aceite: python01 termina "ok"; vw06ingest_report mostra n_feature_asis plausivel;
+onde ja existe publicacao no CutGeo, os geojsons do --out-root batem em tamanho e numero de
+feicoes (a ordem interna das feicoes pode variar).
+
+Ordem sugerida: 1, 4, 22, 3, 18 (zips presentes, pequenos); depois 2, 10, 7, 6, 9, 11, 12, 13, 14,
+16, 17, 19, 20, 21, 5, 15.
+
+
+CASOS COM ZIP JA NO PK21
+------------------------
+ #  caso (mecanismo)                                                       pacote                                      layer                     MB   status
+ 1  csv2sql + layer cadastral (cadastral_asis) + join_id + charset us-ascii  preserv-BR/data/RS/CaxiasSul/_pk0069.01     cadparcel, depois parcel  0.4  pendente
+    outros: GovernadorValadares, Niteroi, RibeiraoPreto, SaoPaulo, Jacarei, Umuarama
+ 4  geojson2sql pequeno (colunas jgeom/properties)                           preserv-BR/data/RS/Bage/_pk0082.01          via                       0.4  pendente
+    outros: Brusque
+22  shapefile dentro de .rar                                                 preserv-BR/data/AC/RioBranco/_pk0042.01     via                       0.3  pendente
+    outros: Manaus, CachoeiroItapemirim e mais 18 pacotes
+ 3  gdb2sql com sql_select (sem view) + varios layers do mesmo .rar          preserv-BR/data/MG/Contagem/_pk0009.01      block, nsvia              23   via ok; block/nsvia pendente
+    outros: Serra, PR/_pk0059.01, SaoGoncaloAmarante
+18  buffer_type 2                                                            preserv-BR/data/SP/Campinas/_pk0022.01      geoaddress                3.0  pendente (ja ingerido por alguem)
+    outros: BeloHorizonte, Contagem
+15  csv uncompacted 312 MB + partition_by (any_load_loop) + ISO-8859-1       preserv-BR/data/_pk0147.01                  geopoint                  312  pendente (lento)
+    + delimiter ';' + layer geopoint
+
+
+CASOS QUE PRECISAM BAIXAR O ZIP
+-------------------------------
+ #  caso (mecanismo)                                                       pacote                                      layer                     MB   status
+ 2  xlsx (xlsx2csv) + join                                                   preserv-BR/data/MG/GovernadorValadares/_pk0039.01  cadparcel, parcel  2.0  pendente
+    outros: Maringa, Umuarama, Jacarei, Cabreuva
+ 5  geojson > 150 MB (splitGeojson) + join geoaddress_ext x address_cmpl    preserv-BR/data/RJ/RioJaneiro/_pk0078.02    block; geoaddress+address 159  pendente
+    em geojson
+ 6  ogr2ogr com DXF (sql_view usa ST_MakePolygon)                            preserv-BR/data/BA/Salvador/_pk0050.01      parcel                    ?    pendente
+ 7  ogr2ogr com method_opts "-nlt CONVERT_TO_LINEAR -nlt PROMOTE_TO_MULTI"   preserv-BR/data/SP/Itu/_pk0024.01           via                       1.1  pendente
+    (gpkg); outros: Serra
+ 8  gdb2sql com method_opts "-nlt POLYGON"                                   preserv-BR/data/ES/Serra/_pk0005.01         parcel                    23   pendente
+ 9  shp2sqlparalell (varios .shp numa tabela) + charset Windows-1252         preserv-MX/data/_pk0002.01                  nsvia                     19   pendente (unico do tipo)
+    + srid 6362
+10  orig_filename em lista (varios arquivos -> um layer, any_load_assign)    preserv-BR/data/PR/Araucaria/_pk0061.01     nsvia                     0.8  pendente
+    outros: Joinville, Cali
+11  orig_subfilename (arquivo compactado dentro de outro)                    preserv-BR/data/SP/SaoPaulo/_pk0033.01      ver yaml                  ?    pendente
+    outros: _pk0001.04, Curitiba
+12  after_extract + txt2sql + charsetcopy sql-ascii                          preserv-BR/data/BA/_pk0150.01               geoaddress                ?    pendente
+13  txt2sql + delimiter '|' + charset sql-ascii + after_extract              preserv-CO/data/_pk0006.02                  geoaddress                ?    pendente
+14  lineending crlf (dos2unix) + after_extract + cadastral address           preserv-BR/data/_pk0001.05                  address, geoaddress       ?    pendente
+16  geojson uncompacted (sem zip)                                            preserv-BR/data/SP/Santos/_pk0029.02        parcel                    ?    pendente
+17  partition_by em gdb                                                      preserv-BR/data/PR/_pk0059.01               ver yaml                  ?    pendente
+    outros: CL/_pk0004.02, CO
+19  buffer_type 3 + layer datagrid                                           preserv-CO/data/_pk0006.01                  datagrid                  61   pendente
+20  layer blockface + orig_subfilename                                       preserv-BR/data/_pk0001.04                  blockface                 ?    pendente
+21  charset ISO-8859-15 + cadvia                                             preserv-BR/data/SC/Florianopolis/_pk0053.01 cadvia                    12   pendente
+
+
+FORA DO ESCOPO
+--------------
+23  openstreetmap + osm2sql (.pbf): preserv-BO/_pk0001.01 e mais 10 pacotes de pais  -> fluxo OSM manual (decisao de 2026-11-01)
+24  [RESOLVIDO 2026-11-01] sem cadastro no datalake: preserv-AR/_pk0001.01, preserv-AR/X/VillaGiardino/_pk0002.01
+    Solucao aplicada: municipios da Argentina carregados em optim.jurisdiction (2138, isolevel 3) a partir do OSM
+    (geofabrik argentina-latest, modern_osm_ingest em ingestar; scripts em airflow/sql/ar_jurisdiction_l3_*.sql;
+    regra: admin_level 5 em AR-B/M/J/F/C, 7 nas demais), depois optim.insert_donor_pack('AR'): 7 doadores,
+    2 pacotes, 4 arquivos. python01 dry-run OK nos 2 pacotes (o _pk0001.01 e osm2sql, nao suportado).
+    Backup previo: /dados/carlos/backup/dl05s_main_20261101T014229Z.dump
+    Causa original: optim.jurisdiction nao tem os municipios da Argentina (so AR e as 24 provincias;
+    CL tem 345 municipios, CO 1116). donor.csv da AR tem 5 doadores, 4 deles com scope municipal
+    (AR-X-VillaGiardino, AR-X-JesusMaria, AR-B-CoronelSuarez, AR-B-SanMiguel): insert_donor_pack('AR')
+    falha com country_id NULL e nenhum doador entra, nem o da OSM Foundation.
+    Os municipios entram em optim.jurisdiction/jurisdiction_geom pela ingestao OpenStreetMap do pais
+    (procedimento docs/pt/man-updateJurisd.md), que para a AR nunca rodou (_pk0001.01 e osm2sql).
+    Alternativa pontual: inserir so Villa Giardino (OSM relation 9467319) com geometria, depois
+    SELECT optim.insert_donor_pack('AR') (as foreign tables tmp_orig.fdw_donorar ja existem;
+    nao chamar load_donor_pack, que falha por views dependentes).
+
+
+REGISTRO DOS TESTES
+-------------------
+2026-10-31  PortoAlegre _pk0018.01  3 layers      python01+02: geojsons identicos ao CutGeo (nsvia byte a byte; geoaddress/via so ordem)
+2026-11-01  Contagem    _pk0009.01  via (gdb)     16025/16020/5, 1834 km, srid 31983 = makefile
+2026-11-01  Argentina   datalake    jurisdicoes   2138 municipios + 7 doadores + 2 pacotes cadastrados (item 24 resolvido)
